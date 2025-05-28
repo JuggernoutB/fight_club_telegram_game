@@ -1,0 +1,10 @@
+# VScode
+.vscode
+
+# Node
+node_modules
+
+#Package
+package-lock.json
+package.json
+
