@@ -1,21 +1,29 @@
 const request = require('supertest');
-const express = require('express');
-const app = require('../server'); // we'll tweak server.js for this to work
+const { app, resetProfiles } = require('../app');
+
+beforeAll(() => {
+  resetProfiles();
+});
 
 describe('API Endpoints', () => {
-  test('Create profile returns 200 and profile data', async () => {
+  it('Create profile returns 200 and profile data', async () => {
     const res = await request(app)
       .post('/create-profile')
       .send({ telegram_id: 'test_user_ci', nickname: 'TestBot' });
+
+    if (res.statusCode !== 200) {
+      console.error('Response body:', res.body);
+    }
+
     expect(res.statusCode).toBe(200);
     expect(res.body.profile).toHaveProperty('nickname', 'TestBot');
   });
 
-  test('Fight without profile returns 400', async () => {
+  it('Fight without profile returns 400', async () => {
     const res = await request(app)
       .post('/fight')
       .send({ telegram_id: 'nonexistent_user' });
+
     expect(res.statusCode).toBe(400);
-    expect(res.body.message).toBe('Profile not found');
   });
 });

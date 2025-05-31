@@ -1,9 +1,4 @@
 {
-  "test_user": {
-    "nickname": "Jugger",
-    "hp": 7,
-    "power": 6
-  },
   "test_user_ci": {
     "nickname": "TestBot",
     "hp": 10,
