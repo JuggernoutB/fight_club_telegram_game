@@ -85,6 +85,16 @@ npm install
 
 ---
 
+### 🧪 Tests & CI
+* Run tests locally with:
+  ```bash
+   npm test
+  ```
+* Tests use Jest and supertest to verify API endpoints.
+* GitHub Actions is configured to run tests automatically on every commit and pull request to ensure code quality and prevent regressions.
+
+---
+
 ## 📒 Notes
 
 * Player profiles are stored in `playerProfiles.json`
