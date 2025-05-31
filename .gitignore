@@ -1,6 +1,31 @@
-# VScode
-.vscode
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# Node
-node_modules
+# Local environment
+.env
 
+# Logs
+logs/
+*.log
+
+# OS generated
+.DS_Store
+Thumbs.db
+
+# ngrok logs and files
+ngrok.log
+ngrok/
+
+# Player data
+playerProfiles.json
+
+# Optional: if you have VS Code config folders
+.vscode/
+
+# Optional: backup files
+*.bak
+*.swp
+*.swo
