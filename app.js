@@ -29,13 +29,12 @@ app.use(express.static(path.join(__dirname, "frontend")));
 
 // Function to save profiles to file
 function saveProfiles() {
-  fs.writeFile(DATA_FILE, JSON.stringify(playerProfiles, null, 2), (err) => {
-    if (err) {
-      console.error("Error saving profiles:", err);
-    } else {
-      console.log("Profiles saved to file.");
-    }
-  });
+  try {
+    fs.writeFileSync(DATA_FILE, JSON.stringify(playerProfiles, null, 2));
+    console.log("Profiles saved to file.");
+  } catch (err) {
+    console.error("Error saving profiles:", err);
+  }
 }
 
 // Reset profiles (both in-memory and file) - useful for tests

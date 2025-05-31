@@ -1,7 +1,7 @@
 {
-  "test_user_ci": {
-    "nickname": "TestBot",
-    "hp": 10,
+  "test_user_5": {
+    "nickname": "TestBot5",
+    "hp": 9,
     "power": 5
   }
 }
