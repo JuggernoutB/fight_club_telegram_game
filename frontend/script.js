@@ -1,14 +1,21 @@
 // Detect Telegram WebApp or fallback for testing in a browser
 let telegram_id;
 
-if (window.Telegram && window.Telegram.WebApp) {
-    let tg = window.Telegram.WebApp;
-    telegram_id = tg.initDataUnsafe.user ? tg.initDataUnsafe.user.id : "test_user";
+const urlParams = new URLSearchParams(window.location.search);
+const isDevMode = urlParams.get("dev") === "1";
+
+if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
+    telegram_id = window.Telegram.WebApp.initDataUnsafe.user.id;
     console.log("Telegram WebApp detected. Telegram ID: ", telegram_id);
-} else {
+} else if (isDevMode) {
     telegram_id = "test_user";
-    console.log("Running outside Telegram. Using test_user ID");
+    console.warn("Dev mode active — using test_user");
+} else {
+    console.error("Telegram user data not found. Are you running inside Telegram?");
+    alert("Please open this game via the telegram bot button.");
 }
+
+
 
 console.log("script.js loaded!");
 
