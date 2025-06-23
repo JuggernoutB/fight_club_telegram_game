@@ -15,10 +15,6 @@ if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData
     alert("Please open this game via the telegram bot button.");
 }
 
-
-
-console.log("script.js loaded!");
-
 window.onload = function () {
     checkProfile();
 };
@@ -185,21 +181,12 @@ function createProfileWithAllocation() {
     });
 }
 
-function showGame(profile) {
-    if (profile.extra_points && profile.extra_points > 0) {
-        showAllocatePoints(profile);
-        return;
-    }
-
+function showFightScreen(profile) {
     document.body.innerHTML = `
-        <h1>Welcome, ${profile.nickname}!</h1>
-        <p>HP: ${profile.hp}</p>
+        <h1>Fight Arena</h1>
+        <p>Your HP: ${profile.hp}</p>
         ${renderHPBar(profile.hp, 20)}
-        <p>Power: ${profile.power}</p>
-        <p>Agility: ${profile.agility}</p>
-        <p>Protection: ${profile.protection}</p>
 
-        <h2>Start a Fight</h2>
         <form id="fightForm">
             <label>Hit Part:
                 <select id="hit">
@@ -232,9 +219,33 @@ function showGame(profile) {
 
     document.getElementById("fightForm").addEventListener("submit", (e) => {
         e.preventDefault();
-        fight();
+        fight(profile);
     });
 }
+
+function showGame(profile) {
+    if (profile.extra_points && profile.extra_points > 0) {
+        showAllocatePoints(profile);
+        return;
+    }
+
+    document.body.innerHTML = `
+        <h1>Welcome, ${profile.nickname}!</h1>
+        <p>Level: ${profile.level}</p>
+        <p>HP: ${profile.hp}</p>
+        ${renderHPBar(profile.hp, 20)}
+        <p>Power: ${profile.power}</p>
+        <p>Agility: ${profile.agility}</p>
+        <p>Protection: ${profile.protection}</p>
+
+        <button id="startFightBtn" style="margin-top:20px;">Start a Fight</button>
+    `;
+
+    document.getElementById("startFightBtn").onclick = () => {
+        showFightScreen(profile);
+    };
+}
+
 
 function showAllocatePoints(profile) {
     document.body.innerHTML = `
@@ -334,9 +345,7 @@ function createProfile() {
     });
 }
 
-function fight() {
-    console.log("Fight button clicked!");
-
+function fight(profile) {
     const hit = document.getElementById("hit").value;
     const defend = document.getElementById("defend").value;
 
@@ -353,13 +362,10 @@ function fight() {
     })
     .then(response => response.json())
     .then(data => {
-        console.log("Fight result received: ", data);
-    
         const fightLog = document.getElementById("fightLog");
         const logContent = document.getElementById("logContent");
         logContent.innerHTML = "";
 
-        // Bot HP bar
         const botHPLabel = document.createElement("p");
         botHPLabel.textContent = `Bot HP: ${data.bot.hp}`;
         logContent.appendChild(botHPLabel);
@@ -367,30 +373,22 @@ function fight() {
         const botHPBar = document.createElement("div");
         botHPBar.innerHTML = renderHPBar(data.bot.hp, 20);
         logContent.appendChild(botHPBar);
-    
+
         data.log.forEach(line => {
             const p = document.createElement("p");
             p.textContent = line;
             logContent.appendChild(p);
         });
-    
+
         fightLog.style.display = "block";
-    
-        // Update stats
-        document.body.querySelector("p:nth-of-type(1)").innerText = `HP: ${data.player.hp}`;
-        document.body.querySelector("p:nth-of-type(2)").innerText = `Power: ${data.player.power}`;
-        document.body.querySelector("p:nth-of-type(3)").innerText = `Agility: ${data.player.agility}`;
-        document.body.querySelector("p:nth-of-type(4)").innerText = `Protection: ${data.player.protection}`;
-    
-        // Show Fight Again and Back to Lobby buttons
+
         document.getElementById("fightAgainBtn").style.display = "inline-block";
         document.getElementById("backToLobbyBtn").style.display = "inline-block";
-    
-        // Attach event handlers
+
         document.getElementById("fightAgainBtn").onclick = () => {
-            showGame(data.player);
+            showFightScreen(data.player);
         };
-    
+
         document.getElementById("backToLobbyBtn").onclick = () => {
             checkProfile();
         };

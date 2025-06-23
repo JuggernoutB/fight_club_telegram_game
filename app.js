@@ -127,7 +127,7 @@ app.post("/create-profile", (req, res) => {
     protection: baseStats.protection,
     experience: 0,
     level: 1,
-    extra_points: 5 // 5 extra points available at start, for next level up
+    extra_points: 0
   };
 
   saveProfiles();
