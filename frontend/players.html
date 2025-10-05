@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <title>Online Players</title>
+    <style>
+        body { font-family: sans-serif; font-size: 20px; }
+        h1 { font-size: 28px; }
+        ul { list-style: none; padding: 0; }
+        li { padding: 8px 0; border-bottom: 1px solid #eee; }
+        .empty { color: #888; }
+        button { font-size: 18px; }
+    </style>
+</head>
+<body>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <h1>Players Online</h1>
+    <div id="content"></div>
+    <div style="margin-top:16px;">
+        <button id="refreshBtn">Refresh</button>
+        <button id="backBtn">Back</button>
+    </div>
+
+    <script>
+        function render(players){
+            const content = document.getElementById('content');
+            if(!players || players.length === 0){
+                content.innerHTML = '<p class="empty">No players online right now.</p>';
+                return;
+            }
+            const list = document.createElement('ul');
+            players.forEach(p => {
+                const li = document.createElement('li');
+                li.textContent = `${p.nickname} — level ${p.level}`;
+                list.appendChild(li);
+            });
+            content.innerHTML = '';
+            content.appendChild(list);
+        }
+
+        async function load(){
+            try {
+                // Get current player ID from URL params first, then Telegram WebApp as fallback
+                const urlParams = new URLSearchParams(window.location.search);
+                let currentPlayerId = urlParams.get('telegram_id');
+                
+                // Fallback to Telegram WebApp if not in URL
+                if (!currentPlayerId && window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
+                    currentPlayerId = window.Telegram.WebApp.initDataUnsafe.user.id;
+                }
+                
+                console.log('Current player ID for exclusion:', currentPlayerId);
+                const url = currentPlayerId ? `/players-online?exclude=${currentPlayerId}` : '/players-online';
+                console.log('Fetching URL:', url);
+                
+                const res = await fetch(url);
+                const data = await res.json();
+                console.log('Players data received:', data);
+                render(data.players || []);
+            } catch (e){
+                console.error('Failed to load players:', e);
+            }
+        }
+
+        document.getElementById('refreshBtn').onclick = load;
+        document.getElementById('backBtn').onclick = () => {
+            window.location.href = '/';
+        };
+
+        load();
+    </script>
+</body>
+</html>
+
+

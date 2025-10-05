@@ -127,7 +127,8 @@ app.post("/create-profile", (req, res) => {
     protection: baseStats.protection,
     experience: 0,
     level: 1,
-    extra_points: 0
+    extra_points: 0,
+    last_seen: Date.now()
   };
 
   saveProfiles();
@@ -236,6 +237,10 @@ app.post("/fight", (req, res) => {
     delete player.currentBot;
   }
 
+  // update last_seen on activity
+  if (player) {
+    player.last_seen = Date.now();
+  }
   saveProfiles();
 
   res.json({
@@ -281,6 +286,9 @@ app.post("/allocate-points", (req, res) => {
   // Reset extra points after allocation
   profile.extra_points = 0;
 
+  // update last_seen on activity
+  profile.last_seen = Date.now();
+
   saveProfiles();
 
   res.json({
@@ -310,6 +318,9 @@ app.post("/start-fight", (req, res) => {
     agility: 2,
     protection: 2
   };
+
+  // update last_seen on activity
+  player.last_seen = Date.now();
 
   res.json({
     player,
@@ -344,6 +355,9 @@ app.post("/spend-points", (req, res) => {
 
   profile.extra_points -= totalPointsToSpend;
 
+  // update last_seen on activity
+  profile.last_seen = Date.now();
+
   saveProfiles();
 
   res.json({
@@ -357,6 +371,9 @@ app.get("/profile/:telegram_id", (req, res) => {
   const profile = playerProfiles[telegram_id];
 
   if (profile) {
+    // update last_seen on read
+    profile.last_seen = Date.now();
+    saveProfiles();
     res.json({
       exists: true,
       profile: {
@@ -393,12 +410,31 @@ app.post("/reset-points", (req, res) => {
   }
 
   profile.extra_points = extra_points;
+  profile.last_seen = Date.now();
   saveProfiles();
 
   res.json({
     message: `Extra points reset to ${extra_points}`,
     profile,
   });
+});
+
+// List players online (seen within the last N milliseconds)
+app.get("/players-online", (req, res) => {
+  const ONLINE_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
+  const now = Date.now();
+  const currentPlayerId = req.query.exclude; // optional query param to exclude current player
+
+  const players = Object.entries(playerProfiles)
+    .filter(([, p]) => p && p.nickname && typeof p.level === 'number')
+    .filter(([, p]) => {
+      const ls = p.last_seen || 0;
+      return now - ls <= ONLINE_WINDOW_MS;
+    })
+    .filter(([telegram_id]) => !currentPlayerId || telegram_id !== currentPlayerId) // exclude current player if specified
+    .map(([telegram_id, p]) => ({ telegram_id, nickname: p.nickname, level: p.level }));
+
+  res.json({ players });
 });
 
 module.exports = { app, resetProfiles };

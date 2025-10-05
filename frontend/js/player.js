@@ -128,7 +128,8 @@ function showGame(profile) {
         ${renderHPBar(profile.hp, 20)}
         <p>Experience:</p>
         ${renderXPBar(profile.experience, xpToNextLevel(profile.level))}
-        <button id="fightButton">Fight</button>
+        <button id="fightButton">Fight vs bot</button>
+        <button id="playersListButton">Fight vs player</button>
         ${profile.level % 3 === 0 ? '<button id="allocatePointsButton">Allocate Points</button>' : ""}
     `;
 
@@ -137,4 +138,8 @@ function showGame(profile) {
     if (profile.level % 3 === 0) {
         document.getElementById("allocatePointsButton").onclick = () => showAllocatePoints(profile);
     }
+
+    document.getElementById("playersListButton").onclick = () => {
+        window.location.href = `/players.html?telegram_id=${telegram_id}`;
+    };
 }
