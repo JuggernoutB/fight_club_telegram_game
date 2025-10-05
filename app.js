@@ -152,12 +152,11 @@ app.post("/fight", (req, res) => {
   const botDefend = parts[Math.floor(Math.random() * parts.length)];
 
   // Default bot profile
-  const bot = {
-    hp: 20,
-    power: 2,
-    agility: 2,
-    protection: 2
-  };
+  const bot = player.currentBot;
+
+  if (!bot) {
+    return res.status(400).json({ message: "No ongoing fight found. Start a fight first." });
+  }
 
   let playerDamage = 0;
   let botDamage = 0;
@@ -170,8 +169,8 @@ app.post("/fight", (req, res) => {
     const avoidRoll = Math.random() * 100;
     if (avoidRoll >= avoidChance) {
       playerDamage = player.power;
-      bot.hp -= playerDamage;
-      log.push(`You hit the bot's ${hit}, dealing ${playerDamage} damage.`);
+      bot.hp = Math.max(bot.hp - playerDamage, 0);
+      log.push(`You hit the bot's ${hit},bot HP ${bot.hp}, dealing ${playerDamage} damage.`);
     } else {
       log.push(`Bot dodged your attack to the ${hit}.`);
     }
@@ -185,7 +184,7 @@ app.post("/fight", (req, res) => {
       const roll = Math.random() * 100;
       if (roll < chance) {
         playerDamage = diff;
-        bot.hp -= playerDamage;
+        bot.hp = Math.max(bot.hp - playerDamage, 0);
         log.push(`You hit the bot's protected ${hit}, dealing ${playerDamage} damage.`);
       } else {
         log.push(`Bot blocked your attack to the ${hit}.`);
@@ -199,8 +198,8 @@ app.post("/fight", (req, res) => {
     const avoidRoll = Math.random() * 100;
     if (avoidRoll >= avoidChance) {
       botDamage = bot.power;
-      player.hp -= botDamage;
-      log.push(`Bot hit your ${botHit}, dealing ${botDamage} damage.`);
+      player.hp = Math.max(player.hp - botDamage, 0);
+      log.push(`Bot hit your ${botHit}, your HP is ${player.hp}, dealing ${botDamage} damage.`);
     } else {
       log.push(`You dodged the bot's attack to your ${botHit}.`);
     }
@@ -213,7 +212,7 @@ app.post("/fight", (req, res) => {
       const roll = Math.random() * 100;
       if (roll < chance) {
         botDamage = diff;
-        player.hp -= botDamage;
+        player.hp = Math.max(player.hp - botDamage, 0);
         log.push(`Bot hit your protected ${botHit}, dealing ${botDamage} damage.`);
       } else {
         log.push(`You blocked the bot's attack to your ${botHit}.`);
@@ -227,12 +226,14 @@ app.post("/fight", (req, res) => {
     fightResult = "lost";
     log.push("You lost the fight!");
     player.hp = 1;
+    delete player.currentBot;
   } else if (bot.hp <= 0) {
     fightResult = "won";
     log.push("You won the fight!");
     log.push("You gained 1 experience point.");
     player.experience += 1;
     checkLevelUp(player);
+    delete player.currentBot;
   }
 
   saveProfiles();
@@ -287,6 +288,35 @@ app.post("/allocate-points", (req, res) => {
     profile
   });
 });
+
+// New endpoint to initialize a fight by sending bot stats
+app.post("/start-fight", (req, res) => {
+  const { telegram_id } = req.body;
+
+  if (!telegram_id) {
+    return res.status(400).json({ message: "Missing telegram_id" });
+  }
+
+  const player = playerProfiles[telegram_id];
+  if (!player) {
+    return res.status(400).json({ message: "Profile not found" });
+  }
+
+  // Reset player HP before fight
+  player.hp = 20;
+  player.currentBot = {
+    hp: 20,
+    power: 2,
+    agility: 2,
+    protection: 2
+  };
+
+  res.json({
+    player,
+    bot: player.currentBot
+  });
+});
+
 
 app.post("/spend-points", (req, res) => {
   const { telegram_id, points } = req.body;

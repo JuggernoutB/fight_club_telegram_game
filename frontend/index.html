@@ -23,7 +23,21 @@
 <body>
 
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="script.js"></script>
+
+    <!-- Load utility functions first -->
+    <script src="js/utils.js"></script>
+
+    <!-- API calls wrapper -->
+    <script src="js/api.js"></script>
+
+    <!-- Player-related functions -->
+    <script src="js/player.js"></script>
+
+    <!-- Fight-related functions -->
+    <script src="js/fight.js"></script>
+
+    <!-- Main app bootstrapper (after everything else is available) -->
+    <script src="js/main.js"></script>
 
 </body>
 </html>
