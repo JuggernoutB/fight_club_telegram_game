@@ -114,11 +114,48 @@
             }
         }
 
-        document.getElementById('fightBtn').onclick = () => {
+        document.getElementById('fightBtn').onclick = async () => {
             if (selectedPlayer) {
-                console.log('Starting fight with:', selectedPlayer.nickname);
-                // TODO: Implement actual PvP fight logic
-                alert(`Fight against ${selectedPlayer.nickname} (Level ${selectedPlayer.level}) - Coming soon!`);
+                try {
+                    // Get current player info
+                    const urlParams = new URLSearchParams(window.location.search);
+                    let currentPlayerId = urlParams.get('telegram_id');
+                    
+                    if (!currentPlayerId && window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
+                        currentPlayerId = window.Telegram.WebApp.initDataUnsafe.user.id;
+                    }
+
+                    // Get current player's nickname
+                    const profileResponse = await fetch(`/profile/${currentPlayerId}`);
+                    const profileData = await profileResponse.json();
+                    
+                    if (!profileData.exists) {
+                        alert('Error: Current player profile not found');
+                        return;
+                    }
+
+                    // Send challenge
+                    const challengeResponse = await fetch('/challenge', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            challenger_id: currentPlayerId,
+                            target_id: selectedPlayer.telegram_id,
+                            challenger_nickname: profileData.profile.nickname
+                        })
+                    });
+
+                    const challengeResult = await challengeResponse.json();
+                    
+                    if (challengeResponse.ok) {
+                        alert(`Challenge sent to ${selectedPlayer.nickname}!`);
+                    } else {
+                        alert(`Failed to send challenge: ${challengeResult.message}`);
+                    }
+                } catch (error) {
+                    console.error('Error sending challenge:', error);
+                    alert('Failed to send challenge. Please try again.');
+                }
             }
         };
 

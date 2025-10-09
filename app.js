@@ -7,6 +7,7 @@ const bodyParser = require("body-parser");
 const DATA_FILE = path.join(__dirname, "playerProfiles.json");
 
 let playerProfiles = {};
+let challenges = {}; // Store pending challenges: { challenger_id: { target_id, challenger_nickname, timestamp } }
 
 try {
   if (fs.existsSync(DATA_FILE)) {
@@ -436,5 +437,61 @@ app.get("/players-online", (req, res) => {
 
   res.json({ players });
 });
+
+// Challenge system for PvP fights
+app.post("/challenge", (req, res) => {
+  const { challenger_id, target_id, challenger_nickname } = req.body;
+
+  if (!challenger_id || !target_id || !challenger_nickname) {
+    return res.status(400).json({ message: "Missing required fields" });
+  }
+
+  // Check if both players exist
+  if (!playerProfiles[challenger_id] || !playerProfiles[target_id]) {
+    return res.status(400).json({ message: "One or both players not found" });
+  }
+
+  // Store the challenge
+  challenges[target_id] = {
+    challenger_id,
+    challenger_nickname,
+    timestamp: Date.now()
+  };
+
+  res.json({ message: "Challenge sent successfully" });
+});
+
+// Check for incoming challenges
+app.get("/check-challenges/:player_id", (req, res) => {
+  const player_id = req.params.player_id;
+  
+  if (challenges[player_id]) {
+    const challenge = challenges[player_id];
+    // Remove the challenge after retrieving it (one-time notification)
+    delete challenges[player_id];
+    
+    res.json({ 
+      hasChallenge: true, 
+      challenge: {
+        challenger_nickname: challenge.challenger_nickname,
+        challenger_id: challenge.challenger_id
+      }
+    });
+  } else {
+    res.json({ hasChallenge: false });
+  }
+});
+
+// Clean up old challenges (optional - run periodically)
+setInterval(() => {
+  const now = Date.now();
+  const CHALLENGE_TIMEOUT = 5 * 60 * 1000; // 5 minutes
+  
+  Object.keys(challenges).forEach(target_id => {
+    if (now - challenges[target_id].timestamp > CHALLENGE_TIMEOUT) {
+      delete challenges[target_id];
+    }
+  });
+}, 60000); // Check every minute
 
 module.exports = { app, resetProfiles };

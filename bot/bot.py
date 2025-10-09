@@ -31,7 +31,7 @@ bot = telebot.TeleBot('7590324798:AAFG7smBZ7NHpskMt3wbeXy721xzuHn5Ho8')
 @bot.message_handler(commands=['start'])
 def startHandler(message):
     markup = types.InlineKeyboardMarkup()
-    web_app_info = types.WebAppInfo("https://c5e3a3b2def8.ngrok-free.app")  # <-- your ngrok URL
+    web_app_info = types.WebAppInfo("https://e05a152c5972.ngrok-free.app")  # <-- your ngrok URL
     web_app_button = types.InlineKeyboardButton("🎮 Open Game", web_app=web_app_info)
     markup.add(web_app_button)
 
