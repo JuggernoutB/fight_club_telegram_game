@@ -7,35 +7,87 @@
         body { font-family: sans-serif; font-size: 20px; }
         h1 { font-size: 28px; }
         ul { list-style: none; padding: 0; }
-        li { padding: 8px 0; border-bottom: 1px solid #eee; }
+        li { 
+            padding: 12px 8px; 
+            border-bottom: 1px solid #eee; 
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        li:hover { background-color: #f5f5f5; }
+        li.selected { 
+            background-color: #e3f2fd; 
+            border-left: 4px solid #2196f3;
+        }
         .empty { color: #888; }
-        button { font-size: 18px; }
+        button { 
+            font-size: 18px; 
+            padding: 8px 16px;
+            margin: 4px;
+        }
+        button:disabled { 
+            background-color: #ccc; 
+            cursor: not-allowed;
+        }
+        .button-group { margin-top: 16px; }
     </style>
 </head>
 <body>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <h1>Players Online</h1>
     <div id="content"></div>
-    <div style="margin-top:16px;">
+    <div class="button-group">
+        <button id="fightBtn" disabled>Fight</button>
         <button id="refreshBtn">Refresh</button>
         <button id="backBtn">Back</button>
     </div>
 
     <script>
+        let selectedPlayer = null;
+        let playersList = [];
+
         function render(players){
+            playersList = players;
             const content = document.getElementById('content');
             if(!players || players.length === 0){
                 content.innerHTML = '<p class="empty">No players online right now.</p>';
+                selectedPlayer = null;
+                updateFightButton();
                 return;
             }
+            
             const list = document.createElement('ul');
             players.forEach(p => {
                 const li = document.createElement('li');
                 li.textContent = `${p.nickname} — level ${p.level}`;
+                li.dataset.telegramId = p.telegram_id;
+                li.dataset.nickname = p.nickname;
+                li.dataset.level = p.level;
+                
+                // Add click handler for selection
+                li.onclick = () => selectPlayer(p, li);
+                
                 list.appendChild(li);
             });
+            
             content.innerHTML = '';
             content.appendChild(list);
+        }
+
+        function selectPlayer(player, liElement) {
+            // Remove previous selection
+            document.querySelectorAll('li').forEach(li => li.classList.remove('selected'));
+            
+            // Add selection to clicked item
+            liElement.classList.add('selected');
+            selectedPlayer = player;
+            
+            console.log('Selected player:', selectedPlayer);
+            updateFightButton();
+        }
+
+        function updateFightButton() {
+            const fightBtn = document.getElementById('fightBtn');
+            fightBtn.disabled = !selectedPlayer;
         }
 
         async function load(){
@@ -61,6 +113,14 @@
                 console.error('Failed to load players:', e);
             }
         }
+
+        document.getElementById('fightBtn').onclick = () => {
+            if (selectedPlayer) {
+                console.log('Starting fight with:', selectedPlayer.nickname);
+                // TODO: Implement actual PvP fight logic
+                alert(`Fight against ${selectedPlayer.nickname} (Level ${selectedPlayer.level}) - Coming soon!`);
+            }
+        };
 
         document.getElementById('refreshBtn').onclick = load;
         document.getElementById('backBtn').onclick = () => {
