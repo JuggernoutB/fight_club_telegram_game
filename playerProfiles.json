@@ -6,10 +6,10 @@
     "power": 4,
     "agility": 3,
     "protection": 5,
-    "experience": 1,
+    "experience": 8,
     "level": 2,
     "extra_points": 3,
-    "last_seen": 1760011487646
+    "last_seen": 1760219723688
   },
   "test_user": {
     "nickname": "Jugger",
@@ -29,9 +29,9 @@
     "power": 5,
     "agility": 5,
     "protection": 2,
-    "experience": 2,
+    "experience": 9,
     "level": 1,
     "extra_points": 0,
-    "last_seen": 1760011533437
+    "last_seen": 1760219724145
   }
 }

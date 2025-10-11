@@ -8,6 +8,7 @@ const DATA_FILE = path.join(__dirname, "playerProfiles.json");
 
 let playerProfiles = {};
 let challenges = {}; // Store pending challenges: { challenger_id: { target_id, challenger_nickname, timestamp } }
+let pvpFights = {}; // Store active PvP fights: { fight_id: { player1_id, player2_id, player1_action, player2_action, round, status, etc. } }
 
 try {
   if (fs.existsSync(DATA_FILE)) {
@@ -557,39 +558,447 @@ app.get("/check-challenges/:player_id", (req, res) => {
 
 // Accept challenge (basic implementation)
 app.post("/join-fight", (req, res) => {
+  console.log('=== /join-fight called ===');
+  console.log('Request body:', req.body);
+
   const { challenger_id, target_id } = req.body;
 
   if (!challenger_id || !target_id) {
+    console.log('Missing player IDs:', { challenger_id, target_id });
     return res.status(400).json({ message: "Missing player IDs" });
   }
 
   // Check if both players exist
   if (!playerProfiles[challenger_id] || !playerProfiles[target_id]) {
+    console.log('Player not found:', {
+      challenger_exists: !!playerProfiles[challenger_id],
+      target_exists: !!playerProfiles[target_id]
+    });
     return res.status(400).json({ message: "One or both players not found" });
   }
 
-  // Notify the challenger that their challenge was accepted (temporary notification)
+  // Create the shared PvP fight when challenge is accepted
+  const fight_id = `fight_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+  // Create fight record with both players
+  pvpFights[fight_id] = {
+    player1_id: challenger_id,  // The original challenger
+    player2_id: target_id,      // The target who accepted
+    player1_stats: {
+      hp: playerProfiles[challenger_id].hp,
+      maxHP: playerProfiles[challenger_id].hp,
+      power: playerProfiles[challenger_id].power,
+      agility: playerProfiles[challenger_id].agility,
+      protection: playerProfiles[challenger_id].protection
+    },
+    player2_stats: {
+      hp: playerProfiles[target_id].hp,
+      maxHP: playerProfiles[target_id].hp,
+      power: playerProfiles[target_id].power,
+      agility: playerProfiles[target_id].agility,
+      protection: playerProfiles[target_id].protection
+    },
+    player1_action: null,
+    player2_action: null,
+    round: 1,
+    status: 'waiting',
+    fullLog: [],
+    created_at: Date.now(),
+    round_start_time: Date.now()
+  };
+
+  // Notify the challenger that their challenge was accepted and include fight_id
   challenges[challenger_id] = {
     target_id,
     target_nickname: playerProfiles[target_id].nickname,
     status: 'accepted',
-    timestamp: Date.now()
+    timestamp: Date.now(),
+    fight_id: fight_id  // Add fight ID for Player #1 to use
   };
 
   // Remove the original challenge from the target (Player #2) so it doesn't appear in requests tab
   delete challenges[target_id];
 
   // Set a timer to clean up the "accepted" notification after a longer delay
-  // This gives Player #1 more time to see the accepted status and redirect to fight screen
   setTimeout(() => {
     delete challenges[challenger_id];
   }, 15000); // Remove after 15 seconds (gives multiple polling cycles)
 
+  console.log('Created shared fight:', fight_id);
+  console.log('Returning fight_id to Player #2:', fight_id);
+
   res.json({
     message: "Fight accepted",
-    opponent_nickname: playerProfiles[challenger_id].nickname
+    opponent_nickname: playerProfiles[challenger_id].nickname,
+    fight_id: fight_id  // Return fight ID to Player #2
   });
+  console.log('=== /join-fight completed ===');
 });
+
+// Create PvP fight
+app.post("/create-pvp-fight", (req, res) => {
+  console.log('=== /create-pvp-fight called (SHOULD NOT HAPPEN IN CHALLENGE FLOW) ===');
+  console.log('Request body:', req.body);
+
+  const { player_id, opponent_nickname } = req.body;
+
+  if (!player_id || !opponent_nickname) {
+    return res.status(400).json({ message: "Missing player ID or opponent nickname" });
+  }
+
+  // Find opponent by nickname
+  const opponent = Object.values(playerProfiles).find(p => p.nickname === opponent_nickname);
+  if (!opponent) {
+    return res.status(400).json({ message: "Opponent not found" });
+  }
+
+  // Find opponent ID
+  const opponent_id = Object.keys(playerProfiles).find(id => playerProfiles[id].nickname === opponent_nickname);
+
+  // Generate unique fight ID
+  const fight_id = `fight_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+  // Create fight record
+  pvpFights[fight_id] = {
+    player1_id: player_id,
+    player2_id: opponent_id,
+    player1_stats: {
+      hp: playerProfiles[player_id].hp,
+      maxHP: playerProfiles[player_id].hp,
+      power: playerProfiles[player_id].power,
+      agility: playerProfiles[player_id].agility,
+      protection: playerProfiles[player_id].protection
+    },
+    player2_stats: {
+      hp: playerProfiles[opponent_id].hp,
+      maxHP: playerProfiles[opponent_id].hp,
+      power: playerProfiles[opponent_id].power,
+      agility: playerProfiles[opponent_id].agility,
+      protection: playerProfiles[opponent_id].protection
+    },
+    player1_action: null,
+    player2_action: null,
+    round: 1,
+    status: 'waiting',
+    fullLog: [],
+    created_at: Date.now(),
+    round_start_time: Date.now()
+  };
+
+  res.json({ fight_id });
+});
+
+// Submit PvP action
+app.post("/submit-pvp-action", (req, res) => {
+  const { fight_id, player_id, hit, defend } = req.body;
+
+  if (!fight_id || !player_id || !hit || !defend) {
+    return res.status(400).json({ message: "Missing required parameters" });
+  }
+
+  const fight = pvpFights[fight_id];
+  if (!fight) {
+    return res.status(404).json({ message: "Fight not found" });
+  }
+
+  if (fight.status !== 'waiting') {
+    return res.status(400).json({ message: "Fight is not accepting actions" });
+  }
+
+  // Store player action
+  if (player_id === fight.player1_id) {
+    fight.player1_action = { hit, defend, timestamp: Date.now() };
+    console.log(`Fight ${fight_id}: Player 1 (${player_id}) submitted action`);
+  } else if (player_id === fight.player2_id) {
+    fight.player2_action = { hit, defend, timestamp: Date.now() };
+    console.log(`Fight ${fight_id}: Player 2 (${player_id}) submitted action`);
+  } else {
+    return res.status(400).json({ message: "Invalid player ID for this fight" });
+  }
+
+  console.log(`Fight ${fight_id} state: P1 action: ${!!fight.player1_action}, P2 action: ${!!fight.player2_action}`);
+
+  // Check if both players have submitted
+  if (fight.player1_action && fight.player2_action) {
+    // Process the round
+    console.log(`Processing round for fight ${fight_id}: both players submitted`);
+    processRound(fight_id);
+  } else {
+    console.log(`Fight ${fight_id}: Player ${player_id} submitted, waiting for opponent`);
+  }
+
+  res.json({ message: "Action submitted" });
+});
+
+// Get PvP fight status
+app.get("/pvp-fight-status/:fight_id/:player_id", (req, res) => {
+  const { fight_id, player_id } = req.params;
+
+  const fight = pvpFights[fight_id];
+  if (!fight) {
+    return res.status(404).json({ message: "Fight not found" });
+  }
+
+  // Check for timeout (30 seconds) - but only if not both players have submitted
+  const now = Date.now();
+  const timeSinceRoundStart = now - fight.round_start_time;
+  const bothSubmitted = !!fight.player1_action && !!fight.player2_action;
+
+  if (timeSinceRoundStart > 30000 && fight.status === 'waiting' && !bothSubmitted) {
+    // Handle timeout only if both haven't submitted
+    handleRoundTimeout(fight_id);
+  }
+
+  // Determine player stats based on which player is requesting
+  let playerStats, opponentStats;
+  if (player_id === fight.player1_id) {
+    playerStats = fight.player1_stats;
+    opponentStats = fight.player2_stats;
+  } else {
+    playerStats = fight.player2_stats;
+    opponentStats = fight.player1_stats;
+  }
+
+  const response = {
+    status: fight.status,
+    playerStats,
+    opponentStats,
+    my_action_submitted: player_id === fight.player1_id ? !!fight.player1_action : !!fight.player2_action,
+    opponent_action_submitted: player_id === fight.player1_id ? !!fight.player2_action : !!fight.player1_action
+  };
+
+  // Add round results if available
+  if (fight.lastRoundResults) {
+    response.roundResults = fight.lastRoundResults;
+  }
+
+  // Add final results if fight is complete
+  if (fight.status === 'fight_complete' && fight.finalResults) {
+    // Adjust final results based on player perspective
+    let adjustedResults = { ...fight.finalResults };
+
+    // Adjust XP based on which player is requesting
+    if (fight.finalResults.winner.includes(playerProfiles[player_id].nickname)) {
+      // This player won
+      adjustedResults.xpGained = fight.finalResults.xpGained;
+    } else {
+      // This player lost or drew
+      adjustedResults.xpGained = 0;
+    }
+
+    response.finalResults = adjustedResults;
+  }
+
+  res.json(response);
+});
+
+// Helper function to process a round
+function processRound(fight_id) {
+  console.log(`processRound called for fight ${fight_id}`);
+  const fight = pvpFights[fight_id];
+  if (!fight) {
+    console.log(`processRound: Fight ${fight_id} not found!`);
+    return;
+  }
+
+  const p1Action = fight.player1_action;
+  const p2Action = fight.player2_action;
+
+  const player1 = fight.player1_stats;
+  const player2 = fight.player2_stats;
+
+  let roundLog = [];
+  let p1Damage = 0;
+  let p2Damage = 0;
+
+  // Player 1 attacks Player 2
+  if (p1Action.hit !== p2Action.defend) {
+    // Calculate damage - same logic as bot fights
+    const avoidChance = Math.min((player2.agility - player1.agility) * 5, 75);
+    const avoidRoll = Math.random() * 100;
+    if (avoidRoll >= avoidChance) {
+      p1Damage = player1.power;
+      player2.hp = Math.max(player2.hp - p1Damage, 0);
+      roundLog.push(`${playerProfiles[fight.player1_id].nickname} hit ${playerProfiles[fight.player2_id].nickname}'s ${p1Action.hit}, dealing ${p1Damage} damage.`);
+    } else {
+      roundLog.push(`${playerProfiles[fight.player2_id].nickname} dodged ${playerProfiles[fight.player1_id].nickname}'s attack to the ${p1Action.hit}.`);
+    }
+  } else {
+    // Player 2 defends against Player 1's attack
+    const diff = player1.power - player2.protection;
+    if (diff <= 0) {
+      roundLog.push(`${playerProfiles[fight.player2_id].nickname} blocked ${playerProfiles[fight.player1_id].nickname}'s attack to the ${p1Action.hit}.`);
+    } else {
+      const chance = diff === 1 ? 50 : 100;
+      const roll = Math.random() * 100;
+      if (roll < chance) {
+        p1Damage = diff;
+        player2.hp = Math.max(player2.hp - p1Damage, 0);
+        roundLog.push(`${playerProfiles[fight.player1_id].nickname} hit ${playerProfiles[fight.player2_id].nickname}'s protected ${p1Action.hit}, dealing ${p1Damage} damage.`);
+      } else {
+        roundLog.push(`${playerProfiles[fight.player2_id].nickname} blocked ${playerProfiles[fight.player1_id].nickname}'s attack to the ${p1Action.hit}.`);
+      }
+    }
+  }
+
+  // Player 2 attacks Player 1
+  if (p2Action.hit !== p1Action.defend) {
+    // Calculate damage
+    const avoidChance = Math.min((player1.agility - player2.agility) * 5, 75);
+    const avoidRoll = Math.random() * 100;
+    if (avoidRoll >= avoidChance) {
+      p2Damage = player2.power;
+      player1.hp = Math.max(player1.hp - p2Damage, 0);
+      roundLog.push(`${playerProfiles[fight.player2_id].nickname} hit ${playerProfiles[fight.player1_id].nickname}'s ${p2Action.hit}, dealing ${p2Damage} damage.`);
+    } else {
+      roundLog.push(`${playerProfiles[fight.player1_id].nickname} dodged ${playerProfiles[fight.player2_id].nickname}'s attack to the ${p2Action.hit}.`);
+    }
+  } else {
+    // Player 1 defends against Player 2's attack
+    const diff = player2.power - player1.protection;
+    if (diff <= 0) {
+      roundLog.push(`${playerProfiles[fight.player1_id].nickname} blocked ${playerProfiles[fight.player2_id].nickname}'s attack to the ${p2Action.hit}.`);
+    } else {
+      const chance = diff === 1 ? 50 : 100;
+      const roll = Math.random() * 100;
+      if (roll < chance) {
+        p2Damage = diff;
+        player1.hp = Math.max(player1.hp - p2Damage, 0);
+        roundLog.push(`${playerProfiles[fight.player2_id].nickname} hit ${playerProfiles[fight.player1_id].nickname}'s protected ${p2Action.hit}, dealing ${p2Damage} damage.`);
+      } else {
+        roundLog.push(`${playerProfiles[fight.player1_id].nickname} blocked ${playerProfiles[fight.player2_id].nickname}'s attack to the ${p2Action.hit}.`);
+      }
+    }
+  }
+
+  // Add to full log
+  fight.fullLog.push(...roundLog);
+
+  // Check if fight is over
+  if (player1.hp <= 0 || player2.hp <= 0) {
+    // Fight is complete
+    let winner, loser, winnerProfile, loserProfile;
+
+    if (player1.hp <= 0 && player2.hp <= 0) {
+      // Draw
+      winner = "Draw";
+    } else if (player1.hp <= 0) {
+      winner = playerProfiles[fight.player2_id].nickname;
+      loser = fight.player1_id;
+      winnerProfile = playerProfiles[fight.player2_id];
+      loserProfile = playerProfiles[fight.player1_id];
+    } else {
+      winner = playerProfiles[fight.player1_id].nickname;
+      loser = fight.player2_id;
+      winnerProfile = playerProfiles[fight.player1_id];
+      loserProfile = playerProfiles[fight.player2_id];
+    }
+
+    // Award XP if there's a winner
+    let xpGained = 0;
+    if (winner !== "Draw") {
+      xpGained = 1; // Same as bot fights
+      winnerProfile.experience = (winnerProfile.experience || 0) + xpGained;
+      saveProfiles();
+    }
+
+    fight.status = 'fight_complete';
+    fight.finalResults = {
+      winner,
+      playerHP: player1.hp,
+      opponentHP: player2.hp,
+      xpGained: winner !== "Draw" ? xpGained : 0,
+      fullLog: fight.fullLog
+    };
+
+    // Clean up fight after some time
+    setTimeout(() => {
+      delete pvpFights[fight_id];
+    }, 60000); // Remove after 1 minute
+
+  } else {
+    // Continue to next round
+    fight.round++;
+    fight.status = 'round_complete';
+    fight.lastRoundResults = {
+      log: roundLog,
+      playerHP: player1.hp,
+      opponentHP: player2.hp
+    };
+
+    // Reset actions for next round
+    fight.player1_action = null;
+    fight.player2_action = null;
+    fight.round_start_time = Date.now();
+
+    // Auto-transition back to waiting after 3 seconds
+    setTimeout(() => {
+      if (fight.status === 'round_complete') {
+        console.log(`Fight ${fight_id}: Transitioning from round_complete to waiting`);
+        fight.status = 'waiting';
+        fight.lastRoundResults = null; // Clear round results
+      }
+    }, 3000);
+  }
+
+  console.log(`processRound completed for fight ${fight_id}, status: ${fight.status}`);
+}
+
+// Helper function to handle round timeout
+function handleRoundTimeout(fight_id) {
+  const fight = pvpFights[fight_id];
+  if (!fight) return;
+
+  const p1Submitted = !!fight.player1_action;
+  const p2Submitted = !!fight.player2_action;
+
+  console.log(`Timeout for fight ${fight_id}: Player1 submitted: ${p1Submitted}, Player2 submitted: ${p2Submitted}`);
+
+  if (!p1Submitted && !p2Submitted) {
+    // Both players timed out - draw
+    fight.status = 'fight_complete';
+    fight.finalResults = {
+      winner: "Draw (timeout)",
+      playerHP: fight.player1_stats.hp,
+      opponentHP: fight.player2_stats.hp,
+      xpGained: 0,
+      fullLog: [...fight.fullLog, "Both players timed out. No winner."]
+    };
+  } else if (!p1Submitted) {
+    // Player 1 timed out - Player 2 wins
+    const winnerProfile = playerProfiles[fight.player2_id];
+    winnerProfile.experience = (winnerProfile.experience || 0) + 1;
+    saveProfiles();
+
+    fight.status = 'fight_complete';
+    fight.finalResults = {
+      winner: winnerProfile.nickname + " (opponent timeout)",
+      playerHP: fight.player1_stats.hp,
+      opponentHP: fight.player2_stats.hp,
+      xpGained: 1,
+      fullLog: [...fight.fullLog, `${winnerProfile.nickname} wins by timeout.`]
+    };
+  } else if (!p2Submitted) {
+    // Player 2 timed out - Player 1 wins
+    const winnerProfile = playerProfiles[fight.player1_id];
+    winnerProfile.experience = (winnerProfile.experience || 0) + 1;
+    saveProfiles();
+
+    fight.status = 'fight_complete';
+    fight.finalResults = {
+      winner: winnerProfile.nickname + " (opponent timeout)",
+      playerHP: fight.player1_stats.hp,
+      opponentHP: fight.player2_stats.hp,
+      xpGained: 1,
+      fullLog: [...fight.fullLog, `${winnerProfile.nickname} wins by timeout.`]
+    };
+  }
+
+  // Clean up fight after timeout
+  setTimeout(() => {
+    delete pvpFights[fight_id];
+  }, 60000);
+}
 
 // Clean up old challenges and fights (optional - run periodically)
 setInterval(() => {
@@ -600,6 +1009,15 @@ setInterval(() => {
   Object.keys(challenges).forEach(target_id => {
     if (now - challenges[target_id].timestamp > CHALLENGE_TIMEOUT) {
       delete challenges[target_id];
+    }
+  });
+
+  // Clean up old PvP fights (older than 5 minutes)
+  const FIGHT_CLEANUP_TIMEOUT = 5 * 60 * 1000; // 5 minutes
+  Object.keys(pvpFights).forEach(fight_id => {
+    const fight = pvpFights[fight_id];
+    if (now - fight.created_at > FIGHT_CLEANUP_TIMEOUT) {
+      delete pvpFights[fight_id];
     }
   });
   

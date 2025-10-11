@@ -37,7 +37,8 @@ function startChallengePolling() {
                         console.log('Challenge accepted! Redirecting Player #1 to fight screen...');
                         clearInterval(challengePollingInterval);
                         challengePollingInterval = null;
-                        showSimpleFightWindow(data.challenge.target_nickname);
+                        // Use the fight_id from the challenge response
+                        startPvPFight(data.challenge.fight_id, data.challenge.target_nickname);
                     } else {
                         // This is the challenger waiting for acceptance
                         showChallengerWaiting(data.challenge.target_nickname);
@@ -215,15 +216,50 @@ function showChallengeCancelled(challengeData) {
 function startPvPFight(fight_id, opponentNickname) {
     let timeLeft = 30;
     let fightPollingInterval = null;
-    
+    let actualFightId = fight_id;
+
+    // Only create a new fight if we don't have a fight_id (shouldn't happen in challenge flow)
+    if (!actualFightId) {
+        console.log('No fight_id provided - this should not happen in challenge acceptance flow');
+        fetch('/create-pvp-fight', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                player_id: telegram_id,
+                opponent_nickname: opponentNickname
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.fight_id) {
+                actualFightId = data.fight_id;
+                console.log('PvP fight created:', actualFightId);
+            }
+        })
+        .catch(error => {
+            console.error('Error creating PvP fight:', error);
+        });
+    } else {
+        console.log('Using existing fight_id:', actualFightId);
+    }
+
     // Create fight interface
     document.body.innerHTML = `
-        <div style="text-align: center; padding: 20px;">
-            <h1>PvP Fight vs ${opponentNickname}</h1>
+        <div style="text-align: center; padding: 20px; font-family: sans-serif;">
+            <h1>🥊 PvP Fight vs ${opponentNickname}</h1>
+            <div id="playerStats" style="margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 8px; display: inline-block;">
+                <h3>Your Stats</h3>
+                <div id="playerHP">Loading...</div>
+            </div>
+            <div id="opponentStats" style="margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 8px; display: inline-block; margin-left: 20px;">
+                <h3>${opponentNickname}'s Stats</h3>
+                <div id="opponentHP">Loading...</div>
+            </div>
+
             <div id="timer" style="font-size: 24px; color: #f44336; margin: 20px 0;">
                 Time left: ${timeLeft}s
             </div>
-            
+
             <div style="margin: 20px 0;">
                 <label>Hit Part:
                     <select id="hit">
@@ -233,7 +269,7 @@ function startPvPFight(fight_id, opponentNickname) {
                         <option value="legs">Legs</option>
                     </select>
                 </label><br><br>
-                
+
                 <label>Defend Part:
                     <select id="defend">
                         <option value="head">Head</option>
@@ -242,7 +278,7 @@ function startPvPFight(fight_id, opponentNickname) {
                         <option value="legs">Legs</option>
                     </select>
                 </label><br><br>
-                
+
                 <button id="submitBtn" style="
                     background-color: #2196f3;
                     color: white;
@@ -253,76 +289,108 @@ function startPvPFight(fight_id, opponentNickname) {
                     cursor: pointer;
                 ">Hit!</button>
             </div>
-            
+
             <div id="status" style="margin: 20px 0; font-size: 16px;">
                 Waiting for both players to submit actions...
             </div>
-            
-            <div id="results" style="display: none; margin: 20px 0;">
-                <h3>Fight Results</h3>
-                <div id="resultsContent"></div>
-                <button id="backToLobbyBtn" style="
-                    background-color: #4caf50;
+
+            <div id="roundResults" style="margin: 20px 0; padding: 15px; border: 1px solid #ccc; display: none;">
+                <h3>Round Results</h3>
+                <div id="roundContent"></div>
+                <button id="nextRoundBtn" style="
+                    background-color: #2196f3;
                     color: white;
                     border: none;
                     padding: 10px 20px;
                     border-radius: 4px;
                     font-size: 16px;
                     cursor: pointer;
+                    margin-top: 10px;
+                ">Next Round</button>
+            </div>
+
+            <div id="finalResults" style="display: none; margin: 20px 0;">
+                <h3>Fight Finished!</h3>
+                <div id="finalContent"></div>
+                <button id="backToLobbyBtn" style="
+                    background-color: #4caf50;
+                    color: white;
+                    border: none;
+                    padding: 15px 30px;
+                    border-radius: 8px;
+                    font-size: 18px;
+                    cursor: pointer;
                     margin-top: 16px;
                 ">Back to Lobby</button>
             </div>
         </div>
     `;
-    
+
     // Start countdown timer
     const timerInterval = setInterval(() => {
         timeLeft--;
         document.getElementById('timer').textContent = `Time left: ${timeLeft}s`;
-        
+
         if (timeLeft <= 0) {
             clearInterval(timerInterval);
-            clearInterval(fightPollingInterval);
             document.getElementById('submitBtn').disabled = true;
             document.getElementById('status').textContent = 'Time\'s up!';
         }
     }, 1000);
-    
+
     // Start polling for fight status
     fightPollingInterval = setInterval(async () => {
+        if (!actualFightId) return;
+
         try {
-            const response = await fetch(`/fight-status/${fight_id}/${telegram_id}`);
+            const response = await fetch(`/pvp-fight-status/${actualFightId}/${telegram_id}`);
             const data = await response.json();
-            
-            if (data.status === 'completed' || data.status === 'timeout') {
+
+            // Update player stats
+            if (data.playerStats) {
+                document.getElementById('playerHP').innerHTML = `HP: ${data.playerStats.hp}/${data.playerStats.maxHP}`;
+            }
+            if (data.opponentStats) {
+                document.getElementById('opponentHP').innerHTML = `HP: ${data.opponentStats.hp}/${data.opponentStats.maxHP}`;
+            }
+
+            if (data.status === 'round_complete') {
+                clearInterval(timerInterval);
+                showRoundResults(data.roundResults);
+            } else if (data.status === 'fight_complete') {
                 clearInterval(timerInterval);
                 clearInterval(fightPollingInterval);
-                showFightResults(data.results);
-            } else {
+                showFinalResults(data.finalResults);
+            } else if (data.status === 'waiting') {
                 updateFightStatus(data);
             }
         } catch (error) {
-            console.error('Error checking fight status:', error);
+            console.error('Error checking PvP fight status:', error);
         }
     }, 1000);
-    
+
     // Handle submit button
     document.getElementById('submitBtn').onclick = async () => {
+        if (!actualFightId) {
+            alert('Fight not ready yet, please wait...');
+            return;
+        }
+
         const hit = document.getElementById('hit').value;
         const defend = document.getElementById('defend').value;
-        
+
         try {
-            const response = await fetch('/submit-fight-action', {
+            const response = await fetch('/submit-pvp-action', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    fight_id,
+                    fight_id: actualFightId,
                     player_id: telegram_id,
                     hit,
                     defend
                 })
             });
-            
+
             if (response.ok) {
                 document.getElementById('submitBtn').disabled = true;
                 document.getElementById('submitBtn').textContent = 'Submitted!';
@@ -335,18 +403,26 @@ function startPvPFight(fight_id, opponentNickname) {
             alert('Failed to submit action. Please try again.');
         }
     };
-    
+
     // Handle back to lobby button
-    document.getElementById('backToLobbyBtn').onclick = () => {
-        clearInterval(timerInterval);
-        clearInterval(fightPollingInterval);
-        checkProfile();
+    const setupBackButton = () => {
+        const backBtn = document.getElementById('backToLobbyBtn');
+        if (backBtn) {
+            backBtn.onclick = () => {
+                clearInterval(timerInterval);
+                clearInterval(fightPollingInterval);
+                window.location.href = '/';
+            };
+        }
     };
+
+    // Set up back button initially
+    setTimeout(setupBackButton, 100);
 }
 
 function updateFightStatus(data) {
     const statusDiv = document.getElementById('status');
-    
+
     if (data.my_action_submitted && data.opponent_action_submitted) {
         statusDiv.textContent = 'Both players submitted! Processing fight...';
     } else if (data.my_action_submitted) {
@@ -356,6 +432,75 @@ function updateFightStatus(data) {
     } else {
         statusDiv.textContent = 'Waiting for both players to submit actions...';
     }
+}
+
+function showRoundResults(results) {
+    const roundDiv = document.getElementById('roundResults');
+    const roundContent = document.getElementById('roundContent');
+
+    roundContent.innerHTML = `
+        <div style="margin: 10px 0;">
+            <strong>Round Results:</strong>
+        </div>
+        ${results.log.map(log => `<p>${log}</p>`).join('')}
+        <div style="margin-top: 15px;">
+            <strong>Your HP:</strong> ${results.playerHP} |
+            <strong>Opponent HP:</strong> ${results.opponentHP}
+        </div>
+    `;
+
+    roundDiv.style.display = 'block';
+
+    // Setup next round button
+    document.getElementById('nextRoundBtn').onclick = () => {
+        roundDiv.style.display = 'none';
+
+        // Re-enable the fight controls for next round
+        document.getElementById('submitBtn').disabled = false;
+        document.getElementById('submitBtn').textContent = 'Hit!';
+        document.getElementById('status').textContent = 'Waiting for both players to submit actions...';
+
+        // Reset timer to 30 seconds
+        let timeLeft = 30;
+        const timerInterval = setInterval(() => {
+            timeLeft--;
+            document.getElementById('timer').textContent = `Time left: ${timeLeft}s`;
+
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                document.getElementById('submitBtn').disabled = true;
+                document.getElementById('status').textContent = 'Time\'s up!';
+            }
+        }, 1000);
+    };
+}
+
+function showFinalResults(results) {
+    const finalDiv = document.getElementById('finalResults');
+    const finalContent = document.getElementById('finalContent');
+
+    finalContent.innerHTML = `
+        <div style="font-size: 20px; margin: 20px 0;">
+            <strong>Winner: ${results.winner}</strong>
+        </div>
+        <div style="margin: 15px 0;">
+            <strong>Final Stats:</strong><br>
+            Your HP: ${results.playerHP}<br>
+            Opponent HP: ${results.opponentHP}
+        </div>
+        ${results.xpGained ? `<div style="margin: 15px 0; color: #4caf50;"><strong>XP Gained: +${results.xpGained}</strong></div>` : ''}
+        <div style="margin-top: 20px;">
+            <h4>Fight Summary:</h4>
+            ${results.fullLog.map(log => `<p>${log}</p>`).join('')}
+        </div>
+    `;
+
+    finalDiv.style.display = 'block';
+
+    // Hide the fight controls
+    document.getElementById('timer').style.display = 'none';
+    document.getElementById('submitBtn').style.display = 'none';
+    document.getElementById('status').style.display = 'none';
 }
 
 function showFightResults(results) {
@@ -380,28 +525,6 @@ function showSimpleFightWindow(opponentNickname) {
         challengePollingInterval = null;
     }
 
-    // Create simple fight interface
-    document.body.innerHTML = `
-        <div style="text-align: center; padding: 40px; font-family: sans-serif;">
-            <h1>🥊 Fight Arena</h1>
-            <div style="font-size: 24px; margin: 30px 0; color: #2196f3;">
-                You vs ${opponentNickname}
-            </div>
-            <div style="font-size: 18px; margin: 20px 0; color: #666;">
-                Fight is starting...
-            </div>
-            <div style="margin: 40px 0;">
-                <button onclick="window.location.href='/'" style="
-                    background-color: #4caf50;
-                    color: white;
-                    border: none;
-                    padding: 15px 30px;
-                    border-radius: 8px;
-                    font-size: 18px;
-                    cursor: pointer;
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-                ">Back to Lobby</button>
-            </div>
-        </div>
-    `;
+    // Start PvP fight - this will be handled by startPvPFight function
+    startPvPFight(null, opponentNickname);
 }
