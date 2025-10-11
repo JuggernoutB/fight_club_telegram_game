@@ -458,40 +458,116 @@ app.post("/challenge", (req, res) => {
     timestamp: Date.now()
   };
 
+  // Also store the challenge for the challenger so they can check if it was accepted
+  challenges[challenger_id] = {
+    target_id,
+    target_nickname: playerProfiles[target_id].nickname,
+    timestamp: Date.now(),
+    is_challenger: true
+  };
+
   res.json({ message: "Challenge sent successfully" });
+});
+
+// Cancel challenge
+app.post("/cancel-challenge", (req, res) => {
+  const { challenger_id, target_id, cancelled_by } = req.body;
+  
+  if (!challenger_id || !target_id || !cancelled_by) {
+    return res.status(400).json({ message: "Missing player IDs or cancelled_by" });
+  }
+  
+  // Notify the other player that challenge was cancelled
+  const other_player_id = cancelled_by === challenger_id ? target_id : challenger_id;
+  
+  challenges[other_player_id] = {
+    challenger_id,
+    target_id,
+    status: 'cancelled',
+    cancelled_by,
+    timestamp: Date.now()
+  };
+  
+  // Remove original challenge
+  delete challenges[target_id];
+  delete challenges[challenger_id];
+  
+  res.json({ message: "Challenge cancelled successfully" });
 });
 
 // Check for incoming challenges
 app.get("/check-challenges/:player_id", (req, res) => {
   const player_id = req.params.player_id;
-  
+
   if (challenges[player_id]) {
     const challenge = challenges[player_id];
-    // Remove the challenge after retrieving it (one-time notification)
-    delete challenges[player_id];
-    
-    res.json({ 
-      hasChallenge: true, 
-      challenge: {
-        challenger_nickname: challenge.challenger_nickname,
-        challenger_id: challenge.challenger_id
-      }
-    });
+
+    // Only delete cancelled or accepted challenges after retrieving them
+    // Keep pending challenges so they persist in the requests tab
+    if (challenge.status === 'cancelled' || challenge.status === 'accepted') {
+      delete challenges[player_id];
+    }
+
+    if (challenge.is_challenger) {
+      res.json({
+        hasChallenge: true,
+        challenge: {
+          target_nickname: challenge.target_nickname,
+          target_id: challenge.target_id,
+          is_challenger: true,
+          status: challenge.status || 'pending',
+          timestamp: challenge.timestamp
+        }
+      });
+    } else if (challenge.status === 'cancelled') {
+      res.json({
+        hasChallenge: true,
+        challenge: {
+          challenger_id: challenge.challenger_id,
+          target_id: challenge.target_id,
+          status: 'cancelled',
+          cancelled_by: challenge.cancelled_by
+        }
+      });
+    } else if (challenge.status === 'accepted') {
+      res.json({
+        hasChallenge: true,
+        challenge: {
+          target_nickname: challenge.target_nickname,
+          fight_id: challenge.fight_id,
+          is_challenger: true,
+          status: 'accepted'
+        }
+      });
+    } else {
+      res.json({
+        hasChallenge: true,
+        challenge: {
+          challenger_nickname: challenge.challenger_nickname,
+          challenger_id: challenge.challenger_id,
+          is_challenger: false,
+          timestamp: challenge.timestamp
+        }
+      });
+    }
   } else {
     res.json({ hasChallenge: false });
   }
 });
 
-// Clean up old challenges (optional - run periodically)
+
+// Clean up old challenges and fights (optional - run periodically)
 setInterval(() => {
   const now = Date.now();
-  const CHALLENGE_TIMEOUT = 5 * 60 * 1000; // 5 minutes
+  const CHALLENGE_TIMEOUT = 30 * 1000; // 30 seconds
   
+  // Clean up old challenges
   Object.keys(challenges).forEach(target_id => {
     if (now - challenges[target_id].timestamp > CHALLENGE_TIMEOUT) {
       delete challenges[target_id];
     }
   });
-}, 60000); // Check every minute
+  
+}, 10000); // Check every 10 seconds
 
 module.exports = { app, resetProfiles };

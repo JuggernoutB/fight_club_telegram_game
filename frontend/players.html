@@ -7,43 +7,415 @@
         body { font-family: sans-serif; font-size: 20px; }
         h1 { font-size: 28px; }
         ul { list-style: none; padding: 0; }
-        li { 
-            padding: 12px 8px; 
-            border-bottom: 1px solid #eee; 
+        li {
+            padding: 12px 8px;
+            border-bottom: 1px solid #eee;
             cursor: pointer;
             transition: background-color 0.2s;
         }
         li:hover { background-color: #f5f5f5; }
-        li.selected { 
-            background-color: #e3f2fd; 
+        li.selected {
+            background-color: #e3f2fd;
             border-left: 4px solid #2196f3;
         }
         .empty { color: #888; }
-        button { 
-            font-size: 18px; 
+        button {
+            font-size: 18px;
             padding: 8px 16px;
             margin: 4px;
         }
-        button:disabled { 
-            background-color: #ccc; 
+        button:disabled {
+            background-color: #ccc;
             cursor: not-allowed;
         }
         .button-group { margin-top: 16px; }
+
+        /* Tab styles */
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #ddd;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 12px 24px;
+            background: #f5f5f5;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+            margin-right: 4px;
+            transition: background-color 0.2s;
+        }
+        .tab:hover {
+            background: #e0e0e0;
+        }
+        .tab.active {
+            background: #2196f3;
+            color: white;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Request styles */
+        .request-item {
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .request-info {
+            flex: 1;
+        }
+        .request-actions {
+            display: flex;
+            gap: 8px;
+        }
+        .request-timer {
+            font-size: 14px;
+            color: #666;
+            font-weight: normal;
+        }
+        .request-type {
+            font-size: 12px;
+            text-transform: uppercase;
+            font-weight: bold;
+            color: #2196f3;
+        }
+        .accept-btn {
+            background-color: #4caf50;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .decline-btn, .cancel-btn {
+            background-color: #f44336;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <h1>Players Online</h1>
-    <div id="content"></div>
-    <div class="button-group">
-        <button id="fightBtn" disabled>Fight</button>
-        <button id="refreshBtn">Refresh</button>
-        <button id="backBtn">Back</button>
+    <h1>Fight vs Players</h1>
+
+    <!-- Tab Navigation -->
+    <div class="tabs">
+        <button class="tab active" onclick="switchTab('players')">Online Players</button>
+        <button class="tab" onclick="switchTab('requests')">Fight Requests <span id="requestsCount"></span></button>
+    </div>
+
+    <!-- Players Tab Content -->
+    <div id="players-tab" class="tab-content active">
+        <div id="challengeStatus" style="display: none; background: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; margin: 10px 0; border-radius: 4px;">
+            <div id="challengeInfo"></div>
+            <button id="cancelChallengeBtn" style="background-color: #f44336; color: white; border: none; padding: 5px 10px; border-radius: 4px; margin-top: 5px;">Cancel Request</button>
+        </div>
+        <div id="content"></div>
+        <div class="button-group">
+            <button id="fightBtn" disabled>Fight</button>
+            <button id="refreshBtn">Refresh</button>
+            <button id="backBtn">Back</button>
+        </div>
+    </div>
+
+    <!-- Requests Tab Content -->
+    <div id="requests-tab" class="tab-content">
+        <div id="sentRequests">
+            <h3>Sent Requests</h3>
+            <div id="sentRequestsList">
+                <p class="empty">No sent requests</p>
+            </div>
+        </div>
+        <div id="receivedRequests" style="margin-top: 30px;">
+            <h3>Received Requests</h3>
+            <div id="receivedRequestsList">
+                <p class="empty">No received requests</p>
+            </div>
+        </div>
+        <div class="button-group">
+            <button id="refreshRequestsBtn">Refresh</button>
+            <button id="backFromRequestsBtn">Back</button>
+        </div>
     </div>
 
     <script>
         let selectedPlayer = null;
         let playersList = [];
+        let currentChallenge = null;
+        let challengeTimer = null;
+        let currentPlayerId = null;
+        let requestsPollingInterval = null;
+        let sentRequests = [];
+        let receivedRequests = [];
+
+        // Tab switching functionality
+        function switchTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+
+            // Remove active class from all tabs
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Show selected tab content
+            document.getElementById(tabName + '-tab').classList.add('active');
+
+            // Activate the clicked tab
+            event.target.classList.add('active');
+
+            // If switching to requests tab, load requests
+            if (tabName === 'requests') {
+                loadRequests();
+                // Start polling for requests updates
+                if (!requestsPollingInterval) {
+                    requestsPollingInterval = setInterval(loadRequests, 3000);
+                }
+            } else {
+                // Stop requests polling when leaving requests tab
+                if (requestsPollingInterval) {
+                    clearInterval(requestsPollingInterval);
+                    requestsPollingInterval = null;
+                }
+            }
+        }
+
+        // Requests management functionality
+        async function loadRequests() {
+            if (!currentPlayerId) return;
+
+            try {
+                // Check for challenges as both challenger and target
+                const response = await fetch(`/check-challenges/${currentPlayerId}`);
+                const data = await response.json();
+
+                if (data.hasChallenge) {
+                    const challenge = data.challenge;
+
+                    if (challenge.is_challenger) {
+                        // This is a sent request
+                        updateSentRequests([challenge]);
+                        updateReceivedRequests([]);
+                    } else {
+                        // This is a received request
+                        updateSentRequests([]);
+                        updateReceivedRequests([challenge]);
+                    }
+                } else {
+                    // No challenges
+                    updateSentRequests([]);
+                    updateReceivedRequests([]);
+                }
+
+                updateRequestsCount();
+            } catch (error) {
+                console.error('Error loading requests:', error);
+            }
+        }
+
+        function calculateTimeLeft(timestamp) {
+            const now = Date.now();
+            const elapsed = now - timestamp;
+            const CHALLENGE_TIMEOUT = 30 * 1000; // 30 seconds in milliseconds
+            const remainingMs = CHALLENGE_TIMEOUT - elapsed;
+            const remainingSeconds = Math.max(0, Math.floor(remainingMs / 1000));
+            return remainingSeconds;
+        }
+
+        function updateSentRequests(requests) {
+            sentRequests = requests;
+            const sentList = document.getElementById('sentRequestsList');
+
+            if (requests.length === 0) {
+                sentList.innerHTML = '<p class="empty">No sent requests</p>';
+                return;
+            }
+
+            sentList.innerHTML = requests.map(request => `
+                <div class="request-item">
+                    <div class="request-info">
+                        <div class="request-type">Sent Request</div>
+                        <strong>To: ${request.target_nickname}</strong>
+                        <div class="request-timer" id="sent-timer-${request.target_id}">Calculating...</div>
+                    </div>
+                    <div class="request-actions">
+                        <button class="cancel-btn" onclick="cancelSentRequest('${request.target_id}', '${request.target_nickname}')">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+
+            // Start timers for sent requests
+            requests.forEach(request => {
+                const timeLeft = calculateTimeLeft(request.timestamp);
+                startRequestTimer(`sent-timer-${request.target_id}`, timeLeft);
+            });
+        }
+
+        function updateReceivedRequests(requests) {
+            receivedRequests = requests;
+            const receivedList = document.getElementById('receivedRequestsList');
+
+            if (requests.length === 0) {
+                receivedList.innerHTML = '<p class="empty">No received requests</p>';
+                return;
+            }
+
+            receivedList.innerHTML = requests.map(request => `
+                <div class="request-item">
+                    <div class="request-info">
+                        <div class="request-type">Received Request</div>
+                        <strong>From: ${request.challenger_nickname}</strong>
+                        <div class="request-timer" id="received-timer-${request.challenger_id}">Calculating...</div>
+                    </div>
+                    <div class="request-actions">
+                        <button class="accept-btn" onclick="acceptRequest('${request.challenger_id}', '${request.challenger_nickname}')">
+                            Accept
+                        </button>
+                        <button class="decline-btn" onclick="declineRequest('${request.challenger_id}', '${request.challenger_nickname}')">
+                            Decline
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+
+            // Start timers for received requests
+            requests.forEach(request => {
+                const timeLeft = calculateTimeLeft(request.timestamp);
+                startRequestTimer(`received-timer-${request.challenger_id}`, timeLeft);
+            });
+        }
+
+        function startRequestTimer(elementId, initialSeconds) {
+            let timeLeft = initialSeconds;
+            const element = document.getElementById(elementId);
+
+            const updateTimer = () => {
+                if (element) {
+                    element.textContent = `⏱️ ${timeLeft}s remaining`;
+                    if (timeLeft <= 0) {
+                        element.textContent = '⏰ Expired';
+                        element.style.color = '#f44336';
+                    }
+                }
+                timeLeft--;
+            };
+
+            updateTimer();
+            const timer = setInterval(() => {
+                updateTimer();
+                if (timeLeft < 0) {
+                    clearInterval(timer);
+                    // Refresh requests after expiry
+                    setTimeout(loadRequests, 1000);
+                }
+            }, 1000);
+        }
+
+        function updateRequestsCount() {
+            const count = sentRequests.length + receivedRequests.length;
+            const countElement = document.getElementById('requestsCount');
+            if (count > 0) {
+                countElement.textContent = `(${count})`;
+                countElement.style.color = '#f44336';
+                countElement.style.fontWeight = 'bold';
+            } else {
+                countElement.textContent = '';
+            }
+        }
+
+        // Request action handlers
+        async function acceptRequest(challengerId, challengerNickname) {
+            try {
+                const response = await fetch('/join-fight', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        challenger_id: challengerId,
+                        target_id: currentPlayerId
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    alert(`Fight started with ${challengerNickname}!`);
+                    // Navigate to fight or refresh
+                    loadRequests();
+                } else {
+                    alert(`Failed to accept fight: ${result.message}`);
+                }
+            } catch (error) {
+                console.error('Error accepting request:', error);
+                alert('Failed to accept fight request');
+            }
+        }
+
+        async function declineRequest(challengerId, challengerNickname) {
+            try {
+                const response = await fetch('/cancel-challenge', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        challenger_id: challengerId,
+                        target_id: currentPlayerId,
+                        cancelled_by: currentPlayerId
+                    })
+                });
+
+                if (response.ok) {
+                    alert(`Declined fight request from ${challengerNickname}`);
+                    loadRequests();
+                } else {
+                    alert('Failed to decline request');
+                }
+            } catch (error) {
+                console.error('Error declining request:', error);
+                alert('Failed to decline request');
+            }
+        }
+
+        async function cancelSentRequest(targetId, targetNickname) {
+            try {
+                const response = await fetch('/cancel-challenge', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        challenger_id: currentPlayerId,
+                        target_id: targetId,
+                        cancelled_by: currentPlayerId
+                    })
+                });
+
+                if (response.ok) {
+                    alert(`Cancelled fight request to ${targetNickname}`);
+                    loadRequests();
+                } else {
+                    alert('Failed to cancel request');
+                }
+            } catch (error) {
+                console.error('Error cancelling request:', error);
+                alert('Failed to cancel request');
+            }
+        }
 
         function render(players){
             playersList = players;
@@ -90,29 +462,120 @@
             fightBtn.disabled = !selectedPlayer;
         }
 
+        function showChallengeStatus(opponentNickname) {
+            currentChallenge = {
+                opponent: opponentNickname,
+                timestamp: Date.now(),
+                timeLeft: 30 // 30 seconds timeout
+            };
+            
+            const challengeStatusDiv = document.getElementById('challengeStatus');
+            const challengeInfoDiv = document.getElementById('challengeInfo');
+            
+            challengeStatusDiv.style.display = 'block';
+            updateChallengeDisplay();
+            
+            // Start countdown timer
+            challengeTimer = setInterval(() => {
+                currentChallenge.timeLeft--;
+                updateChallengeDisplay();
+                
+                if (currentChallenge.timeLeft <= 0) {
+                    clearInterval(challengeTimer);
+                    hideChallengeStatus();
+                }
+            }, 1000);
+        }
+
+        function updateChallengeDisplay() {
+            const challengeInfoDiv = document.getElementById('challengeInfo');
+            challengeInfoDiv.innerHTML = `
+                <strong>Challenge sent to ${currentChallenge.opponent}</strong><br>
+                <small>Time left: ${currentChallenge.timeLeft}s</small>
+            `;
+        }
+
+        function hideChallengeStatus() {
+            const challengeStatusDiv = document.getElementById('challengeStatus');
+            challengeStatusDiv.style.display = 'none';
+            currentChallenge = null;
+            if (challengeTimer) {
+                clearInterval(challengeTimer);
+                challengeTimer = null;
+            }
+        }
+
+        // Expose function globally so main.js can call it
+        window.hideChallengeStatus = hideChallengeStatus;
+
+        async function cancelChallenge() {
+            try {
+                // Get current player info
+                const urlParams = new URLSearchParams(window.location.search);
+                let currentPlayerId = urlParams.get('telegram_id');
+                
+                if (!currentPlayerId && window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
+                    currentPlayerId = window.Telegram.WebApp.initDataUnsafe.user.id;
+                }
+
+                // Find the target player ID
+                const targetPlayer = playersList.find(p => p.nickname === currentChallenge.opponent);
+                if (!targetPlayer) {
+                    hideChallengeStatus();
+                    return;
+                }
+
+                // Cancel the challenge
+                const response = await fetch('/cancel-challenge', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        challenger_id: currentPlayerId,
+                        target_id: targetPlayer.telegram_id,
+                        cancelled_by: currentPlayerId
+                    })
+                });
+
+                if (response.ok) {
+                    hideChallengeStatus();
+                    alert('Challenge cancelled');
+                } else {
+                    alert('Failed to cancel challenge');
+                }
+            } catch (error) {
+                console.error('Error cancelling challenge:', error);
+                alert('Failed to cancel challenge');
+            }
+        }
+
         async function load(){
             try {
                 // Get current player ID from URL params first, then Telegram WebApp as fallback
                 const urlParams = new URLSearchParams(window.location.search);
-                let currentPlayerId = urlParams.get('telegram_id');
-                
+                currentPlayerId = urlParams.get('telegram_id');
+
                 // Fallback to Telegram WebApp if not in URL
                 if (!currentPlayerId && window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
                     currentPlayerId = window.Telegram.WebApp.initDataUnsafe.user.id;
                 }
-                
+
                 console.log('Current player ID for exclusion:', currentPlayerId);
                 const url = currentPlayerId ? `/players-online?exclude=${currentPlayerId}` : '/players-online';
                 console.log('Fetching URL:', url);
-                
+
                 const res = await fetch(url);
                 const data = await res.json();
                 console.log('Players data received:', data);
                 render(data.players || []);
+
+                // Load requests for the requests tab count
+                loadRequests();
             } catch (e){
                 console.error('Failed to load players:', e);
             }
         }
+
+        document.getElementById('cancelChallengeBtn').onclick = cancelChallenge;
 
         document.getElementById('fightBtn').onclick = async () => {
             if (selectedPlayer) {
@@ -149,6 +612,8 @@
                     
                     if (challengeResponse.ok) {
                         alert(`Challenge sent to ${selectedPlayer.nickname}!`);
+                        // Show challenge status
+                        showChallengeStatus(selectedPlayer.nickname);
                     } else {
                         alert(`Failed to send challenge: ${challengeResult.message}`);
                     }
@@ -163,6 +628,23 @@
         document.getElementById('backBtn').onclick = () => {
             window.location.href = '/';
         };
+
+        // New button handlers for requests tab
+        document.getElementById('refreshRequestsBtn').onclick = loadRequests;
+        document.getElementById('backFromRequestsBtn').onclick = () => {
+            window.location.href = '/';
+        };
+
+        // Clean up intervals when leaving the page
+        window.addEventListener('beforeunload', () => {
+            if (requestsPollingInterval) {
+                clearInterval(requestsPollingInterval);
+            }
+            if (challengeTimer) {
+                clearInterval(challengeTimer);
+            }
+        });
+
 
         load();
     </script>
