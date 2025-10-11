@@ -121,10 +121,6 @@
 
     <!-- Players Tab Content -->
     <div id="players-tab" class="tab-content active">
-        <div id="challengeStatus" style="display: none; background: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; margin: 10px 0; border-radius: 4px;">
-            <div id="challengeInfo"></div>
-            <button id="cancelChallengeBtn" style="background-color: #f44336; color: white; border: none; padding: 5px 10px; border-radius: 4px; margin-top: 5px;">Cancel Request</button>
-        </div>
         <div id="content"></div>
         <div class="button-group">
             <button id="fightBtn" disabled>Fight</button>
@@ -156,10 +152,9 @@
     <script>
         let selectedPlayer = null;
         let playersList = [];
-        let currentChallenge = null;
-        let challengeTimer = null;
         let currentPlayerId = null;
         let requestsPollingInterval = null;
+        let challengePollingInterval = null;
         let sentRequests = [];
         let receivedRequests = [];
 
@@ -357,9 +352,8 @@
                 const result = await response.json();
 
                 if (response.ok) {
-                    alert(`Fight started with ${challengerNickname}!`);
-                    // Navigate to fight or refresh
-                    loadRequests();
+                    // Show simple fight window for Player #2 (target)
+                    showSimpleFightWindow(challengerNickname);
                 } else {
                     alert(`Failed to accept fight: ${result.message}`);
                 }
@@ -462,91 +456,6 @@
             fightBtn.disabled = !selectedPlayer;
         }
 
-        function showChallengeStatus(opponentNickname) {
-            currentChallenge = {
-                opponent: opponentNickname,
-                timestamp: Date.now(),
-                timeLeft: 30 // 30 seconds timeout
-            };
-            
-            const challengeStatusDiv = document.getElementById('challengeStatus');
-            const challengeInfoDiv = document.getElementById('challengeInfo');
-            
-            challengeStatusDiv.style.display = 'block';
-            updateChallengeDisplay();
-            
-            // Start countdown timer
-            challengeTimer = setInterval(() => {
-                currentChallenge.timeLeft--;
-                updateChallengeDisplay();
-                
-                if (currentChallenge.timeLeft <= 0) {
-                    clearInterval(challengeTimer);
-                    hideChallengeStatus();
-                }
-            }, 1000);
-        }
-
-        function updateChallengeDisplay() {
-            const challengeInfoDiv = document.getElementById('challengeInfo');
-            challengeInfoDiv.innerHTML = `
-                <strong>Challenge sent to ${currentChallenge.opponent}</strong><br>
-                <small>Time left: ${currentChallenge.timeLeft}s</small>
-            `;
-        }
-
-        function hideChallengeStatus() {
-            const challengeStatusDiv = document.getElementById('challengeStatus');
-            challengeStatusDiv.style.display = 'none';
-            currentChallenge = null;
-            if (challengeTimer) {
-                clearInterval(challengeTimer);
-                challengeTimer = null;
-            }
-        }
-
-        // Expose function globally so main.js can call it
-        window.hideChallengeStatus = hideChallengeStatus;
-
-        async function cancelChallenge() {
-            try {
-                // Get current player info
-                const urlParams = new URLSearchParams(window.location.search);
-                let currentPlayerId = urlParams.get('telegram_id');
-                
-                if (!currentPlayerId && window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
-                    currentPlayerId = window.Telegram.WebApp.initDataUnsafe.user.id;
-                }
-
-                // Find the target player ID
-                const targetPlayer = playersList.find(p => p.nickname === currentChallenge.opponent);
-                if (!targetPlayer) {
-                    hideChallengeStatus();
-                    return;
-                }
-
-                // Cancel the challenge
-                const response = await fetch('/cancel-challenge', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        challenger_id: currentPlayerId,
-                        target_id: targetPlayer.telegram_id,
-                        cancelled_by: currentPlayerId
-                    })
-                });
-
-                if (response.ok) {
-                    hideChallengeStatus();
-                    alert('Challenge cancelled');
-                } else {
-                    alert('Failed to cancel challenge');
-                }
-            } catch (error) {
-                console.error('Error cancelling challenge:', error);
-                alert('Failed to cancel challenge');
-            }
-        }
 
         async function load(){
             try {
@@ -570,12 +479,41 @@
 
                 // Load requests for the requests tab count
                 loadRequests();
+
+                // Start challenge polling to detect when sent challenges are accepted
+                startChallengePolling();
             } catch (e){
                 console.error('Failed to load players:', e);
             }
         }
 
-        document.getElementById('cancelChallengeBtn').onclick = cancelChallenge;
+        // Challenge polling for Player #1 to detect when their challenge is accepted
+        function startChallengePolling() {
+            if (challengePollingInterval) return; // Already running
+
+            challengePollingInterval = setInterval(async () => {
+                try {
+                    const response = await fetch(`/check-challenges/${currentPlayerId}`);
+                    const data = await response.json();
+
+                    if (data.hasChallenge) {
+                        console.log('Challenge polling detected:', data.challenge);
+                        if (data.challenge.is_challenger) {
+                            if (data.challenge.status === 'accepted') {
+                                // Challenge was accepted, stop polling and show simple fight window for Player #1 (challenger)
+                                console.log('Challenge accepted! Redirecting Player #1 to fight screen...');
+                                clearInterval(challengePollingInterval);
+                                challengePollingInterval = null;
+                                showSimpleFightWindow(data.challenge.target_nickname);
+                            }
+                            // Note: we don't show "waiting" status here since requests tab handles it
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error checking challenges:', error);
+                }
+            }, 1000); // Poll every 1 second for more responsive detection
+        }
 
         document.getElementById('fightBtn').onclick = async () => {
             if (selectedPlayer) {
@@ -612,8 +550,7 @@
                     
                     if (challengeResponse.ok) {
                         alert(`Challenge sent to ${selectedPlayer.nickname}!`);
-                        // Show challenge status
-                        showChallengeStatus(selectedPlayer.nickname);
+                        // Challenge status will be shown in Fight Requests tab
                     } else {
                         alert(`Failed to send challenge: ${challengeResult.message}`);
                     }
@@ -640,11 +577,47 @@
             if (requestsPollingInterval) {
                 clearInterval(requestsPollingInterval);
             }
-            if (challengeTimer) {
-                clearInterval(challengeTimer);
+            if (challengePollingInterval) {
+                clearInterval(challengePollingInterval);
             }
         });
 
+        function showSimpleFightWindow(opponentNickname) {
+            // Stop any existing polling
+            if (requestsPollingInterval) {
+                clearInterval(requestsPollingInterval);
+                requestsPollingInterval = null;
+            }
+            if (challengePollingInterval) {
+                clearInterval(challengePollingInterval);
+                challengePollingInterval = null;
+            }
+
+            // Create simple fight interface
+            document.body.innerHTML = `
+                <div style="text-align: center; padding: 40px; font-family: sans-serif;">
+                    <h1>🥊 Fight Arena</h1>
+                    <div style="font-size: 24px; margin: 30px 0; color: #2196f3;">
+                        You vs ${opponentNickname}
+                    </div>
+                    <div style="font-size: 18px; margin: 20px 0; color: #666;">
+                        Fight is starting...
+                    </div>
+                    <div style="margin: 40px 0;">
+                        <button onclick="window.location.href='/'" style="
+                            background-color: #4caf50;
+                            color: white;
+                            border: none;
+                            padding: 15px 30px;
+                            border-radius: 8px;
+                            font-size: 18px;
+                            cursor: pointer;
+                            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                        ">Back to Lobby</button>
+                    </div>
+                </div>
+            `;
+        }
 
         load();
     </script>

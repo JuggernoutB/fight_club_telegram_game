@@ -555,6 +555,41 @@ app.get("/check-challenges/:player_id", (req, res) => {
   }
 });
 
+// Accept challenge (basic implementation)
+app.post("/join-fight", (req, res) => {
+  const { challenger_id, target_id } = req.body;
+
+  if (!challenger_id || !target_id) {
+    return res.status(400).json({ message: "Missing player IDs" });
+  }
+
+  // Check if both players exist
+  if (!playerProfiles[challenger_id] || !playerProfiles[target_id]) {
+    return res.status(400).json({ message: "One or both players not found" });
+  }
+
+  // Notify the challenger that their challenge was accepted (temporary notification)
+  challenges[challenger_id] = {
+    target_id,
+    target_nickname: playerProfiles[target_id].nickname,
+    status: 'accepted',
+    timestamp: Date.now()
+  };
+
+  // Remove the original challenge from the target (Player #2) so it doesn't appear in requests tab
+  delete challenges[target_id];
+
+  // Set a timer to clean up the "accepted" notification after a longer delay
+  // This gives Player #1 more time to see the accepted status and redirect to fight screen
+  setTimeout(() => {
+    delete challenges[challenger_id];
+  }, 15000); // Remove after 15 seconds (gives multiple polling cycles)
+
+  res.json({
+    message: "Fight accepted",
+    opponent_nickname: playerProfiles[challenger_id].nickname
+  });
+});
 
 // Clean up old challenges and fights (optional - run periodically)
 setInterval(() => {

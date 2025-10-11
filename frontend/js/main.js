@@ -30,10 +30,14 @@ function startChallengePolling() {
             const data = await response.json();
             
             if (data.hasChallenge) {
+                console.log('Challenge polling detected:', data.challenge);
                 if (data.challenge.is_challenger) {
                     if (data.challenge.status === 'accepted') {
-                        // Challenge was accepted, start the fight
-                        startPvPFight(data.challenge.fight_id, data.challenge.target_nickname);
+                        // Challenge was accepted, stop polling and show simple fight window for Player #1 (challenger)
+                        console.log('Challenge accepted! Redirecting Player #1 to fight screen...');
+                        clearInterval(challengePollingInterval);
+                        challengePollingInterval = null;
+                        showSimpleFightWindow(data.challenge.target_nickname);
                     } else {
                         // This is the challenger waiting for acceptance
                         showChallengerWaiting(data.challenge.target_nickname);
@@ -42,89 +46,40 @@ function startChallengePolling() {
                     // Challenge was cancelled by the other player
                     showChallengeCancelled(data.challenge);
                 } else {
-                    // This is the target receiving a challenge
-                    showChallengePopup(data.challenge.challenger_nickname, data.challenge.challenger_id);
+                    // This is the target receiving a challenge - only handled in requests tab now
+                    // No popup, requests are shown in the Fight Requests tab only
                 }
             }
         } catch (error) {
             console.error('Error checking challenges:', error);
         }
-    }, 3000);
-}
-
-function showChallengePopup(challengerNickname, challengerId) {
-    // Create popup overlay
-    const overlay = document.createElement('div');
-    overlay.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.5);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 1000;
-    `;
-
-    // Create popup content
-    const popup = document.createElement('div');
-    popup.style.cssText = `
-        background: white;
-        padding: 20px;
-        border-radius: 8px;
-        text-align: center;
-        max-width: 300px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    `;
-
-    popup.innerHTML = `
-        <h3>Fight Challenge!</h3>
-        <p>${challengerNickname} challenges you to a fight!</p>
-        <div style="margin-top: 16px;">
-            <button id="acceptBtn" style="
-                background-color: #4caf50;
-                color: white;
-                border: none;
-                padding: 10px 20px;
-                border-radius: 4px;
-                font-size: 16px;
-                cursor: pointer;
-                margin-right: 8px;
-            ">Accept</button>
-            <button id="cancelBtn" style="
-                background-color: #f44336;
-                color: white;
-                border: none;
-                padding: 10px 20px;
-                border-radius: 4px;
-                font-size: 16px;
-                cursor: pointer;
-            ">Cancel</button>
-        </div>
-    `;
-
-    overlay.appendChild(popup);
-    document.body.appendChild(overlay);
-
-    // Handle Accept button click
-    document.getElementById('acceptBtn').onclick = async () => {
-        document.body.removeChild(overlay);
-        await acceptChallenge(challengerNickname, challengerId);
-    };
-
-    // Handle Cancel button click
-    document.getElementById('cancelBtn').onclick = async () => {
-        document.body.removeChild(overlay);
-        await cancelChallengeByTarget(challengerId, challengerNickname);
-    };
+    }, 1000); // Poll every 1 second for more responsive detection
 }
 
 async function acceptChallenge(challengerNickname, challengerId) {
-    // For now, just show that the challenge was accepted
-    alert(`You accepted the fight challenge from ${challengerNickname}!`);
-    // TODO: Implement actual fight logic
+    try {
+        // Call the join-fight endpoint
+        const response = await fetch('/join-fight', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                challenger_id: challengerId,
+                target_id: telegram_id
+            })
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            // Show simple fight window for Player #2 (target)
+            showSimpleFightWindow(challengerNickname);
+        } else {
+            alert(`Failed to accept fight: ${result.message}`);
+        }
+    } catch (error) {
+        console.error('Error accepting challenge:', error);
+        alert('Failed to accept fight request');
+    }
 }
 
 async function cancelChallengeByTarget(challengerId, challengerNickname) {
@@ -414,6 +369,39 @@ function showFightResults(results) {
         <div style="margin-top: 16px;">
             <h4>Fight Log:</h4>
             ${results.log.map(log => `<p>${log}</p>`).join('')}
+        </div>
+    `;
+}
+
+function showSimpleFightWindow(opponentNickname) {
+    // Stop any existing polling
+    if (challengePollingInterval) {
+        clearInterval(challengePollingInterval);
+        challengePollingInterval = null;
+    }
+
+    // Create simple fight interface
+    document.body.innerHTML = `
+        <div style="text-align: center; padding: 40px; font-family: sans-serif;">
+            <h1>🥊 Fight Arena</h1>
+            <div style="font-size: 24px; margin: 30px 0; color: #2196f3;">
+                You vs ${opponentNickname}
+            </div>
+            <div style="font-size: 18px; margin: 20px 0; color: #666;">
+                Fight is starting...
+            </div>
+            <div style="margin: 40px 0;">
+                <button onclick="window.location.href='/'" style="
+                    background-color: #4caf50;
+                    color: white;
+                    border: none;
+                    padding: 15px 30px;
+                    border-radius: 8px;
+                    font-size: 18px;
+                    cursor: pointer;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                ">Back to Lobby</button>
+            </div>
         </div>
     `;
 }
