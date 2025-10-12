@@ -214,7 +214,7 @@ function showChallengeCancelled(challengeData) {
 }
 
 function startPvPFight(fight_id, opponentNickname) {
-    let timeLeft = 30;
+    let timeLeft = 120;
     let fightPollingInterval = null;
     let actualFightId = fight_id;
 
@@ -461,7 +461,7 @@ function showRoundResults(results) {
         document.getElementById('status').textContent = 'Waiting for both players to submit actions...';
 
         // Reset timer to 30 seconds
-        let timeLeft = 30;
+        let timeLeft = 120;
         const timerInterval = setInterval(() => {
             timeLeft--;
             document.getElementById('timer').textContent = `Time left: ${timeLeft}s`;

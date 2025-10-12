@@ -577,23 +577,27 @@ app.post("/join-fight", (req, res) => {
     return res.status(400).json({ message: "One or both players not found" });
   }
 
+  // Reset both players to full HP before fight (like bot fights)
+  playerProfiles[challenger_id].hp = 20;
+  playerProfiles[target_id].hp = 20;
+
   // Create the shared PvP fight when challenge is accepted
   const fight_id = `fight_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-  // Create fight record with both players
+  // Create fight record with both players at full HP
   pvpFights[fight_id] = {
     player1_id: challenger_id,  // The original challenger
     player2_id: target_id,      // The target who accepted
     player1_stats: {
-      hp: playerProfiles[challenger_id].hp,
-      maxHP: playerProfiles[challenger_id].hp,
+      hp: 20,  // Always start at full HP
+      maxHP: 20,
       power: playerProfiles[challenger_id].power,
       agility: playerProfiles[challenger_id].agility,
       protection: playerProfiles[challenger_id].protection
     },
     player2_stats: {
-      hp: playerProfiles[target_id].hp,
-      maxHP: playerProfiles[target_id].hp,
+      hp: 20,  // Always start at full HP
+      maxHP: 20,
       power: playerProfiles[target_id].power,
       agility: playerProfiles[target_id].agility,
       protection: playerProfiles[target_id].protection
@@ -744,7 +748,7 @@ app.get("/pvp-fight-status/:fight_id/:player_id", (req, res) => {
   const timeSinceRoundStart = now - fight.round_start_time;
   const bothSubmitted = !!fight.player1_action && !!fight.player2_action;
 
-  if (timeSinceRoundStart > 30000 && fight.status === 'waiting' && !bothSubmitted) {
+  if (timeSinceRoundStart > 120000 && fight.status === 'waiting' && !bothSubmitted) {
     // Handle timeout only if both haven't submitted
     handleRoundTimeout(fight_id);
   }
