@@ -15,6 +15,15 @@ function showCreateProfile() {
         <h1>Create Your Fighter</h1>
         <form id="createProfileForm">
             <label>Name: <input type="text" id="name" required></label><br>
+            <label>Race:
+                <select id="race" required>
+                    <option value="">Select a race</option>
+                    <option value="human">Human (+2 HP)</option>
+                    <option value="elf">Elf (+2 Agility)</option>
+                    <option value="dwarf">Dwarf (+2 Protection)</option>
+                    <option value="orc">Orc (+2 Power)</option>
+                </select>
+            </label><br>
             <button type="submit">Create Profile</button>
         </form>
     `;
@@ -22,12 +31,13 @@ function showCreateProfile() {
     document.getElementById("createProfileForm").addEventListener("submit", (e) => {
         e.preventDefault();
         const name = document.getElementById("name").value.trim();
-        if (name) createProfileWithAllocation(name);
+        const race = document.getElementById("race").value;
+        if (name && race) createProfileWithAllocation(name, race);
     });
 }
 
-function createProfileWithAllocation(name) {
-    let stats = { strength: 5, agility: 5, endurance: 5 };
+function createProfileWithAllocation(name, race) {
+    let stats = { hp: 0, power: 0, agility: 0, protection: 0 };
     let remainingPoints = 5;
 
     function renderAllocationForm() {
@@ -35,9 +45,10 @@ function createProfileWithAllocation(name) {
             <h1>Allocate Points</h1>
             <p>Remaining Points: ${remainingPoints}</p>
             <div>
-                <p>Strength: ${stats.strength} <button onclick="changeStat('strength', 1)">+</button> <button onclick="changeStat('strength', -1)">-</button></p>
+                <p>HP: ${stats.hp} <button onclick="changeStat('hp', 1)">+</button> <button onclick="changeStat('hp', -1)">-</button></p>
+                <p>Power: ${stats.power} <button onclick="changeStat('power', 1)">+</button> <button onclick="changeStat('power', -1)">-</button></p>
                 <p>Agility: ${stats.agility} <button onclick="changeStat('agility', 1)">+</button> <button onclick="changeStat('agility', -1)">-</button></p>
-                <p>Endurance: ${stats.endurance} <button onclick="changeStat('endurance', 1)">+</button> <button onclick="changeStat('endurance', -1)">-</button></p>
+                <p>Protection: ${stats.protection} <button onclick="changeStat('protection', 1)">+</button> <button onclick="changeStat('protection', -1)">-</button></p>
             </div>
             <button id="confirmAllocation" ${remainingPoints > 0 ? "disabled" : ""}>Confirm</button>
         `;
@@ -45,10 +56,14 @@ function createProfileWithAllocation(name) {
         document.getElementById("confirmAllocation").onclick = () => {
             createProfileAPI({
                 telegram_id,
-                name,
-                strength: stats.strength,
-                agility: stats.agility,
-                endurance: stats.endurance
+                nickname: name,
+                race: race,
+                extra_points: {
+                    hp: stats.hp,
+                    power: stats.power,
+                    agility: stats.agility,
+                    protection: stats.protection
+                }
             })
                 .then(data => checkProfile())
                 .catch(error => console.error("Profile creation error:", error));
@@ -59,7 +74,7 @@ function createProfileWithAllocation(name) {
         if (delta > 0 && remainingPoints > 0) {
             stats[stat]++;
             remainingPoints--;
-        } else if (delta < 0 && stats[stat] > 1) {
+        } else if (delta < 0 && stats[stat] > 0) {
             stats[stat]--;
             remainingPoints++;
         }
