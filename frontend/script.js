@@ -55,45 +55,83 @@ function showCreateProfile() {
     };
 
     document.body.innerHTML = `
-        <h1>Create your profile</h1>
-        <input type="text" id="nickname" placeholder="Enter nickname" />
-        <br/><br/>
+        <div class="game-container">
+            <div class="game-header">
+                <h1>⚔️ CREATE YOUR FIGHTER</h1>
+                <div class="subtitle">Build your ultimate warrior</div>
+            </div>
 
-        <label for="race">Choose race:</label>
-        <select id="race" onchange="updateRaceBonus()">
-            <option value="human">Human (+2 HP)</option>
-            <option value="elf">Elf (+2 Agility)</option>
-            <option value="dwarf">Dwarf (+2 Protection)</option>
-            <option value="orc">Orc (+2 Power)</option>
-        </select>
-        <br/><br/>
+            <div class="avatar-preview">
+                <div class="avatar-placeholder" id="avatarPreview">
+                    👤
+                </div>
+            </div>
 
-        <div>
-          <p>Distribute your 5 extra points among these attributes:</p>
-          <div>
-            <label>HP: <span id="hpVal">0</span></label>
-            <button onclick="changeAllocation('hp', 1)">+</button>
-            <button onclick="changeAllocation('hp', -1)">-</button>
-          </div>
-          <div>
-            <label>Power: <span id="powerVal">0</span></label>
-            <button onclick="changeAllocation('power', 1)">+</button>
-            <button onclick="changeAllocation('power', -1)">-</button>
-          </div>
-          <div>
-            <label>Agility: <span id="agilityVal">0</span></label>
-            <button onclick="changeAllocation('agility', 1)">+</button>
-            <button onclick="changeAllocation('agility', -1)">-</button>
-          </div>
-          <div>
-            <label>Protection: <span id="protectionVal">0</span></label>
-            <button onclick="changeAllocation('protection', 1)">+</button>
-            <button onclick="changeAllocation('protection', -1)">-</button>
-          </div>
-          <p>Points remaining: <span id="pointsRemaining">${remainingPoints}</span></p>
+            <div class="game-form">
+                <div class="form-group">
+                    <label for="nickname">Fighter Name</label>
+                    <input type="text" id="nickname" class="form-input" placeholder="Enter your fighter's name" maxlength="20" />
+                </div>
+
+                <div class="form-group">
+                    <label for="race">Choose Your Race</label>
+                    <select id="race" class="form-select" onchange="updateRaceBonus()">
+                        <option value="human">🧑 Human (+2 HP)</option>
+                        <option value="elf" selected>🧝 Elf (+2 Agility)</option>
+                        <option value="dwarf">🧔 Dwarf (+2 Protection)</option>
+                        <option value="orc">👹 Orc (+2 Power)</option>
+                    </select>
+                </div>
+
+                <div class="stats-container">
+                    <div class="stats-header">
+                        <div class="points-remaining">
+                            <span id="pointsRemaining">${remainingPoints}</span> Points Remaining
+                        </div>
+                    </div>
+
+                    <div class="stat-row">
+                        <div class="stat-name">❤️ HP</div>
+                        <div class="stat-value" id="hpVal">0</div>
+                        <div class="stat-controls">
+                            <button class="stat-button" onclick="changeAllocation('hp', -1)">−</button>
+                            <button class="stat-button" onclick="changeAllocation('hp', 1)">+</button>
+                        </div>
+                    </div>
+
+                    <div class="stat-row">
+                        <div class="stat-name">⚔️ Power</div>
+                        <div class="stat-value" id="powerVal">0</div>
+                        <div class="stat-controls">
+                            <button class="stat-button" onclick="changeAllocation('power', -1)">−</button>
+                            <button class="stat-button" onclick="changeAllocation('power', 1)">+</button>
+                        </div>
+                    </div>
+
+                    <div class="stat-row">
+                        <div class="stat-name">💨 Agility</div>
+                        <div class="stat-value" id="agilityVal">0</div>
+                        <div class="stat-controls">
+                            <button class="stat-button" onclick="changeAllocation('agility', -1)">−</button>
+                            <button class="stat-button" onclick="changeAllocation('agility', 1)">+</button>
+                        </div>
+                    </div>
+
+                    <div class="stat-row">
+                        <div class="stat-name">🛡️ Protection</div>
+                        <div class="stat-value" id="protectionVal">0</div>
+                        <div class="stat-controls">
+                            <button class="stat-button" onclick="changeAllocation('protection', -1)">−</button>
+                            <button class="stat-button" onclick="changeAllocation('protection', 1)">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <button id="createProfileBtn" class="btn-primary" onclick="createProfileWithAllocation()" disabled>
+                    ⚔️ Create Fighter
+                </button>
+            </div>
         </div>
-
-        <button id="createProfileBtn" onclick="createProfileWithAllocation()" disabled>Create Profile</button>
     `;
 
     // Expose to global so buttons can call these functions
@@ -115,13 +153,78 @@ function showCreateProfile() {
         document.getElementById(`${attr}Val`).textContent = window.allocation[attr];
         document.getElementById("pointsRemaining").textContent = window.remainingPoints;
 
-        // Enable button only if all points allocated
+        // Update button states
+        updateButtonStates();
+
+        // Enable create button only if all points allocated
         document.getElementById("createProfileBtn").disabled = (window.remainingPoints !== 0);
     };
 
+    function updateButtonStates() {
+        const stats = ['hp', 'power', 'agility', 'protection'];
+
+        stats.forEach(stat => {
+            const statRow = document.querySelector(`#${stat}Val`).closest('.stat-row');
+            const minusBtn = statRow.querySelector('.stat-button:first-child');
+            const plusBtn = statRow.querySelector('.stat-button:last-child');
+
+            // Disable minus button if stat is 0
+            minusBtn.disabled = window.allocation[stat] <= 0;
+
+            // Disable plus button if no points remaining
+            plusBtn.disabled = window.remainingPoints <= 0;
+        });
+    }
+
     window.updateRaceBonus = function() {
-        // No immediate action needed, race bonus applied on backend / profile creation
+        const race = document.getElementById("race").value;
+        const avatarPreview = document.getElementById("avatarPreview");
+
+        console.log('Updating race avatar for:', race); // Debug log
+
+        // Update avatar with image or fallback to emoji
+        if (race) {
+            const imgPath = `./images/avatars/${race}.png`;
+            console.log('Trying to load image:', imgPath); // Debug log
+            console.log('Current URL:', window.location.href); // Debug log
+
+            const img = document.createElement('img');
+            img.src = imgPath;
+            img.alt = `${race} avatar`;
+            img.style.cssText = 'width: 100%; height: 100%; object-fit: cover; border-radius: 50%;';
+
+            img.onload = function() {
+                console.log('Image loaded successfully:', imgPath);
+                avatarPreview.innerHTML = '';
+                avatarPreview.appendChild(img);
+            };
+
+            img.onerror = function() {
+                console.log('Image failed to load:', imgPath);
+                console.log('Falling back to emoji for:', race);
+                avatarPreview.innerHTML = getRaceEmoji(race);
+            };
+
+            // Set a temporary loading state
+            avatarPreview.innerHTML = '⏳';
+        } else {
+            avatarPreview.innerHTML = "👤";
+        }
     };
+
+    function getRaceEmoji(race) {
+        const raceAvatars = {
+            "human": "🧑",
+            "elf": "🧝",
+            "dwarf": "🧔",
+            "orc": "👹"
+        };
+        return raceAvatars[race] || "👤";
+    }
+
+    // Initialize button states and race avatar
+    updateButtonStates();
+    window.updateRaceBonus();
 }
 
 function createProfileWithAllocation() {

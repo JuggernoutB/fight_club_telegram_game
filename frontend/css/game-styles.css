@@ -1,0 +1,312 @@
+/* Fantasy Fight Club Game Styles */
+
+:root {
+  /* Color Palette */
+  --primary-brown: #8B4513;
+  --secondary-gold: #DAA520;
+  --accent-fire: #FF6B35;
+  --background-dark: #2C1810;
+  --background-card: #3A241A;
+  --text-cream: #F4E4BC;
+  --text-white: #FFFFFF;
+  --border-gold: #B8860B;
+  --success-green: #4CAF50;
+  --error-red: #F44336;
+
+  /* Shadows */
+  --shadow-card: 0 4px 8px rgba(0, 0, 0, 0.3);
+  --shadow-button: 0 2px 4px rgba(0, 0, 0, 0.2);
+  --shadow-inset: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 20px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, var(--background-dark) 0%, #1a0e0a 100%);
+  color: var(--text-cream);
+  min-height: 100vh;
+  font-size: 18px;
+  line-height: 1.4;
+}
+
+/* Main Container */
+.game-container {
+  max-width: 400px;
+  margin: 0 auto;
+  background: var(--background-card);
+  border-radius: 16px;
+  box-shadow: var(--shadow-card);
+  border: 2px solid var(--border-gold);
+  overflow: hidden;
+}
+
+/* Header */
+.game-header {
+  background: linear-gradient(135deg, var(--primary-brown) 0%, var(--secondary-gold) 100%);
+  padding: 20px;
+  text-align: center;
+  border-bottom: 2px solid var(--border-gold);
+}
+
+.game-header h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: bold;
+  color: var(--text-white);
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.game-header .subtitle {
+  margin: 5px 0 0 0;
+  font-size: 14px;
+  color: var(--text-cream);
+  opacity: 0.9;
+}
+
+/* Avatar Preview Area */
+.avatar-preview {
+  text-align: center;
+  padding: 20px;
+  border-bottom: 1px solid rgba(184, 134, 11, 0.3);
+}
+
+.avatar-placeholder {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--secondary-gold) 0%, var(--accent-fire) 100%);
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+  color: var(--text-white);
+  box-shadow: var(--shadow-card);
+  border: 3px solid var(--border-gold);
+}
+
+/* Form Styles */
+.game-form {
+  padding: 20px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: var(--secondary-gold);
+  font-size: 16px;
+}
+
+.form-input {
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 16px;
+  border: 2px solid var(--border-gold);
+  border-radius: 8px;
+  background: var(--background-dark);
+  color: var(--text-cream);
+  transition: all 0.3s ease;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--secondary-gold);
+  box-shadow: 0 0 8px rgba(218, 165, 32, 0.3);
+}
+
+.form-select {
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 16px;
+  border: 2px solid var(--border-gold);
+  border-radius: 8px;
+  background: var(--background-dark);
+  color: var(--text-cream);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.form-select:focus {
+  outline: none;
+  border-color: var(--secondary-gold);
+  box-shadow: 0 0 8px rgba(218, 165, 32, 0.3);
+}
+
+/* Race Options Styling */
+.race-option {
+  color: var(--text-cream);
+  background: var(--background-dark);
+}
+
+/* Stats Allocation */
+.stats-container {
+  background: rgba(139, 69, 19, 0.1);
+  border-radius: 12px;
+  padding: 16px;
+  margin: 20px 0;
+  border: 1px solid rgba(184, 134, 11, 0.3);
+}
+
+.stats-header {
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.points-remaining {
+  background: var(--accent-fire);
+  color: var(--text-white);
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-weight: bold;
+  display: inline-block;
+  box-shadow: var(--shadow-button);
+}
+
+.stat-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: rgba(44, 24, 16, 0.5);
+  border-radius: 8px;
+  border: 1px solid rgba(184, 134, 11, 0.2);
+}
+
+.stat-name {
+  font-weight: 600;
+  color: var(--secondary-gold);
+  min-width: 80px;
+}
+
+.stat-value {
+  font-weight: bold;
+  color: var(--text-white);
+  min-width: 30px;
+  text-align: center;
+  font-size: 18px;
+}
+
+.stat-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.stat-button {
+  width: 32px;
+  height: 32px;
+  border: 2px solid var(--border-gold);
+  background: var(--primary-brown);
+  color: var(--text-white);
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stat-button:hover:not(:disabled) {
+  background: var(--secondary-gold);
+  transform: translateY(-1px);
+}
+
+.stat-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Primary Button */
+.btn-primary {
+  width: 100%;
+  padding: 16px 24px;
+  font-size: 18px;
+  font-weight: bold;
+  color: var(--text-white);
+  background: linear-gradient(135deg, var(--accent-fire) 0%, #e55a2b 100%);
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow-button);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-top: 20px;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #ff7849 0%, var(--accent-fire) 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.4);
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Responsive Design */
+@media (max-width: 480px) {
+  body {
+    padding: 10px;
+  }
+
+  .game-header h1 {
+    font-size: 20px;
+  }
+
+  .avatar-placeholder {
+    width: 100px;
+    height: 100px;
+    font-size: 40px;
+  }
+
+  .stat-row {
+    flex-direction: column;
+    gap: 8px;
+    text-align: center;
+  }
+
+  .stat-controls {
+    justify-content: center;
+  }
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.game-container {
+  animation: fadeIn 0.5s ease-out;
+}
+
+/* Progress Bar Styles (for later use) */
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 4px 0;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--success-green) 0%, var(--secondary-gold) 100%);
+  transition: width 0.3s ease;
+}
