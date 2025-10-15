@@ -282,29 +282,132 @@ function showGame(profile) {
     if (profile.hp < 20) {
         profile.hp = 20;
     }
-    
+
+    // Generate stars based on level
+    const levelStars = "⭐".repeat(Math.min(profile.level, 5));
+    const canAllocatePoints = profile.level % 3 === 0;
+    const raceAvatar = getRaceAvatar(profile.race);
+
     document.body.innerHTML = `
-        <h1>Welcome, ${profile.nickname}</h1>
-        <p>Level: ${profile.level}</p>
-        <p>Power: ${profile.power}</p>
-        <p>Agility: ${profile.agility}</p>
-        <p>Protection: ${profile.protection}</p>
-        <p>HP: ${profile.hp}</p>
-        ${renderHPBar(profile.hp, 20)}
-        <p>Experience:</p>
-        ${renderXPBar(profile.experience, xpToNextLevel(profile.level))}
-        <button id="fightButton">Fight vs bot</button>
-        <button id="playersListButton">Fight vs player</button>
-        ${profile.level % 3 === 0 ? '<button id="allocatePointsButton">Allocate Points</button>' : ""}
+        <div class="game-container">
+            <div class="game-header">
+                <h1>⚔️ FIGHT CLUB</h1>
+                <div class="subtitle">Ready for battle, warrior?</div>
+            </div>
+
+            <div class="player-info">
+                <div class="player-header">
+                    <div class="player-avatar" id="playerAvatar">
+                        ${raceAvatar}
+                    </div>
+                    <div class="player-details">
+                        <h2>Welcome, ${profile.nickname}!</h2>
+                        <div class="player-level">
+                            <span class="level-badge ${canAllocatePoints ? 'level-up-glow' : ''}">Level ${profile.level}</span>
+                            <span class="stars">${levelStars}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">⚔️ Power</div>
+                        <div class="stat-value">${profile.power}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">💨 Agility</div>
+                        <div class="stat-value">${profile.agility}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">🛡️ Protection</div>
+                        <div class="stat-value">${profile.protection}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">🏆 Race</div>
+                        <div class="stat-value">${capitalizeFirst(profile.race)}</div>
+                    </div>
+                </div>
+
+                <div class="progress-container">
+                    <div class="progress-item">
+                        <div class="progress-label">
+                            <span>❤️ Health Points</span>
+                            <span class="progress-text">${profile.hp}/20</span>
+                        </div>
+                        ${renderHPBar(profile.hp, 20)}
+                    </div>
+                    <div class="progress-item">
+                        <div class="progress-label">
+                            <span>⭐ Experience</span>
+                            <span class="progress-text">${profile.experience}/${xpToNextLevel(profile.level)}</span>
+                        </div>
+                        ${renderXPBar(profile.experience, xpToNextLevel(profile.level))}
+                    </div>
+                </div>
+            </div>
+
+            <div class="actions-container">
+                <button id="fightButton" class="btn-action btn-fight-bot">
+                    🤖 Fight vs Bot
+                </button>
+                <button id="playersListButton" class="btn-action btn-fight-player">
+                    👥 Fight vs Player
+                </button>
+                ${canAllocatePoints ? `
+                    <button id="allocatePointsButton" class="btn-action btn-allocate">
+                        📈 Allocate Points (${profile.extra_points || 3})
+                    </button>
+                ` : ""}
+            </div>
+        </div>
     `;
 
+    // Load player's race avatar
+    loadPlayerAvatar(profile.race);
+
+    // Bind event handlers
     document.getElementById("fightButton").onclick = () => showFightScreen(profile);
 
-    if (profile.level % 3 === 0) {
+    if (canAllocatePoints) {
         document.getElementById("allocatePointsButton").onclick = () => showAllocatePoints(profile);
     }
 
     document.getElementById("playersListButton").onclick = () => {
         window.location.href = `/players.html?telegram_id=${telegram_id}`;
     };
+}
+
+function getRaceAvatar(race) {
+    const raceAvatars = {
+        "human": "🧑",
+        "elf": "🧝",
+        "dwarf": "🧔",
+        "orc": "👹"
+    };
+    return raceAvatars[race] || "👤";
+}
+
+function loadPlayerAvatar(race) {
+    const avatarElement = document.getElementById("playerAvatar");
+    if (!avatarElement || !race) return;
+
+    const imgPath = `./images/avatars/${race}.png`;
+    const img = document.createElement('img');
+    img.src = imgPath;
+    img.alt = `${race} avatar`;
+    img.style.cssText = 'width: 100%; height: 100%; object-fit: cover; border-radius: 50%;';
+
+    img.onload = function() {
+        avatarElement.innerHTML = '';
+        avatarElement.appendChild(img);
+    };
+
+    img.onerror = function() {
+        // Keep emoji if image fails to load
+        avatarElement.innerHTML = getRaceAvatar(race);
+    };
+}
+
+function capitalizeFirst(str) {
+    return str.charAt(0).toUpperCase() + str.slice(1);
 }
