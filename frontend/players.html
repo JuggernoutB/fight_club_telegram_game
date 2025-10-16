@@ -712,6 +712,31 @@
                     border-color: #6496ff;
                 }
 
+                /* Opponent selection reveal styles */
+                .opponent-attack-revealed {
+                    background: rgba(255, 165, 0, 0.8) !important;
+                    border-color: #ff8c00 !important;
+                    animation: opponentAttackBlink 2s ease-in-out;
+                }
+
+                .opponent-defend-revealed {
+                    background: rgba(255, 215, 0, 0.8) !important;
+                    border-color: #ffcc00 !important;
+                    animation: opponentDefendBlink 2s ease-in-out;
+                }
+
+                @keyframes opponentAttackBlink {
+                    0%, 100% { opacity: 0.3; }
+                    25%, 75% { opacity: 1; }
+                    50% { opacity: 0.6; }
+                }
+
+                @keyframes opponentDefendBlink {
+                    0%, 100% { opacity: 0.3; }
+                    25%, 75% { opacity: 1; }
+                    50% { opacity: 0.6; }
+                }
+
                 .body-part-label {
                     font-size: 18px;
                     text-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
@@ -1004,6 +1029,11 @@
 
                     console.log('PvP fight status:', data);
 
+                    // Store player identification for opponent action display
+                    if (data.isPlayer1 !== undefined) {
+                        window.currentFightData = { isPlayer1: data.isPlayer1 };
+                    }
+
                     // Update player stats
                     if (data.playerStats) {
                         document.getElementById('playerHPText').textContent = `${data.playerStats.hp}/${data.playerStats.maxHP}`;
@@ -1067,6 +1097,9 @@
             }).join('');
             logContent.innerHTML = newMessages;
 
+            // Show opponent's selections with blinking animation
+            showOpponentSelections(results);
+
             // Update status
             const statusDiv = document.querySelector('.fight-status p');
             if (statusDiv) {
@@ -1088,6 +1121,51 @@
                     statusDiv.textContent = '';
                 }
             }, 2000);
+        }
+
+        function showOpponentSelections(results) {
+            console.log('Showing opponent selections:', results);
+
+            // Determine which actions belong to the opponent
+            // We need to check if current player is player1 or player2 in the fight
+            const isPlayer1 = window.currentFightData && window.currentFightData.isPlayer1;
+            const opponentActions = isPlayer1 ? results.player2Actions : results.player1Actions;
+            const playerActions = isPlayer1 ? results.player1Actions : results.player2Actions;
+
+            console.log('Current player is player1:', isPlayer1);
+            console.log('Opponent actions:', opponentActions);
+            console.log('Player actions:', playerActions);
+
+            if (!opponentActions) {
+                console.log('No opponent actions to display');
+                return;
+            }
+
+            // Show opponent's attack selection (what they attacked on you)
+            if (opponentActions.hit) {
+                const playerDefendArea = document.querySelector(`.defend-area[data-part="${opponentActions.hit}"]`);
+                if (playerDefendArea) {
+                    playerDefendArea.classList.add('opponent-attack-revealed');
+                    console.log(`Showing opponent attacked your ${opponentActions.hit}`);
+                    // Remove after 2 seconds
+                    setTimeout(() => {
+                        playerDefendArea.classList.remove('opponent-attack-revealed');
+                    }, 2000);
+                }
+            }
+
+            // Show opponent's defend selection (what they defended)
+            if (opponentActions.defend) {
+                const opponentDefendArea = document.querySelector(`.attack-area[data-part="${opponentActions.defend}"]`);
+                if (opponentDefendArea) {
+                    opponentDefendArea.classList.add('opponent-defend-revealed');
+                    console.log(`Showing opponent defended their ${opponentActions.defend}`);
+                    // Remove after 2 seconds
+                    setTimeout(() => {
+                        opponentDefendArea.classList.remove('opponent-defend-revealed');
+                    }, 2000);
+                }
+            }
         }
 
         function showPvPFinalResults(results) {

@@ -777,7 +777,8 @@ app.get("/pvp-fight-status/:fight_id/:player_id", (req, res) => {
     opponentStats,
     opponentProfile,
     my_action_submitted: player_id === fight.player1_id ? !!fight.player1_action : !!fight.player2_action,
-    opponent_action_submitted: player_id === fight.player1_id ? !!fight.player2_action : !!fight.player1_action
+    opponent_action_submitted: player_id === fight.player1_id ? !!fight.player2_action : !!fight.player1_action,
+    isPlayer1: player_id === fight.player1_id
   };
 
   // Add round results if available
@@ -939,7 +940,9 @@ function processRound(fight_id) {
     fight.lastRoundResults = {
       log: roundLog,
       playerHP: player1.hp,
-      opponentHP: player2.hp
+      opponentHP: player2.hp,
+      player1Actions: fight.player1_action,
+      player2Actions: fight.player2_action
     };
 
     // Reset actions for next round
