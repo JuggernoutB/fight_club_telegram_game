@@ -357,9 +357,16 @@
         }
 
         function render(players){
+            console.log('Render function called with players:', players);
+            console.log('Players type:', typeof players);
+            console.log('Players length:', players ? players.length : 'undefined');
+
             playersList = players;
             const content = document.getElementById('content');
+            console.log('Content element found:', content);
+
             if(!players || players.length === 0){
+                console.log('No players found, showing empty state');
                 content.innerHTML = `
                     <div class="empty-state">
                         <div class="empty-icon">👥</div>
@@ -426,6 +433,7 @@
 
         async function load(){
             try {
+                console.log('Load function started');
                 // Get current player ID from URL params first, then Telegram WebApp as fallback
                 const urlParams = new URLSearchParams(window.location.search);
                 currentPlayerId = urlParams.get('telegram_id');
@@ -443,8 +451,10 @@
                 console.log('Fetching URL:', url);
 
                 const res = await fetch(url);
+                console.log('Fetch response status:', res.status);
                 const data = await res.json();
                 console.log('Players data received:', data);
+                console.log('Players array length:', data.players ? data.players.length : 'undefined');
                 render(data.players || []);
 
                 // Load requests for the requests tab count
@@ -454,6 +464,7 @@
                 startChallengePolling();
             } catch (e){
                 console.error('Failed to load players:', e);
+                console.error('Error stack:', e.stack);
             }
         }
 
@@ -534,13 +545,13 @@
 
         document.getElementById('refreshBtn').onclick = load;
         document.getElementById('backBtn').onclick = () => {
-            window.location.href = '/';
+            window.location.href = `/?telegram_id=${currentPlayerId}`;
         };
 
         // New button handlers for requests tab
         document.getElementById('refreshRequestsBtn').onclick = loadRequests;
         document.getElementById('backFromRequestsBtn').onclick = () => {
-            window.location.href = '/';
+            window.location.href = `/?telegram_id=${currentPlayerId}`;
         };
 
         // Clean up intervals when leaving the page
@@ -588,8 +599,22 @@
                     </div>
                     <div class="fight-vs-section">
                         <div class="fighter-card" id="playerCard">
-                            <div class="fighter-image-container" id="playerImageContainer">
+                            <div class="fighter-image-container interactive-fighter" id="playerImageContainer">
                                 <div class="fighter-fallback" id="playerFallback">🧑</div>
+                                <div class="body-part-overlay">
+                                    <div class="body-part-area defend-area" data-part="head" data-action="defend" title="Defend Head">
+                                        <span class="body-part-label">🧠</span>
+                                    </div>
+                                    <div class="body-part-area defend-area" data-part="chest" data-action="defend" title="Defend Chest">
+                                        <span class="body-part-label">👕</span>
+                                    </div>
+                                    <div class="body-part-area defend-area" data-part="stomach" data-action="defend" title="Defend Stomach">
+                                        <span class="body-part-label">🥋</span>
+                                    </div>
+                                    <div class="body-part-area defend-area" data-part="legs" data-action="defend" title="Defend Legs">
+                                        <span class="body-part-label">🦵</span>
+                                    </div>
+                                </div>
                             </div>
                             <div class="fighter-name" id="playerName">You</div>
                             <div class="fighter-hp">
@@ -600,8 +625,22 @@
                         </div>
                         <div class="vs-divider">⚔️<br>VS</div>
                         <div class="fighter-card" id="opponentCard">
-                            <div class="fighter-image-container" id="opponentImageContainer">
+                            <div class="fighter-image-container interactive-fighter" id="opponentImageContainer">
                                 <div class="fighter-fallback">👤</div>
+                                <div class="body-part-overlay">
+                                    <div class="body-part-area attack-area" data-part="head" data-action="attack" title="Attack Head">
+                                        <span class="body-part-label">🧠</span>
+                                    </div>
+                                    <div class="body-part-area attack-area" data-part="chest" data-action="attack" title="Attack Chest">
+                                        <span class="body-part-label">👕</span>
+                                    </div>
+                                    <div class="body-part-area attack-area" data-part="stomach" data-action="attack" title="Attack Stomach">
+                                        <span class="body-part-label">🥋</span>
+                                    </div>
+                                    <div class="body-part-area attack-area" data-part="legs" data-action="attack" title="Attack Legs">
+                                        <span class="body-part-label">🦵</span>
+                                    </div>
+                                </div>
                             </div>
                             <div class="fighter-name" id="opponentName">${opponentNickname}</div>
                             <div class="fighter-hp">
@@ -612,26 +651,6 @@
                         </div>
                     </div>
                     <div class="fight-controls">
-                        <div class="fight-actions">
-                            <div class="action-group">
-                                <div class="action-label">🎯 Attack Target</div>
-                                <div class="body-parts" id="hitParts">
-                                    <div class="body-part" data-part="head">🧠 Head</div>
-                                    <div class="body-part" data-part="chest">👕 Chest</div>
-                                    <div class="body-part" data-part="stomach">🥋 Stomach</div>
-                                    <div class="body-part" data-part="legs">🦵 Legs</div>
-                                </div>
-                            </div>
-                            <div class="action-group">
-                                <div class="action-label">🛡️ Defend Area</div>
-                                <div class="body-parts" id="defendParts">
-                                    <div class="body-part" data-part="head">🧠 Head</div>
-                                    <div class="body-part" data-part="chest">👕 Chest</div>
-                                    <div class="body-part" data-part="stomach">🥋 Stomach</div>
-                                    <div class="body-part" data-part="legs">🦵 Legs</div>
-                                </div>
-                            </div>
-                        </div>
                         <button class="attack-button" id="submitBtn" disabled>⚔️ ATTACK!</button>
                     </div>
 
@@ -642,43 +661,173 @@
 
                     <div class="fight-status">
                         <p></p>
-                        <button class="btn-secondary" onclick="window.location.href='/players.html?telegram_id=${currentPlayerId}'">
-                            🏠 Back to Players
+                        <button class="btn-secondary" onclick="window.location.href='/?telegram_id=${currentPlayerId}'">
+                            🏠 Back to Lobby
                         </button>
                     </div>
                 </div>
             `;
 
+            // Add CSS for interactive body parts
+            const style = document.createElement('style');
+            style.textContent = `
+                .interactive-fighter {
+                    position: relative;
+                }
+
+                .body-part-overlay {
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    pointer-events: none;
+                    z-index: 10;
+                }
+
+                .body-part-area {
+                    position: absolute;
+                    pointer-events: auto;
+                    cursor: pointer;
+                    border: 2px solid transparent;
+                    border-radius: 8px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    transition: all 0.2s ease;
+                }
+
+                .body-part-area:hover {
+                    background: rgba(255, 255, 255, 0.2);
+                    border-color: rgba(255, 255, 255, 0.4);
+                }
+
+                .attack-area.selected {
+                    background: rgba(255, 100, 100, 0.6);
+                    border-color: #ff6464;
+                }
+
+                .defend-area.selected {
+                    background: rgba(100, 150, 255, 0.6);
+                    border-color: #6496ff;
+                }
+
+                .body-part-label {
+                    font-size: 18px;
+                    text-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
+                    opacity: 0;
+                    transition: opacity 0.2s ease;
+                }
+
+                .body-part-area:hover .body-part-label {
+                    opacity: 1;
+                }
+
+                .body-part-area.selected .body-part-label {
+                    opacity: 0;
+                }
+
+                /* Position the body parts */
+                .body-part-area[data-part="head"] {
+                    top: 10%;
+                    left: 0%;
+                    width: 100%;
+                    height: 25%;
+                }
+
+                .body-part-area[data-part="chest"] {
+                    top: 35%;
+                    left: 0%;
+                    width: 100%;
+                    height: 20%;
+                }
+
+                .body-part-area[data-part="stomach"] {
+                    top: 55%;
+                    left: 0%;
+                    width: 100%;
+                    height: 20%;
+                }
+
+                .body-part-area[data-part="legs"] {
+                    top: 75%;
+                    left: 0%;
+                    width: 100%;
+                    height: 25%;
+                }
+
+            `;
+            document.head.appendChild(style);
+
             // Set up body part selection
-            setupSimpleBodyParts();
+            setupInteractiveBodyParts();
 
             // Load fighter images
             loadPvPFighterImages();
         }
 
-        function setupSimpleBodyParts() {
+
+        function setupInteractiveBodyParts() {
             let selectedHit = null;
             let selectedDefend = null;
 
-            // Hit parts selection
-            document.querySelectorAll('#hitParts .body-part').forEach(part => {
-                part.addEventListener('click', () => {
-                    document.querySelectorAll('#hitParts .body-part').forEach(p => p.classList.remove('selected'));
-                    part.classList.add('selected');
-                    selectedHit = part.dataset.part;
-                    updateAttackButton();
-                });
-            });
+            console.log('Setting up interactive body parts');
 
-            // Defend parts selection
-            document.querySelectorAll('#defendParts .body-part').forEach(part => {
-                part.addEventListener('click', () => {
-                    document.querySelectorAll('#defendParts .body-part').forEach(p => p.classList.remove('selected'));
-                    part.classList.add('selected');
-                    selectedDefend = part.dataset.part;
-                    updateAttackButton();
+            // Function to initialize all body part areas
+            function initializeBodyParts() {
+                const areas = document.querySelectorAll('.body-part-area');
+                console.log('Found body part areas:', areas.length);
+
+                const attackAreas = document.querySelectorAll('.attack-area');
+                const defendAreas = document.querySelectorAll('.defend-area');
+                console.log('Attack areas:', attackAreas.length, 'Defend areas:', defendAreas.length);
+
+                areas.forEach((area, index) => {
+                    // Remove any existing event listeners
+                    area.onclick = null;
+
+                    // Set up proper styling for invisible clickable areas
+                    area.style.zIndex = '100';
+                    area.style.cursor = 'pointer';
+
+                    // Remove any existing listeners
+                    area.removeEventListener('click', area.clickHandler);
+
+                    // Create and store the click handler
+                    area.clickHandler = (event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        const action = area.dataset.action;
+                        const part = area.dataset.part;
+                        console.log('Selected body part:', action, part);
+
+                        if (action === 'attack') {
+                            // Remove previous attack selection
+                            document.querySelectorAll('.attack-area.selected').forEach(a => a.classList.remove('selected'));
+                            // Add new selection
+                            area.classList.add('selected');
+                            selectedHit = part;
+                        } else if (action === 'defend') {
+                            // Remove previous defend selection
+                            document.querySelectorAll('.defend-area.selected').forEach(a => a.classList.remove('selected'));
+                            // Add new selection
+                            area.classList.add('selected');
+                            selectedDefend = part;
+                        }
+
+                        updateAttackButton();
+                    };
+
+                    // Attach the event listener
+                    area.addEventListener('click', area.clickHandler);
                 });
-            });
+            }
+
+            // Initialize now and also after a delay to ensure images are loaded
+            initializeBodyParts();
+            setTimeout(initializeBodyParts, 1000);
+            setTimeout(initializeBodyParts, 3000);
+
 
             function updateAttackButton() {
                 const attackBtn = document.getElementById("submitBtn");
@@ -689,12 +838,10 @@
             document.getElementById("submitBtn").onclick = async () => {
                 if (selectedHit && selectedDefend) {
                     console.log('Submitting PvP action:', { hit: selectedHit, defend: selectedDefend, fight_id: window.currentFightId });
-
                     // Disable button during submission
                     const submitBtn = document.getElementById("submitBtn");
                     submitBtn.disabled = true;
                     submitBtn.textContent = "⚔️ Submitting...";
-
                     try {
                         const response = await fetch('/submit-pvp-action', {
                             method: 'POST',
@@ -706,7 +853,6 @@
                                 defend: selectedDefend
                             })
                         });
-
                         if (response.ok) {
                             submitBtn.textContent = "✅ Submitted!";
                             // Start polling for fight results
@@ -966,7 +1112,7 @@
                         ${results.xpGained ? `<div class="fight-log-entry" style="color: var(--success-green); font-size: 16px; margin: 10px 0;">XP Gained: +${results.xpGained}</div>` : ''}
                     </div>
                     <div class="fight-result-actions" style="margin-top: 20px;">
-                        <button class="btn-secondary" onclick="window.location.href='/players.html?telegram_id=${currentPlayerId}'" style="font-size: 18px; padding: 12px 24px;">
+                        <button class="btn-secondary" onclick="window.location.href='/?telegram_id=${currentPlayerId}'" style="font-size: 18px; padding: 12px 24px;">
                             🏠 Back to Lobby
                         </button>
                     </div>
