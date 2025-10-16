@@ -754,19 +754,28 @@ app.get("/pvp-fight-status/:fight_id/:player_id", (req, res) => {
   }
 
   // Determine player stats based on which player is requesting
-  let playerStats, opponentStats;
+  let playerStats, opponentStats, opponentId, opponentProfile;
   if (player_id === fight.player1_id) {
     playerStats = fight.player1_stats;
     opponentStats = fight.player2_stats;
+    opponentId = fight.player2_id;
   } else {
     playerStats = fight.player2_stats;
     opponentStats = fight.player1_stats;
+    opponentId = fight.player1_id;
   }
+
+  // Get opponent profile information for frontend
+  opponentProfile = {
+    nickname: playerProfiles[opponentId].nickname,
+    race: playerProfiles[opponentId].race
+  };
 
   const response = {
     status: fight.status,
     playerStats,
     opponentStats,
+    opponentProfile,
     my_action_submitted: player_id === fight.player1_id ? !!fight.player1_action : !!fight.player2_action,
     opponent_action_submitted: player_id === fight.player1_id ? !!fight.player2_action : !!fight.player1_action
   };
@@ -781,14 +790,17 @@ app.get("/pvp-fight-status/:fight_id/:player_id", (req, res) => {
     // Adjust final results based on player perspective
     let adjustedResults = { ...fight.finalResults };
 
-    // Adjust XP based on which player is requesting
-    if (fight.finalResults.winner.includes(playerProfiles[player_id].nickname)) {
-      // This player won
+    // Determine if this player won
+    let isWinner = false;
+    if (fight.finalResults.winner !== "Draw" && fight.finalResults.winner.includes(playerProfiles[player_id].nickname)) {
+      isWinner = true;
       adjustedResults.xpGained = fight.finalResults.xpGained;
     } else {
-      // This player lost or drew
       adjustedResults.xpGained = 0;
     }
+
+    // Add clear winner indicator for frontend
+    adjustedResults.isWinner = isWinner;
 
     response.finalResults = adjustedResults;
   }

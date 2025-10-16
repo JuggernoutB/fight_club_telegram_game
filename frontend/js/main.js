@@ -1,26 +1,29 @@
 let telegram_id;
 let challengePollingInterval = null;
 
-window.onload = function () {
-    const urlParams = new URLSearchParams(window.location.search);
-    const isDevMode = urlParams.get("dev") === "1";
+// Only run main game initialization if we're on the main page (not players.html)
+if (!window.location.pathname.includes('players.html')) {
+    window.onload = function () {
+        const urlParams = new URLSearchParams(window.location.search);
+        const isDevMode = urlParams.get("dev") === "1";
 
-    if (window.Telegram && window.Telegram.WebApp?.initDataUnsafe?.user) {
-        telegram_id = window.Telegram.WebApp.initDataUnsafe.user.id;
-        console.log("Telegram ID:", telegram_id);
-    } else if (isDevMode) {
-        telegram_id = "test_user";
-        console.warn("Dev mode active — using test_user");
-    } else {
-        console.error("Telegram user data not found.");
-        alert("Please open this via your Telegram bot button.");
-    }
+        if (window.Telegram && window.Telegram.WebApp?.initDataUnsafe?.user) {
+            telegram_id = window.Telegram.WebApp.initDataUnsafe.user.id;
+            console.log("Telegram ID:", telegram_id);
+        } else if (isDevMode) {
+            telegram_id = "test_user";
+            console.warn("Dev mode active — using test_user");
+        } else {
+            console.error("Telegram user data not found.");
+            alert("Please open this via your Telegram bot button.");
+        }
 
-    if (telegram_id) {
-        checkProfile();
-        startChallengePolling();
-    }
-};
+        if (telegram_id) {
+            checkProfile();
+            startChallengePolling();
+        }
+    };
+}
 
 function startChallengePolling() {
     // Poll for challenges every 3 seconds
@@ -243,88 +246,130 @@ function startPvPFight(fight_id, opponentNickname) {
         console.log('Using existing fight_id:', actualFightId);
     }
 
-    // Create fight interface
+    // Create styled fight interface similar to bot fight
     document.body.innerHTML = `
-        <div style="text-align: center; padding: 20px; font-family: sans-serif;">
-            <h1>🥊 PvP Fight vs ${opponentNickname}</h1>
-            <div id="playerStats" style="margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 8px; display: inline-block;">
-                <h3>Your Stats</h3>
-                <div id="playerHP">Loading...</div>
-            </div>
-            <div id="opponentStats" style="margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 8px; display: inline-block; margin-left: 20px;">
-                <h3>${opponentNickname}'s Stats</h3>
-                <div id="opponentHP">Loading...</div>
+        <div class="game-container fight-container">
+            <div class="game-header">
+                <h1>⚔️ PVP ARENA</h1>
+                <div class="subtitle">Battle against ${opponentNickname}</div>
+                <div id="timer" class="fight-timer">
+                    ⏰ Time left: ${timeLeft}s
+                </div>
             </div>
 
-            <div id="timer" style="font-size: 24px; color: #f44336; margin: 20px 0;">
-                Time left: ${timeLeft}s
+            <div class="fight-vs-section">
+                <div class="fighter-card" id="playerCard">
+                    <div class="fighter-image-container" id="playerImageContainer">
+                        <div class="fighter-fallback" id="playerFallback">🧑</div>
+                    </div>
+                    <div class="fighter-name" id="playerName">You</div>
+                    <div class="fighter-hp">
+                        <div class="hp-label">❤️ Health Points</div>
+                        <div id="playerHPText">Loading...</div>
+                        <div id="playerHPBar"></div>
+                    </div>
+                    <div class="fighter-stats" id="playerStats">
+                        <div class="mini-stat">
+                            <div class="mini-stat-label">⚔️ PWR</div>
+                            <div class="mini-stat-value">-</div>
+                        </div>
+                        <div class="mini-stat">
+                            <div class="mini-stat-label">💨 AGL</div>
+                            <div class="mini-stat-value">-</div>
+                        </div>
+                        <div class="mini-stat">
+                            <div class="mini-stat-label">🛡️ PRO</div>
+                            <div class="mini-stat-value">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="vs-divider">⚔️<br>VS</div>
+
+                <div class="fighter-card" id="opponentCard">
+                    <div class="fighter-image-container" id="opponentImageContainer">
+                        <div class="fighter-fallback">👤</div>
+                    </div>
+                    <div class="fighter-name">${opponentNickname}</div>
+                    <div class="fighter-hp">
+                        <div class="hp-label">❤️ Health Points</div>
+                        <div id="opponentHPText">Loading...</div>
+                        <div id="opponentHPBar"></div>
+                    </div>
+                    <div class="fighter-stats" id="opponentStats">
+                        <div class="mini-stat">
+                            <div class="mini-stat-label">⚔️ PWR</div>
+                            <div class="mini-stat-value">-</div>
+                        </div>
+                        <div class="mini-stat">
+                            <div class="mini-stat-label">💨 AGL</div>
+                            <div class="mini-stat-value">-</div>
+                        </div>
+                        <div class="mini-stat">
+                            <div class="mini-stat-label">🛡️ PRO</div>
+                            <div class="mini-stat-value">-</div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <div style="margin: 20px 0;">
-                <label>Hit Part:
-                    <select id="hit">
-                        <option value="head">Head</option>
-                        <option value="chest">Chest</option>
-                        <option value="stomach">Stomach</option>
-                        <option value="legs">Legs</option>
-                    </select>
-                </label><br><br>
+            <div class="fight-controls">
+                <div class="fight-actions">
+                    <div class="action-group">
+                        <div class="action-label">🎯 Attack Target</div>
+                        <div class="body-parts" id="hitParts">
+                            <div class="body-part" data-part="head">🧠 Head</div>
+                            <div class="body-part" data-part="chest">👕 Chest</div>
+                            <div class="body-part" data-part="stomach">🥋 Stomach</div>
+                            <div class="body-part" data-part="legs">🦵 Legs</div>
+                        </div>
+                    </div>
 
-                <label>Defend Part:
-                    <select id="defend">
-                        <option value="head">Head</option>
-                        <option value="chest">Chest</option>
-                        <option value="stomach">Stomach</option>
-                        <option value="legs">Legs</option>
-                    </select>
-                </label><br><br>
+                    <div class="action-group">
+                        <div class="action-label">🛡️ Defend Area</div>
+                        <div class="body-parts" id="defendParts">
+                            <div class="body-part" data-part="head">🧠 Head</div>
+                            <div class="body-part" data-part="chest">👕 Chest</div>
+                            <div class="body-part" data-part="stomach">🥋 Stomach</div>
+                            <div class="body-part" data-part="legs">🦵 Legs</div>
+                        </div>
+                    </div>
+                </div>
 
-                <button id="submitBtn" style="
-                    background-color: #2196f3;
-                    color: white;
-                    border: none;
-                    padding: 12px 24px;
-                    border-radius: 4px;
-                    font-size: 18px;
-                    cursor: pointer;
-                ">Hit!</button>
+                <button class="attack-button" id="submitBtn" disabled>
+                    ⚔️ ATTACK!
+                </button>
             </div>
 
-            <div id="status" style="margin: 20px 0; font-size: 16px;">
+            <div id="status" class="fight-status">
                 Waiting for both players to submit actions...
             </div>
 
-            <div id="roundResults" style="margin: 20px 0; padding: 15px; border: 1px solid #ccc; display: none;">
-                <h3>Round Results</h3>
-                <div id="roundContent"></div>
-                <button id="nextRoundBtn" style="
-                    background-color: #2196f3;
-                    color: white;
-                    border: none;
-                    padding: 10px 20px;
-                    border-radius: 4px;
-                    font-size: 16px;
-                    cursor: pointer;
-                    margin-top: 10px;
-                ">Next Round</button>
+            <div id="roundResults" class="fight-log" style="display:none;">
+                <div class="fight-log-header">📜 Round Results</div>
+                <div class="fight-log-content" id="roundContent"></div>
+                <div class="fight-result-actions">
+                    <button id="nextRoundBtn" class="btn-secondary">
+                        ⏭️ Next Round
+                    </button>
+                </div>
             </div>
 
-            <div id="finalResults" style="display: none; margin: 20px 0;">
-                <h3>Fight Finished!</h3>
-                <div id="finalContent"></div>
-                <button id="backToLobbyBtn" style="
-                    background-color: #4caf50;
-                    color: white;
-                    border: none;
-                    padding: 15px 30px;
-                    border-radius: 8px;
-                    font-size: 18px;
-                    cursor: pointer;
-                    margin-top: 16px;
-                ">Back to Lobby</button>
+            <div id="finalResults" class="fight-log" style="display: none;">
+                <div class="fight-log-header">🏆 Fight Finished!</div>
+                <div class="fight-log-content" id="finalContent"></div>
+                <div class="fight-result-actions">
+                    <button id="backToLobbyBtn" class="btn-secondary">
+                        🏠 Back to Lobby
+                    </button>
+                </div>
             </div>
         </div>
     `;
+
+    // Initialize body part selection and fighter images
+    setupPvPBodyPartSelection();
+    loadPvPFighterImages();
 
     // Start countdown timer
     const timerInterval = setInterval(() => {
@@ -348,10 +393,50 @@ function startPvPFight(fight_id, opponentNickname) {
 
             // Update player stats
             if (data.playerStats) {
-                document.getElementById('playerHP').innerHTML = `HP: ${data.playerStats.hp}/${data.playerStats.maxHP}`;
+                document.getElementById('playerHPText').textContent = `${data.playerStats.hp}/${data.playerStats.maxHP}`;
+                document.getElementById('playerHPBar').innerHTML = renderHPBar(data.playerStats.hp, data.playerStats.maxHP);
+
+                // Update player stats display
+                const playerStats = document.getElementById('playerStats');
+                if (playerStats) {
+                    playerStats.innerHTML = `
+                        <div class="mini-stat">
+                            <div class="mini-stat-label">⚔️ PWR</div>
+                            <div class="mini-stat-value">${data.playerStats.power || '-'}</div>
+                        </div>
+                        <div class="mini-stat">
+                            <div class="mini-stat-label">💨 AGL</div>
+                            <div class="mini-stat-value">${data.playerStats.agility || '-'}</div>
+                        </div>
+                        <div class="mini-stat">
+                            <div class="mini-stat-label">🛡️ PRO</div>
+                            <div class="mini-stat-value">${data.playerStats.protection || '-'}</div>
+                        </div>
+                    `;
+                }
             }
             if (data.opponentStats) {
-                document.getElementById('opponentHP').innerHTML = `HP: ${data.opponentStats.hp}/${data.opponentStats.maxHP}`;
+                document.getElementById('opponentHPText').textContent = `${data.opponentStats.hp}/${data.opponentStats.maxHP}`;
+                document.getElementById('opponentHPBar').innerHTML = renderHPBar(data.opponentStats.hp, data.opponentStats.maxHP);
+
+                // Update opponent stats display
+                const opponentStats = document.getElementById('opponentStats');
+                if (opponentStats) {
+                    opponentStats.innerHTML = `
+                        <div class="mini-stat">
+                            <div class="mini-stat-label">⚔️ PWR</div>
+                            <div class="mini-stat-value">${data.opponentStats.power || '-'}</div>
+                        </div>
+                        <div class="mini-stat">
+                            <div class="mini-stat-label">💨 AGL</div>
+                            <div class="mini-stat-value">${data.opponentStats.agility || '-'}</div>
+                        </div>
+                        <div class="mini-stat">
+                            <div class="mini-stat-label">🛡️ PRO</div>
+                            <div class="mini-stat-value">${data.opponentStats.protection || '-'}</div>
+                        </div>
+                    `;
+                }
             }
 
             if (data.status === 'round_complete') {
@@ -376,8 +461,13 @@ function startPvPFight(fight_id, opponentNickname) {
             return;
         }
 
-        const hit = document.getElementById('hit').value;
-        const defend = document.getElementById('defend').value;
+        const hit = window.getSelectedHit ? window.getSelectedHit() : null;
+        const defend = window.getSelectedDefend ? window.getSelectedDefend() : null;
+
+        if (!hit || !defend) {
+            alert('Please select both hit and defend body parts');
+            return;
+        }
 
         try {
             const response = await fetch('/submit-pvp-action', {
@@ -418,6 +508,127 @@ function startPvPFight(fight_id, opponentNickname) {
 
     // Set up back button initially
     setTimeout(setupBackButton, 100);
+}
+
+// Helper functions for PvP fight screen
+function setupPvPBodyPartSelection() {
+    let selectedHit = null;
+    let selectedDefend = null;
+
+    // Hit parts selection
+    document.querySelectorAll('#hitParts .body-part').forEach(part => {
+        part.addEventListener('click', () => {
+            document.querySelectorAll('#hitParts .body-part').forEach(p => p.classList.remove('selected'));
+            part.classList.add('selected');
+            selectedHit = part.dataset.part;
+            updatePvPAttackButton();
+        });
+    });
+
+    // Defend parts selection
+    document.querySelectorAll('#defendParts .body-part').forEach(part => {
+        part.addEventListener('click', () => {
+            document.querySelectorAll('#defendParts .body-part').forEach(p => p.classList.remove('selected'));
+            part.classList.add('selected');
+            selectedDefend = part.dataset.part;
+            updatePvPAttackButton();
+        });
+    });
+
+    // Expose selection getters
+    window.getSelectedHit = () => selectedHit;
+    window.getSelectedDefend = () => selectedDefend;
+}
+
+function updatePvPAttackButton() {
+    const attackBtn = document.getElementById("submitBtn");
+    const hit = window.getSelectedHit ? window.getSelectedHit() : null;
+    const defend = window.getSelectedDefend ? window.getSelectedDefend() : null;
+    attackBtn.disabled = !(hit && defend);
+}
+
+function loadPvPFighterImages() {
+    // Load player's fighter image
+    fetchProfile(telegram_id)
+        .then(data => {
+            if (data.exists && data.profile && data.profile.race) {
+                loadPvPPlayerImage(data.profile.race, data.profile.nickname);
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching player profile for PvP:', error);
+        });
+
+    // Load opponent fighter image (random for now)
+    loadPvPOpponentImage();
+}
+
+function loadPvPPlayerImage(race, nickname) {
+    const container = document.getElementById("playerImageContainer");
+    const fallback = document.getElementById("playerFallback");
+    const nameElement = document.getElementById("playerName");
+
+    if (!container || !race) return;
+
+    if (nameElement) {
+        nameElement.textContent = nickname || 'You';
+    }
+
+    console.log('Loading PvP player fighter image for race:', race);
+
+    const imgPath = `./images/fighters/${race}.png`;
+    const img = document.createElement('img');
+    img.src = imgPath;
+    img.alt = `${race} fighter`;
+    img.className = 'fighter-image';
+
+    img.onload = function() {
+        console.log('PvP player fighter image loaded successfully:', imgPath);
+        fallback.style.display = 'none';
+        container.appendChild(img);
+    };
+
+    img.onerror = function() {
+        console.log('PvP player fighter image failed to load:', imgPath, 'Using fallback');
+        const raceAvatars = {
+            "human": "🧑",
+            "elf": "🧝",
+            "dwarf": "🧔",
+            "orc": "👹"
+        };
+        fallback.innerHTML = raceAvatars[race] || "👤";
+        fallback.style.display = 'flex';
+    };
+}
+
+function loadPvPOpponentImage() {
+    const container = document.getElementById("opponentImageContainer");
+    if (!container) return;
+
+    // Pick a random race for the opponent
+    const races = ['human', 'elf', 'dwarf', 'orc'];
+    const randomRace = races[Math.floor(Math.random() * races.length)];
+
+    console.log('Loading PvP opponent image, chosen race:', randomRace);
+
+    const imgPath = `./images/fighters/${randomRace}.png`;
+    const img = document.createElement('img');
+    img.src = imgPath;
+    img.alt = `${randomRace} opponent`;
+    img.className = 'fighter-image';
+    img.style.filter = 'sepia(50%) hue-rotate(10deg) saturate(1.5) brightness(0.9)'; // Make it look different
+
+    img.onload = function() {
+        console.log('PvP opponent image loaded successfully:', imgPath);
+        const fallback = container.querySelector('.fighter-fallback');
+        if (fallback) fallback.style.display = 'none';
+        container.appendChild(img);
+    };
+
+    img.onerror = function() {
+        console.log('PvP opponent image failed to load:', imgPath, 'keeping fallback');
+        // Keep fallback visible
+    };
 }
 
 function updateFightStatus(data) {
