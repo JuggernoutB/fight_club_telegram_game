@@ -279,9 +279,8 @@ function showAllocatePoints(profile) {
 function showGame(profile) {
     console.log("Profile data:", profile);
     // Restore HP to full if not fighting
-    if (profile.hp < 20) {
-        profile.hp = 20;
-    }
+    // Note: profile.hp represents the max HP value, so we don't need to restore it
+    // Current HP during fights is handled separately in fight data structures
 
     // Generate stars based on level
     const levelStars = "⭐".repeat(Math.min(profile.level, 5));
@@ -332,9 +331,9 @@ function showGame(profile) {
                     <div class="progress-item">
                         <div class="progress-label">
                             <span>❤️ Health Points</span>
-                            <span class="progress-text">${profile.hp}/20</span>
+                            <span class="progress-text">${profile.hp}/${profile.hp}</span>
                         </div>
-                        ${renderHPBar(profile.hp, 20)}
+                        ${renderHPBar(profile.hp, profile.hp)}
                     </div>
                     <div class="progress-item">
                         <div class="progress-label">

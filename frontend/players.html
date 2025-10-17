@@ -619,8 +619,8 @@
                             <div class="fighter-name" id="playerName">You</div>
                             <div class="fighter-hp">
                                 <div class="hp-label">❤️ Health Points</div>
-                                <div id="playerHPText">20/20</div>
-                                <div id="playerHPBar">${renderHPBar(20, 20)}</div>
+                                <div id="playerHPText">Loading...</div>
+                                <div id="playerHPBar">Loading...</div>
                             </div>
                         </div>
                         <div class="vs-divider">⚔️<br>VS</div>
@@ -645,8 +645,8 @@
                             <div class="fighter-name" id="opponentName">${opponentNickname}</div>
                             <div class="fighter-hp">
                                 <div class="hp-label">❤️ Health Points</div>
-                                <div id="opponentHPText">20/20</div>
-                                <div id="opponentHPBar">${renderHPBar(20, 20)}</div>
+                                <div id="opponentHPText">Loading...</div>
+                                <div id="opponentHPBar">Loading...</div>
                             </div>
                         </div>
                     </div>
@@ -922,6 +922,16 @@
                         if (data.opponentProfile && data.opponentProfile.race) {
                             updatePvPFighterImages(data.opponentProfile);
                         }
+
+                        // Also update HP displays immediately
+                        if (data.playerStats) {
+                            document.getElementById('playerHPText').textContent = `${data.playerStats.hp}/${data.playerStats.maxHP}`;
+                            document.getElementById('playerHPBar').innerHTML = renderHPBar(data.playerStats.hp, data.playerStats.maxHP);
+                        }
+                        if (data.opponentStats) {
+                            document.getElementById('opponentHPText').textContent = `${data.opponentStats.hp}/${data.opponentStats.maxHP}`;
+                            document.getElementById('opponentHPBar').innerHTML = renderHPBar(data.opponentStats.hp, data.opponentStats.maxHP);
+                        }
                     })
                     .catch(error => {
                         console.error('Error fetching initial fight status:', error);
@@ -1053,6 +1063,9 @@
 
                     if (data.status === 'round_complete') {
                         clearInterval(pollInterval);
+                        // Preserve current HP values before showing round results
+                        window.lastPlayerStats = data.playerStats;
+                        window.lastOpponentStats = data.opponentStats;
                         showPvPRoundResults(data.roundResults);
                     } else if (data.status === 'fight_complete') {
                         clearInterval(pollInterval);
@@ -1088,6 +1101,16 @@
 
             // Show the log area (it's hidden initially)
             fightLog.style.display = 'block';
+
+            // Keep HP values updated during round results
+            if (window.lastPlayerStats) {
+                document.getElementById('playerHPText').textContent = `${window.lastPlayerStats.hp}/${window.lastPlayerStats.maxHP}`;
+                document.getElementById('playerHPBar').innerHTML = renderHPBar(window.lastPlayerStats.hp, window.lastPlayerStats.maxHP);
+            }
+            if (window.lastOpponentStats) {
+                document.getElementById('opponentHPText').textContent = `${window.lastOpponentStats.hp}/${window.lastOpponentStats.maxHP}`;
+                document.getElementById('opponentHPBar').innerHTML = renderHPBar(window.lastOpponentStats.hp, window.lastOpponentStats.maxHP);
+            }
 
             // Replace content with only the latest round messages and highlight damage values
             const newMessages = results.log.map(line => {

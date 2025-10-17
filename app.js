@@ -201,8 +201,8 @@ app.post("/fight", (req, res) => {
     const avoidRoll = Math.random() * 100;
     if (avoidRoll >= avoidChance) {
       botDamage = bot.power;
-      player.hp = Math.max(player.hp - botDamage, 0);
-      log.push(`Bot hit your ${botHit}, your HP is ${player.hp}, dealing ${botDamage} damage.`);
+      player.currentHP = Math.max(player.currentHP - botDamage, 0);
+      log.push(`Bot hit your ${botHit}, your HP is ${player.currentHP}, dealing ${botDamage} damage.`);
     } else {
       log.push(`You dodged the bot's attack to your ${botHit}.`);
     }
@@ -215,7 +215,7 @@ app.post("/fight", (req, res) => {
       const roll = Math.random() * 100;
       if (roll < chance) {
         botDamage = diff;
-        player.hp = Math.max(player.hp - botDamage, 0);
+        player.currentHP = Math.max(player.currentHP - botDamage, 0);
         log.push(`Bot hit your protected ${botHit}, dealing ${botDamage} damage.`);
       } else {
         log.push(`You blocked the bot's attack to your ${botHit}.`);
@@ -225,10 +225,11 @@ app.post("/fight", (req, res) => {
 
   // Check win/loss
   let fightResult = null;
-  if (player.hp <= 0) {
+  if (player.currentHP <= 0) {
     fightResult = "lost";
     log.push("You lost the fight!");
-    player.hp = 1;
+    // Reset current HP, keep profile HP stat unchanged
+    delete player.currentHP;
     delete player.currentBot;
   } else if (bot.hp <= 0) {
     fightResult = "won";
@@ -236,6 +237,7 @@ app.post("/fight", (req, res) => {
     log.push("You gained 1 experience point.");
     player.experience += 1;
     checkLevelUp(player);
+    delete player.currentHP;
     delete player.currentBot;
   }
 
@@ -245,9 +247,15 @@ app.post("/fight", (req, res) => {
   }
   saveProfiles();
 
+  // Send structured response with current and max HP
+  const playerHP = player.currentHP !== undefined ? player.currentHP : player.hp;
   res.json({
     log,
-    player,
+    player: {
+      ...player,
+      hp: playerHP,
+      maxHP: player.hp
+    },
     fightResult,
     bot
   });
@@ -312,8 +320,8 @@ app.post("/start-fight", (req, res) => {
     return res.status(400).json({ message: "Profile not found" });
   }
 
-  // Reset player HP before fight
-  player.hp = 20;
+  // Start fight with full HP (save max HP for proper tracking)
+  const playerMaxHP = player.hp;
   player.currentBot = {
     hp: 20,
     power: 2,
@@ -321,11 +329,18 @@ app.post("/start-fight", (req, res) => {
     protection: 2
   };
 
+  // Track current HP during fight separately from profile HP stat
+  player.currentHP = playerMaxHP;
+
   // update last_seen on activity
   player.last_seen = Date.now();
 
   res.json({
-    player,
+    player: {
+      ...player,
+      hp: player.currentHP,
+      maxHP: player.hp
+    },
     bot: player.currentBot
   });
 });
@@ -577,9 +592,9 @@ app.post("/join-fight", (req, res) => {
     return res.status(400).json({ message: "One or both players not found" });
   }
 
-  // Reset both players to full HP before fight (like bot fights)
-  playerProfiles[challenger_id].hp = 20;
-  playerProfiles[target_id].hp = 20;
+  // Store original HP values (don't modify profiles!)
+  const challengerMaxHP = playerProfiles[challenger_id].hp;
+  const targetMaxHP = playerProfiles[target_id].hp;
 
   // Create the shared PvP fight when challenge is accepted
   const fight_id = `fight_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -589,15 +604,15 @@ app.post("/join-fight", (req, res) => {
     player1_id: challenger_id,  // The original challenger
     player2_id: target_id,      // The target who accepted
     player1_stats: {
-      hp: 20,  // Always start at full HP
-      maxHP: 20,
+      hp: playerProfiles[challenger_id].hp,  // Always start at full HP
+      maxHP: playerProfiles[challenger_id].hp,
       power: playerProfiles[challenger_id].power,
       agility: playerProfiles[challenger_id].agility,
       protection: playerProfiles[challenger_id].protection
     },
     player2_stats: {
-      hp: 20,  // Always start at full HP
-      maxHP: 20,
+      hp: playerProfiles[target_id].hp,  // Always start at full HP
+      maxHP: playerProfiles[target_id].hp,
       power: playerProfiles[target_id].power,
       agility: playerProfiles[target_id].agility,
       protection: playerProfiles[target_id].protection
@@ -916,6 +931,7 @@ function processRound(fight_id) {
     if (winner !== "Draw") {
       xpGained = 1; // Same as bot fights
       winnerProfile.experience = (winnerProfile.experience || 0) + xpGained;
+      checkLevelUp(winnerProfile);
       saveProfiles();
     }
 
@@ -987,6 +1003,7 @@ function handleRoundTimeout(fight_id) {
     // Player 1 timed out - Player 2 wins
     const winnerProfile = playerProfiles[fight.player2_id];
     winnerProfile.experience = (winnerProfile.experience || 0) + 1;
+    checkLevelUp(winnerProfile);
     saveProfiles();
 
     fight.status = 'fight_complete';
@@ -1001,6 +1018,7 @@ function handleRoundTimeout(fight_id) {
     // Player 2 timed out - Player 1 wins
     const winnerProfile = playerProfiles[fight.player1_id];
     winnerProfile.experience = (winnerProfile.experience || 0) + 1;
+    checkLevelUp(winnerProfile);
     saveProfiles();
 
     fight.status = 'fight_complete';

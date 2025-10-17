@@ -17,6 +17,13 @@ function renderXPBar(current, max) {
 }
 
 function xpToNextLevel(level) {
-    return level * 10;  // or your custom formula
+    return 10;  // Fixed 10 XP per level to match backend
+}
+
+function getMaxHP(profile) {
+    // Calculate max HP based on profile stats
+    // Base HP starts at 20, plus any HP points allocated during character creation or level-ups
+    // The profile.hp value represents the base HP stat, so we use it directly as max HP
+    return profile.hp;
 }
 

@@ -7,7 +7,7 @@ function updatePlayerStats(player) {
     playerStatsDiv.innerHTML = `
         <h2>Your Stats:</h2>
         <p>HP: ${player.hp}</p>
-        ${renderHPBar(player.hp, 20)}
+        ${renderHPBar(player.hp, player.maxHP || 20)}
         <p>Power: ${player.power}</p>
         <p>Agility: ${player.agility}</p>
         <p>Protection: ${player.protection}</p>
@@ -48,8 +48,8 @@ function showFightScreen(profile) {
                     <div class="fighter-name">${profile.nickname}</div>
                     <div class="fighter-hp">
                         <div class="hp-label">❤️ Health Points</div>
-                        <div id="playerHPText">${profile.hp}/20</div>
-                        <div id="playerHPBar">${renderHPBar(profile.hp, 20)}</div>
+                        <div id="playerHPText">${profile.hp}/${profile.hp}</div>
+                        <div id="playerHPBar">${renderHPBar(profile.hp, profile.hp)}</div>
                     </div>
                     <div class="fighter-stats">
                         <div class="mini-stat">
@@ -160,6 +160,10 @@ function showFightScreen(profile) {
         .then(data => {
             currentBot = data.bot;
             updateBotStatsNew(currentBot);
+            // Update player stats with proper HP values from server
+            if (data.player) {
+                updatePlayerStatsNew(data.player);
+            }
         })
         .catch(error => {
             console.error("Error fetching bot stats:", error);
@@ -334,8 +338,8 @@ function fight(profile) {
 }
 
 function updatePlayerStatsNew(player) {
-    document.getElementById("playerHPText").textContent = `${player.hp}/20`;
-    document.getElementById("playerHPBar").innerHTML = renderHPBar(player.hp, 20);
+    document.getElementById("playerHPText").textContent = `${player.hp}/${player.maxHP || 20}`;
+    document.getElementById("playerHPBar").innerHTML = renderHPBar(player.hp, player.maxHP || 20);
 }
 
 function showFightLog(logMessages, fightResult) {
