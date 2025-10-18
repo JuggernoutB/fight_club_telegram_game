@@ -618,12 +618,10 @@
                             </div>
                             <div class="fighter-name" id="playerName">You</div>
                             <div class="fighter-hp">
-                                <div class="hp-label">❤️ Health Points</div>
                                 <div id="playerHPText">Loading...</div>
                                 <div id="playerHPBar">Loading...</div>
                             </div>
                         </div>
-                        <div class="vs-divider">⚔️<br>VS</div>
                         <div class="fighter-card" id="opponentCard">
                             <div class="fighter-image-container interactive-fighter" id="opponentImageContainer">
                                 <div class="fighter-fallback">👤</div>
@@ -644,7 +642,6 @@
                             </div>
                             <div class="fighter-name" id="opponentName">${opponentNickname}</div>
                             <div class="fighter-hp">
-                                <div class="hp-label">❤️ Health Points</div>
                                 <div id="opponentHPText">Loading...</div>
                                 <div id="opponentHPBar">Loading...</div>
                             </div>
@@ -925,11 +922,11 @@
 
                         // Also update HP displays immediately
                         if (data.playerStats) {
-                            document.getElementById('playerHPText').textContent = `${data.playerStats.hp}/${data.playerStats.maxHP}`;
+                            document.getElementById('playerHPText').textContent = `${data.playerStats.hp}/${data.playerStats.maxHP} HP`;
                             document.getElementById('playerHPBar').innerHTML = renderHPBar(data.playerStats.hp, data.playerStats.maxHP);
                         }
                         if (data.opponentStats) {
-                            document.getElementById('opponentHPText').textContent = `${data.opponentStats.hp}/${data.opponentStats.maxHP}`;
+                            document.getElementById('opponentHPText').textContent = `${data.opponentStats.hp}/${data.opponentStats.maxHP} HP`;
                             document.getElementById('opponentHPBar').innerHTML = renderHPBar(data.opponentStats.hp, data.opponentStats.maxHP);
                         }
                     })
@@ -1046,13 +1043,13 @@
 
                     // Update player stats
                     if (data.playerStats) {
-                        document.getElementById('playerHPText').textContent = `${data.playerStats.hp}/${data.playerStats.maxHP}`;
+                        document.getElementById('playerHPText').textContent = `${data.playerStats.hp}/${data.playerStats.maxHP} HP`;
                         document.getElementById('playerHPBar').innerHTML = renderHPBar(data.playerStats.hp, data.playerStats.maxHP);
                     }
 
                     // Update opponent stats
                     if (data.opponentStats) {
-                        document.getElementById('opponentHPText').textContent = `${data.opponentStats.hp}/${data.opponentStats.maxHP}`;
+                        document.getElementById('opponentHPText').textContent = `${data.opponentStats.hp}/${data.opponentStats.maxHP} HP`;
                         document.getElementById('opponentHPBar').innerHTML = renderHPBar(data.opponentStats.hp, data.opponentStats.maxHP);
                     }
 
@@ -1104,11 +1101,11 @@
 
             // Keep HP values updated during round results
             if (window.lastPlayerStats) {
-                document.getElementById('playerHPText').textContent = `${window.lastPlayerStats.hp}/${window.lastPlayerStats.maxHP}`;
+                document.getElementById('playerHPText').textContent = `${window.lastPlayerStats.hp}/${window.lastPlayerStats.maxHP} HP`;
                 document.getElementById('playerHPBar').innerHTML = renderHPBar(window.lastPlayerStats.hp, window.lastPlayerStats.maxHP);
             }
             if (window.lastOpponentStats) {
-                document.getElementById('opponentHPText').textContent = `${window.lastOpponentStats.hp}/${window.lastOpponentStats.maxHP}`;
+                document.getElementById('opponentHPText').textContent = `${window.lastOpponentStats.hp}/${window.lastOpponentStats.maxHP} HP`;
                 document.getElementById('opponentHPBar').innerHTML = renderHPBar(window.lastOpponentStats.hp, window.lastOpponentStats.maxHP);
             }
 

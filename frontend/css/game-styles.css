@@ -259,7 +259,7 @@ body {
 }
 
 /* Responsive Design */
-@media (max-width: 480px) {
+@media (max-width: 768px) {
   body {
     padding: 10px;
   }
@@ -282,6 +282,104 @@ body {
 
   .stat-controls {
     justify-content: center;
+  }
+
+  /* Fight layout mobile fixes */
+  .fight-container {
+    max-width: 100%;
+    margin: 0;
+  }
+
+  .fight-vs-section {
+    flex-direction: row;
+    gap: 12px;
+    padding: 15px 5px;
+    align-items: flex-start;
+  }
+
+  .fighter-card {
+    min-height: auto;
+    padding: 8px;
+    flex: 1;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .fighter-image-container {
+    max-width: 150px;
+  }
+
+  .fighter-image {
+    max-width: 150px;
+    height: 180px;
+  }
+
+  .fighter-fallback {
+    width: 60px;
+    height: 60px;
+    font-size: 30px;
+  }
+}
+
+@media (max-width: 480px) {
+  .fight-container {
+    padding: 0 2px;
+  }
+
+  .fight-vs-section {
+    padding: 10px 2px;
+    gap: 6px;
+  }
+
+  .fighter-card {
+    padding: 6px;
+    flex: 1;
+  }
+
+  .fighter-image-container {
+    max-width: 100px;
+  }
+
+  .fighter-image {
+    max-width: 100px;
+    height: 130px;
+  }
+
+  .fighter-fallback {
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 360px) {
+  .fight-container {
+    padding: 0 1px;
+  }
+
+  .fight-vs-section {
+    gap: 4px;
+    padding: 8px 1px;
+  }
+
+  .fighter-card {
+    padding: 4px;
+    flex: 1;
+  }
+
+  .fighter-image-container {
+    max-width: 80px;
+  }
+
+  .fighter-image {
+    max-width: 80px;
+    height: 100px;
+  }
+
+  .fighter-fallback {
+    width: 35px;
+    height: 35px;
+    font-size: 18px;
   }
 }
 

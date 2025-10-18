@@ -393,7 +393,7 @@ function startPvPFight(fight_id, opponentNickname) {
 
             // Update player stats
             if (data.playerStats) {
-                document.getElementById('playerHPText').textContent = `${data.playerStats.hp}/${data.playerStats.maxHP}`;
+                document.getElementById('playerHPText').textContent = `${data.playerStats.hp}/${data.playerStats.maxHP} HP`;
                 document.getElementById('playerHPBar').innerHTML = renderHPBar(data.playerStats.hp, data.playerStats.maxHP);
 
                 // Update player stats display
@@ -416,7 +416,7 @@ function startPvPFight(fight_id, opponentNickname) {
                 }
             }
             if (data.opponentStats) {
-                document.getElementById('opponentHPText').textContent = `${data.opponentStats.hp}/${data.opponentStats.maxHP}`;
+                document.getElementById('opponentHPText').textContent = `${data.opponentStats.hp}/${data.opponentStats.maxHP} HP`;
                 document.getElementById('opponentHPBar').innerHTML = renderHPBar(data.opponentStats.hp, data.opponentStats.maxHP);
 
                 // Update opponent stats display
