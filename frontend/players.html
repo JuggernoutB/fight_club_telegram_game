@@ -949,6 +949,83 @@
 
             console.log('Loading PvP player fighter image for race:', race);
 
+            // Clear any existing content first
+            container.innerHTML = '';
+            container.appendChild(fallback);
+
+            // Check if this race has sprite animation available
+            if (race === 'human') {
+                console.log('Loading PvP sprite animation for human');
+                loadPvPSpriteAnimation(container, fallback, race, 'breathe');
+            } else {
+                console.log('Loading static PvP image for race:', race);
+                loadPvPStaticImage(container, fallback, race);
+            }
+        }
+
+        function loadPvPSpriteAnimation(container, fallback, race, action) {
+            console.log(`Loading PvP sprite animation for ${race} - ${action}`);
+
+            const spriteContainer = document.createElement('div');
+            spriteContainer.className = 'sprite-container';
+            spriteContainer.style.width = '128px';
+            spriteContainer.style.height = '128px';
+            spriteContainer.style.position = 'relative';
+            spriteContainer.style.overflow = 'hidden';
+
+            const img = document.createElement('img');
+            img.className = 'fighter-sprite';
+            img.style.width = '128px';
+            img.style.height = '128px';
+            img.style.objectFit = 'contain';
+
+            let currentFrame = 1;
+            const totalFrames = 8;
+            let animationInterval;
+
+            function updateFrame() {
+                const frameNumber = currentFrame.toString().padStart(2, '0');
+                const framePath = `./images/fighters/sprites/${race}/${action}/frame_${frameNumber}.png`;
+                img.src = framePath;
+                currentFrame = currentFrame >= totalFrames ? 1 : currentFrame + 1;
+            }
+
+            function startAnimation() {
+                updateFrame();
+                animationInterval = setInterval(updateFrame, 150);
+            }
+
+            function stopAnimation() {
+                if (animationInterval) {
+                    clearInterval(animationInterval);
+                    animationInterval = null;
+                }
+            }
+
+            // Test load first frame
+            const testImg = new Image();
+            const testPath = `./images/fighters/sprites/${race}/${action}/frame_01.png`;
+            console.log('Testing PvP sprite path:', testPath);
+
+            testImg.onload = function() {
+                console.log(`PvP sprite animation loaded successfully for ${race} - ${action}`);
+                fallback.style.display = 'none';
+                spriteContainer.appendChild(img);
+                container.appendChild(spriteContainer);
+                startAnimation();
+                container.spriteControls = { start: startAnimation, stop: stopAnimation };
+            };
+
+            testImg.onerror = function() {
+                console.log(`PvP sprite animation failed to load for ${race} - ${action}, using static image`);
+                console.log('Failed PvP path was:', testPath);
+                loadPvPStaticImage(container, fallback, race);
+            };
+
+            testImg.src = testPath;
+        }
+
+        function loadPvPStaticImage(container, fallback, race) {
             const imgPath = `./images/fighters/${race}.png`;
             const img = document.createElement('img');
             img.src = imgPath;

@@ -216,7 +216,93 @@ function loadFighterAvatar(race) {
     if (!container || !race) return;
 
     console.log('Loading fighter image for race:', race);
+    console.log('Race type:', typeof race);
+    console.log('Race === "human":', race === 'human');
 
+    // Clear any existing content first
+    container.innerHTML = '';
+    container.appendChild(fallback);
+
+    // Check if this race has sprite animation available
+    if (race === 'human') {
+        console.log('Loading sprite animation for human');
+        loadSpriteAnimation(container, fallback, race, 'breathe');
+    } else {
+        console.log('Loading static image for race:', race);
+        // Fallback to static image for other races
+        loadStaticFighterImage(container, fallback, race);
+    }
+
+    // Also load random bot enemy
+    loadBotImage();
+}
+
+function loadSpriteAnimation(container, fallback, race, action) {
+    console.log(`Loading sprite animation for ${race} - ${action}`);
+
+    const spriteContainer = document.createElement('div');
+    spriteContainer.className = 'sprite-container';
+    spriteContainer.style.width = '128px';
+    spriteContainer.style.height = '128px';
+    spriteContainer.style.position = 'relative';
+    spriteContainer.style.overflow = 'hidden';
+
+    const img = document.createElement('img');
+    img.className = 'fighter-sprite';
+    img.style.width = '128px';
+    img.style.height = '128px';
+    img.style.objectFit = 'contain';
+
+    let currentFrame = 1;
+    const totalFrames = 8;
+    let animationInterval;
+
+    function updateFrame() {
+        const frameNumber = currentFrame.toString().padStart(2, '0');
+        const framePath = `./images/fighters/sprites/${race}/${action}/frame_${frameNumber}.png`;
+        img.src = framePath;
+        currentFrame = currentFrame >= totalFrames ? 1 : currentFrame + 1;
+    }
+
+    function startAnimation() {
+        updateFrame(); // Load first frame immediately
+        animationInterval = setInterval(updateFrame, 150); // Change frame every 150ms
+    }
+
+    function stopAnimation() {
+        if (animationInterval) {
+            clearInterval(animationInterval);
+            animationInterval = null;
+        }
+    }
+
+    // Test load first frame to see if sprites exist
+    const testImg = new Image();
+    const testPath = `./images/fighters/sprites/${race}/${action}/frame_01.png`;
+    console.log('Testing sprite path:', testPath);
+
+    testImg.onload = function() {
+        console.log(`Sprite animation loaded successfully for ${race} - ${action}`);
+        fallback.style.display = 'none';
+        spriteContainer.appendChild(img);
+        container.appendChild(spriteContainer);
+        startAnimation();
+
+        // Store animation controls for potential later use
+        container.spriteControls = { start: startAnimation, stop: stopAnimation };
+    };
+
+    testImg.onerror = function() {
+        console.log(`Sprite animation failed to load for ${race} - ${action}, using fallback`);
+        console.log('Failed path was:', testPath);
+        // Fallback to static image
+        loadStaticFighterImage(container, fallback, race);
+    };
+
+    testImg.src = testPath;
+}
+
+function loadStaticFighterImage(container, fallback, race) {
     const imgPath = `./images/fighters/${race}.png`;
     const img = document.createElement('img');
     img.src = imgPath;
@@ -225,14 +311,12 @@ function loadFighterAvatar(race) {
 
     img.onload = function() {
         console.log('Fighter image loaded successfully:', imgPath);
-        // Hide fallback and show image
         fallback.style.display = 'none';
         container.appendChild(img);
     };
 
     img.onerror = function() {
         console.log('Fighter image failed to load:', imgPath, 'Using fallback');
-        // Keep emoji fallback visible
         const raceAvatars = {
             "human": "🧑",
             "elf": "🧝",
@@ -242,9 +326,6 @@ function loadFighterAvatar(race) {
         fallback.innerHTML = raceAvatars[race] || "👤";
         fallback.style.display = 'flex';
     };
-
-    // Also load random bot enemy
-    loadBotImage();
 }
 
 function loadBotImage() {
