@@ -13,6 +13,14 @@ import json
 app = Flask(__name__)
 
 @dataclass
+class Equipment:
+    """Equipment item data class"""
+    name: str
+    item_type: str
+    uses_remaining: int
+    effect_multiplier: float = 1.0
+
+@dataclass
 class Player:
     """Player data class with race and characteristics"""
     name: str
@@ -22,6 +30,11 @@ class Player:
     power: int
     defense: int
     agility: int
+    equipment: List[Equipment] = None
+
+    def __post_init__(self):
+        if self.equipment is None:
+            self.equipment = [None, None, None]  # 3 equipment slots
 
 # Default race characteristics (adjusted HP and damage parameters)
 RACE_DEFAULTS = {
@@ -45,6 +58,8 @@ class FightSimulator:
         self.damage_rounds = 0  # Track rounds where any damage occurred
         self.player1_total_damage = 0  # Track total damage dealt by player 1
         self.player2_total_damage = 0  # Track total damage dealt by player 2
+        self.player1_stones_used = 0  # Track stones used by player 1
+        self.player2_stones_used = 0  # Track stones used by player 2
 
     def simulate_round(self) -> Tuple[bool, str]:
         """Simulate one round of combat"""
@@ -65,6 +80,12 @@ class FightSimulator:
         # Calculate damage for both players
         p1_damage, p1_effect = self.calculate_damage(self.player1, self.player2, p1_attack, p2_defend)
         p2_damage, p2_effect = self.calculate_damage(self.player2, self.player1, p2_attack, p1_defend)
+
+        # Track stone usage
+        if p1_effect == "stone_used":
+            self.player1_stones_used += 1
+        if p2_effect == "stone_used":
+            self.player2_stones_used += 1
 
         # Check if any damage occurred this round
         any_damage = p1_damage > 0 or p2_damage > 0
@@ -149,6 +170,21 @@ class FightSimulator:
         if effect_type == "super_attack":
             damage *= SUPER_ATTACK_MULTIPLIER
 
+        # Check for equipment usage (stone)
+        equipment_used = False
+        for i, item in enumerate(attacker.equipment):
+            if item and item.item_type == "stone" and item.uses_remaining > 0:
+                # Calculate stone success chance: 25% + agility_diff * 1% (0-100%)
+                stone_success_chance = min(100, max(0, 25 + agility_diff * 1))
+                if random.random() * 100 < stone_success_chance:
+                    # Calculate dynamic multiplier: 1.1 + agility_diff * 0.1
+                    stone_multiplier = 1.1 + agility_diff * 0.1
+                    damage *= stone_multiplier
+                    item.uses_remaining -= 1
+                    equipment_used = True
+                    effect_type = "stone_used"
+                    break
+
         # Check if attack is blocked (defended)
         is_blocked = attack_part in defend_parts
         if is_blocked:
@@ -191,6 +227,10 @@ class FightSimulator:
                         'damage_percentage': round(damage_percentage, 1),
                         'avg_damage_p1': round(avg_damage_p1, 2),
                         'avg_damage_p2': round(avg_damage_p2, 2)
+                    },
+                    'equipment_stats': {
+                        'player1_stones_used': self.player1_stones_used,
+                        'player2_stones_used': self.player2_stones_used
                     }
                 }
 
@@ -213,17 +253,30 @@ class FightSimulator:
                         'damage_percentage': round(damage_percentage, 1),
                         'avg_damage_p1': round(avg_damage_p1, 2),
                         'avg_damage_p2': round(avg_damage_p2, 2)
+                    },
+                    'equipment_stats': {
+                        'player1_stones_used': self.player1_stones_used,
+                        'player2_stones_used': self.player2_stones_used
                     }
                 }
 
-def create_player(name: str, race: str, custom_stats: Dict = None) -> Player:
+def create_stone() -> Equipment:
+    """Create a stone equipment item"""
+    return Equipment(
+        name="Stone",
+        item_type="stone",
+        uses_remaining=1,
+        effect_multiplier=1.0  # Will be calculated dynamically based on agility
+    )
+
+def create_player(name: str, race: str, custom_stats: Dict = None, equipment: List[str] = None) -> Player:
     """Create a player with race defaults or custom stats"""
     stats = RACE_DEFAULTS[race].copy()
 
     if custom_stats:
         stats.update(custom_stats)
 
-    return Player(
+    player = Player(
         name=name,
         race=race,
         hp=stats['hp'],
@@ -232,6 +285,14 @@ def create_player(name: str, race: str, custom_stats: Dict = None) -> Player:
         defense=stats['defense'],
         agility=stats['agility']
     )
+
+    # Add equipment if specified
+    if equipment:
+        for i, item_type in enumerate(equipment):
+            if i < 3 and item_type == "stone":
+                player.equipment[i] = create_stone()
+
+    return player
 
 def run_simulation(player1_config: Dict, player2_config: Dict, num_simulations: int = 1000) -> Dict:
     """Run multiple simulations and return win/loss statistics"""
@@ -244,13 +305,15 @@ def run_simulation(player1_config: Dict, player2_config: Dict, num_simulations: 
         'total_damage_rounds': 0,
         'total_damage_p1': 0,
         'total_damage_p2': 0,
+        'total_stones_used_p1': 0,
+        'total_stones_used_p2': 0,
         'sample_fights': []
     }
 
     for i in range(num_simulations):
         # Create fresh players for each simulation
-        player1 = create_player("Player 1", player1_config['race'], player1_config.get('stats'))
-        player2 = create_player("Player 2", player2_config['race'], player2_config.get('stats'))
+        player1 = create_player("Player 1", player1_config['race'], player1_config.get('stats'), player1_config.get('equipment'))
+        player2 = create_player("Player 2", player2_config['race'], player2_config.get('stats'), player2_config.get('equipment'))
 
         simulator = FightSimulator(player1, player2)
         fight_result = simulator.simulate_fight()
@@ -273,6 +336,11 @@ def run_simulation(player1_config: Dict, player2_config: Dict, num_simulations: 
             results['total_damage_p1'] += fight_result['damage_stats']['avg_damage_p1'] * fight_result['rounds']
             results['total_damage_p2'] += fight_result['damage_stats']['avg_damage_p2'] * fight_result['rounds']
 
+        # Track equipment statistics
+        if 'equipment_stats' in fight_result:
+            results['total_stones_used_p1'] += fight_result['equipment_stats']['player1_stones_used']
+            results['total_stones_used_p2'] += fight_result['equipment_stats']['player2_stones_used']
+
         # Store first few fights as samples
         if i < 5:
             results['sample_fights'].append(fight_result)
@@ -290,6 +358,10 @@ def run_simulation(player1_config: Dict, player2_config: Dict, num_simulations: 
     # Calculate average damage per round across all simulations
     results['avg_damage_per_round_p1'] = round(results['total_damage_p1'] / results['total_rounds'], 2) if results['total_rounds'] > 0 else 0
     results['avg_damage_per_round_p2'] = round(results['total_damage_p2'] / results['total_rounds'], 2) if results['total_rounds'] > 0 else 0
+
+    # Calculate average stones used per fight
+    results['avg_stones_used_p1'] = round(results['total_stones_used_p1'] / num_simulations, 1) if num_simulations > 0 else 0
+    results['avg_stones_used_p2'] = round(results['total_stones_used_p2'] / num_simulations, 1) if num_simulations > 0 else 0
 
     return results
 
@@ -414,6 +486,37 @@ def calculate_time_to_target_level(current_xp: int, daily_xp: int, target_level:
         'months': round(months_needed, 1)
     }
 
+@app.route('/debug_equipment')
+def debug_equipment():
+    """Debug endpoint to test equipment creation and usage"""
+    try:
+        # Test creating players with equipment
+        player1 = create_player("Human with stones", "human", None, ["stone", "stone", "stone"])
+        player2 = create_player("Orc no stones", "orc", None, [])
+
+        # Run a single fight
+        simulator = FightSimulator(player1, player2)
+        fight_result = simulator.simulate_fight()
+
+        equipment_info = []
+        for i, item in enumerate(player1.equipment):
+            if item:
+                equipment_info.append(f"Slot {i+1}: {item.name} ({item.uses_remaining} uses remaining)")
+            else:
+                equipment_info.append(f"Slot {i+1}: Empty")
+
+        return {
+            "fight_winner": fight_result.get('winner'),
+            "fight_rounds": fight_result.get('rounds'),
+            "stones_used_p1": fight_result.get('equipment_stats', {}).get('player1_stones_used', 0),
+            "stones_used_p2": fight_result.get('equipment_stats', {}).get('player2_stones_used', 0),
+            "avg_damage_p1": fight_result.get('damage_stats', {}).get('avg_damage_p1', 0),
+            "avg_damage_p2": fight_result.get('damage_stats', {}).get('avg_damage_p2', 0),
+            "equipment_after_fight": equipment_info
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
 @app.route('/')
 def index():
     """Main page with fight simulator"""
@@ -426,12 +529,14 @@ def simulate():
 
     player1_config = {
         'race': data['player1']['race'],
-        'stats': data['player1']['stats']
+        'stats': data['player1']['stats'],
+        'equipment': data['player1'].get('equipment', [])
     }
 
     player2_config = {
         'race': data['player2']['race'],
-        'stats': data['player2']['stats']
+        'stats': data['player2']['stats'],
+        'equipment': data['player2'].get('equipment', [])
     }
 
     num_simulations = data.get('simulations', 1000)

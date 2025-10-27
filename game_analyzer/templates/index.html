@@ -134,6 +134,37 @@
             margin-top: 10px;
             font-size: 0.9em;
         }
+        .equipment-section {
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(128, 128, 128, 0.1);
+            border: 1px solid #666;
+            border-radius: 8px;
+        }
+        .equipment-section h3 {
+            margin: 0 0 10px 0;
+            color: var(--primary-gold);
+            font-size: 1.1em;
+        }
+        .equipment-slots {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .equipment-slot {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .equipment-slot label {
+            min-width: 60px;
+            margin-bottom: 0;
+            font-size: 0.9em;
+        }
+        .equipment-slot select {
+            flex: 1;
+            padding: 6px;
+        }
 
         .simulation-controls {
             text-align: center;
@@ -303,6 +334,34 @@
                         <input type="number" id="p1-agility" class="form-control" min="0" max="10">
                     </div>
                 </div>
+
+                <!-- Equipment Section -->
+                <div class="equipment-section">
+                    <h3>🛡️ Equipment (3 slots)</h3>
+                    <div class="equipment-slots">
+                        <div class="equipment-slot">
+                            <label>Slot 1:</label>
+                            <select id="p1-equipment-1" class="form-control">
+                                <option value="">Empty</option>
+                                <option value="stone">Stone (agility-based damage, 1 use)</option>
+                            </select>
+                        </div>
+                        <div class="equipment-slot">
+                            <label>Slot 2:</label>
+                            <select id="p1-equipment-2" class="form-control">
+                                <option value="">Empty</option>
+                                <option value="stone">Stone (agility-based damage, 1 use)</option>
+                            </select>
+                        </div>
+                        <div class="equipment-slot">
+                            <label>Slot 3:</label>
+                            <select id="p1-equipment-3" class="form-control">
+                                <option value="">Empty</option>
+                                <option value="stone">Stone (agility-based damage, 1 use)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Player 2 Configuration -->
@@ -337,6 +396,34 @@
                     <div class="stat-input">
                         <label>Agility:</label>
                         <input type="number" id="p2-agility" class="form-control" min="0" max="10">
+                    </div>
+                </div>
+
+                <!-- Equipment Section -->
+                <div class="equipment-section">
+                    <h3>🛡️ Equipment (3 slots)</h3>
+                    <div class="equipment-slots">
+                        <div class="equipment-slot">
+                            <label>Slot 1:</label>
+                            <select id="p2-equipment-1" class="form-control">
+                                <option value="">Empty</option>
+                                <option value="stone">Stone (agility-based damage, 1 use)</option>
+                            </select>
+                        </div>
+                        <div class="equipment-slot">
+                            <label>Slot 2:</label>
+                            <select id="p2-equipment-2" class="form-control">
+                                <option value="">Empty</option>
+                                <option value="stone">Stone (agility-based damage, 1 use)</option>
+                            </select>
+                        </div>
+                        <div class="equipment-slot">
+                            <label>Slot 3:</label>
+                            <select id="p2-equipment-3" class="form-control">
+                                <option value="">Empty</option>
+                                <option value="stone">Stone (agility-based damage, 1 use)</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -493,7 +580,12 @@
                     power: parseInt(document.getElementById('p1-power').value),
                     defense: parseInt(document.getElementById('p1-defense').value),
                     agility: parseInt(document.getElementById('p1-agility').value)
-                }
+                },
+                equipment: [
+                    document.getElementById('p1-equipment-1').value || null,
+                    document.getElementById('p1-equipment-2').value || null,
+                    document.getElementById('p1-equipment-3').value || null
+                ].filter(item => item !== null)
             };
 
             const player2 = {
@@ -503,7 +595,12 @@
                     power: parseInt(document.getElementById('p2-power').value),
                     defense: parseInt(document.getElementById('p2-defense').value),
                     agility: parseInt(document.getElementById('p2-agility').value)
-                }
+                },
+                equipment: [
+                    document.getElementById('p2-equipment-1').value || null,
+                    document.getElementById('p2-equipment-2').value || null,
+                    document.getElementById('p2-equipment-3').value || null
+                ].filter(item => item !== null)
             };
 
             const simulations = parseInt(document.getElementById('simulations').value);
@@ -571,6 +668,14 @@
                     <div class="result-card">
                         <h3>P2 Avg Damage/Round</h3>
                         <div class="result-value">${results.avg_damage_per_round_p2.toFixed(2)}</div>
+                    </div>
+                    <div class="result-card">
+                        <h3>P1 Stones Used</h3>
+                        <div class="result-value">${results.avg_stones_used_p1.toFixed(1)}</div>
+                    </div>
+                    <div class="result-card">
+                        <h3>P2 Stones Used</h3>
+                        <div class="result-value">${results.avg_stones_used_p2.toFixed(1)}</div>
                     </div>
                 </div>
 
