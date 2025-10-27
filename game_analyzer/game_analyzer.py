@@ -185,6 +185,16 @@ class FightSimulator:
                     effect_type = "stone_used"
                     break
 
+        # Check for wooden stick (works every round)
+        for i, item in enumerate(attacker.equipment):
+            if item and item.item_type == "wooden_stick":
+                damage *= item.effect_multiplier  # +1.1 damage
+                if effect_type == "stone_used":
+                    effect_type = "stone_and_stick"
+                else:
+                    effect_type = "stick_used"
+                break
+
         # Check if attack is blocked (defended)
         is_blocked = attack_part in defend_parts
         if is_blocked:
@@ -269,6 +279,15 @@ def create_stone() -> Equipment:
         effect_multiplier=1.0  # Will be calculated dynamically based on agility
     )
 
+def create_wooden_stick() -> Equipment:
+    """Create a wooden stick equipment item"""
+    return Equipment(
+        name="Wooden Stick",
+        item_type="wooden_stick",
+        uses_remaining=999,  # Effectively unlimited uses
+        effect_multiplier=1.06  # Fixed +1.06 damage multiplier
+    )
+
 def create_player(name: str, race: str, custom_stats: Dict = None, equipment: List[str] = None) -> Player:
     """Create a player with race defaults or custom stats"""
     stats = RACE_DEFAULTS[race].copy()
@@ -288,9 +307,15 @@ def create_player(name: str, race: str, custom_stats: Dict = None, equipment: Li
 
     # Add equipment if specified
     if equipment:
+        stick_count = 0
         for i, item_type in enumerate(equipment):
-            if i < 3 and item_type == "stone":
-                player.equipment[i] = create_stone()
+            if i < 3:
+                if item_type == "stone":
+                    player.equipment[i] = create_stone()
+                elif item_type == "wooden_stick" and stick_count == 0:
+                    player.equipment[i] = create_wooden_stick()
+                    stick_count += 1
+                # Ignore additional wooden sticks (only 1 allowed)
 
     return player
 
@@ -491,8 +516,8 @@ def debug_equipment():
     """Debug endpoint to test equipment creation and usage"""
     try:
         # Test creating players with equipment
-        player1 = create_player("Human with stones", "human", None, ["stone", "stone", "stone"])
-        player2 = create_player("Orc no stones", "orc", None, [])
+        player1 = create_player("Human with stick", "human", None, ["wooden_stick", "stone", "stone"])
+        player2 = create_player("Orc no equipment", "orc", None, [])
 
         # Run a single fight
         simulator = FightSimulator(player1, player2)
