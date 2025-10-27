@@ -302,10 +302,6 @@
                         <label>Agility:</label>
                         <input type="number" id="p1-agility" class="form-control" min="0" max="10">
                     </div>
-                    <div class="stat-input">
-                        <label>Super Attack:</label>
-                        <input type="number" id="p1-super-attack" class="form-control" min="0" max="10">
-                    </div>
                 </div>
             </div>
 
@@ -342,15 +338,19 @@
                         <label>Agility:</label>
                         <input type="number" id="p2-agility" class="form-control" min="0" max="10">
                     </div>
-                    <div class="stat-input">
-                        <label>Super Attack:</label>
-                        <input type="number" id="p2-super-attack" class="form-control" min="0" max="10">
-                    </div>
                 </div>
             </div>
         </div>
 
         <div class="simulation-controls">
+            <div class="form-group">
+                <label for="level">Player Level:</label>
+                <div style="display: flex; align-items: center; gap: 10px; justify-content: center;">
+                    <button type="button" onclick="changeLevel(-1)" style="background: var(--secondary-gold); color: var(--text-white); border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer;">-</button>
+                    <span id="level-display" style="font-size: 1.2em; font-weight: bold; color: var(--primary-gold); min-width: 60px; text-align: center;">Level 1</span>
+                    <button type="button" onclick="changeLevel(1)" style="background: var(--secondary-gold); color: var(--text-white); border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer;">+</button>
+                </div>
+            </div>
             <div class="form-group">
                 <label for="simulations">Number of Simulations:</label>
                 <input type="number" id="simulations" class="form-control" value="1000" min="100" max="10000">
@@ -372,32 +372,78 @@
         // Race defaults from Python
         const raceDefaults = {{ race_defaults | tojson }};
 
+        // Current level (1-10)
+        let currentLevel = 1;
+
         // Initialize with default values
         document.addEventListener('DOMContentLoaded', function() {
             updateRaceDefaults(1);
             updateRaceDefaults(2);
         });
 
+        function getLeveledStats(race, level) {
+            const baseStats = raceDefaults[race];
+            const leveledStats = { ...baseStats };
+
+            // Apply level bonuses based on race
+            if (level > 1) {
+                const levelBonus = level - 1;
+                switch (race) {
+                    case 'human':
+                        leveledStats.hp += levelBonus;
+                        leveledStats.agility += levelBonus;
+                        break;
+                    case 'orc':
+                        leveledStats.hp += levelBonus;
+                        leveledStats.power += levelBonus;
+                        break;
+                    case 'elf':
+                        leveledStats.hp += levelBonus;
+                        leveledStats.agility += levelBonus;
+                        break;
+                    case 'dwarf':
+                        leveledStats.hp += levelBonus;
+                        leveledStats.defense += levelBonus;
+                        break;
+                    case 'skeleton':
+                        leveledStats.hp += levelBonus * 2; // +2 HP per level
+                        break;
+                }
+            }
+
+            return leveledStats;
+        }
+
+        function changeLevel(delta) {
+            const newLevel = currentLevel + delta;
+            if (newLevel >= 1 && newLevel <= 10) {
+                currentLevel = newLevel;
+                document.getElementById('level-display').textContent = `Level ${currentLevel}`;
+
+                // Update both players' stats
+                updateRaceDefaults(1);
+                updateRaceDefaults(2);
+            }
+        }
+
         function updateRaceDefaults(player) {
             const raceSelect = document.getElementById(`p${player}-race`);
             const defaultsDiv = document.getElementById(`p${player}-defaults`);
             const race = raceSelect.value;
 
-            const defaults = raceDefaults[race];
+            const leveledStats = getLeveledStats(race, currentLevel);
 
             // Update defaults display
             defaultsDiv.innerHTML = `
-                <strong>${race.toUpperCase()} defaults:</strong><br>
-                HP: ${defaults.hp}, Power: ${defaults.power}, Defense: ${defaults.defense},
-                Agility: ${defaults.agility}, Super Attack: ${defaults.super_attack}
+                <strong>${race.toUpperCase()} Level ${currentLevel}:</strong><br>
+                HP: ${leveledStats.hp}, Power: ${leveledStats.power}, Defense: ${leveledStats.defense}, Agility: ${leveledStats.agility}
             `;
 
             // Update input fields
-            document.getElementById(`p${player}-hp`).value = defaults.hp;
-            document.getElementById(`p${player}-power`).value = defaults.power;
-            document.getElementById(`p${player}-defense`).value = defaults.defense;
-            document.getElementById(`p${player}-agility`).value = defaults.agility;
-            document.getElementById(`p${player}-super-attack`).value = defaults.super_attack;
+            document.getElementById(`p${player}-hp`).value = leveledStats.hp;
+            document.getElementById(`p${player}-power`).value = leveledStats.power;
+            document.getElementById(`p${player}-defense`).value = leveledStats.defense;
+            document.getElementById(`p${player}-agility`).value = leveledStats.agility;
         }
 
         async function runSimulation() {
@@ -418,8 +464,7 @@
                     hp: parseInt(document.getElementById('p1-hp').value),
                     power: parseInt(document.getElementById('p1-power').value),
                     defense: parseInt(document.getElementById('p1-defense').value),
-                    agility: parseInt(document.getElementById('p1-agility').value),
-                    super_attack: parseInt(document.getElementById('p1-super-attack').value)
+                    agility: parseInt(document.getElementById('p1-agility').value)
                 }
             };
 
@@ -429,8 +474,7 @@
                     hp: parseInt(document.getElementById('p2-hp').value),
                     power: parseInt(document.getElementById('p2-power').value),
                     defense: parseInt(document.getElementById('p2-defense').value),
-                    agility: parseInt(document.getElementById('p2-agility').value),
-                    super_attack: parseInt(document.getElementById('p2-super-attack').value)
+                    agility: parseInt(document.getElementById('p2-agility').value)
                 }
             };
 
@@ -489,6 +533,14 @@
                     <div class="result-card">
                         <h3>Damage Rate</h3>
                         <div class="result-value">${results.average_damage_percentage.toFixed(1)}%</div>
+                    </div>
+                    <div class="result-card">
+                        <h3>P1 Avg Damage/Round</h3>
+                        <div class="result-value">${results.avg_damage_per_round_p1.toFixed(2)}</div>
+                    </div>
+                    <div class="result-card">
+                        <h3>P2 Avg Damage/Round</h3>
+                        <div class="result-value">${results.avg_damage_per_round_p2.toFixed(2)}</div>
                     </div>
                 </div>
 

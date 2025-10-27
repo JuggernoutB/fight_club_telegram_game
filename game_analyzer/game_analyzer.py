@@ -22,15 +22,14 @@ class Player:
     power: int
     defense: int
     agility: int
-    super_attack: int
 
-# Default race characteristics (updated HP and minimal dual defense)
+# Default race characteristics (adjusted HP and damage parameters)
 RACE_DEFAULTS = {
-    'human': {'hp': 14, 'power': 5, 'defense': 5, 'agility': 5, 'super_attack': 6},
-    'orc': {'hp': 14, 'power': 6, 'defense': 5, 'agility': 5, 'super_attack': 5},
-    'elf': {'hp': 14, 'power': 5, 'defense': 5, 'agility': 6, 'super_attack': 5},
-    'dwarf': {'hp': 14, 'power': 5, 'defense': 6, 'agility': 5, 'super_attack': 5},
-    'skeleton': {'hp': 17, 'power': 5, 'defense': 5, 'agility': 5, 'super_attack': 5}
+    'human': {'hp': 20, 'power': 5, 'defense': 5, 'agility': 6},
+    'orc': {'hp': 20, 'power': 6, 'defense': 5, 'agility': 5},
+    'elf': {'hp': 20, 'power': 5, 'defense': 5, 'agility': 6},
+    'dwarf': {'hp': 20, 'power': 5, 'defense': 6, 'agility': 5},
+    'skeleton': {'hp': 22, 'power': 5, 'defense': 5, 'agility': 5}
 }
 
 BODY_PARTS = ['head', 'chest', 'stomach', 'belt', 'legs']
@@ -44,6 +43,8 @@ class FightSimulator:
         self.round_number = 0
         self.fight_log = []
         self.damage_rounds = 0  # Track rounds where any damage occurred
+        self.player1_total_damage = 0  # Track total damage dealt by player 1
+        self.player2_total_damage = 0  # Track total damage dealt by player 2
 
     def simulate_round(self) -> Tuple[bool, str]:
         """Simulate one round of combat"""
@@ -55,29 +56,15 @@ class FightSimulator:
         p2_attack = random.choice(BODY_PARTS)
         p2_defend = [random.choice(BODY_PARTS)]
 
-        # Check for dual defense based on defense comparison
-        defense_diff_p1 = self.player1.defense - self.player2.defense
-        defense_diff_p2 = self.player2.defense - self.player1.defense
-
-        # Player 1 dual defense chance (reduced to 2% for minimal dual defense)
-        if defense_diff_p1 > 0 and random.random() < 0.01:
-            # Add second defense part, different from first
-            available_parts = [part for part in BODY_PARTS if part != p1_defend[0]]
-            p1_defend.append(random.choice(available_parts))
-
-        # Player 2 dual defense chance (reduced to 2% for minimal dual defense)
-        if defense_diff_p2 > 0 and random.random() < 0.01:
-            # Add second defense part, different from first
-            available_parts = [part for part in BODY_PARTS if part != p2_defend[0]]
-            p2_defend.append(random.choice(available_parts))
+        # Simplified system - no dual defense
 
         round_log = f"Round {self.round_number}:\n"
         round_log += f"{self.player1.name} attacks {p1_attack}, defends {', '.join(p1_defend)}\n"
         round_log += f"{self.player2.name} attacks {p2_attack}, defends {', '.join(p2_defend)}\n"
 
         # Calculate damage for both players
-        p1_damage = self.calculate_damage(self.player1, self.player2, p1_attack, p2_defend)
-        p2_damage = self.calculate_damage(self.player2, self.player1, p2_attack, p1_defend)
+        p1_damage, p1_effect = self.calculate_damage(self.player1, self.player2, p1_attack, p2_defend)
+        p2_damage, p2_effect = self.calculate_damage(self.player2, self.player1, p2_attack, p1_defend)
 
         # Check if any damage occurred this round
         any_damage = p1_damage > 0 or p2_damage > 0
@@ -85,12 +72,29 @@ class FightSimulator:
             self.damage_rounds += 1
         damage_status = "✅ DAMAGE OCCURRED" if any_damage else "❌ NO DAMAGE"
 
+        # Track total damage dealt
+        self.player1_total_damage += p1_damage
+        self.player2_total_damage += p2_damage
+
         # Apply damage (removed counter-attack system)
         self.player2.hp = max(0, self.player2.hp - p1_damage)
         self.player1.hp = max(0, self.player1.hp - p2_damage)
 
-        round_log += f"{self.player1.name} deals {p1_damage} damage to {self.player2.name}\n"
-        round_log += f"{self.player2.name} deals {p2_damage} damage to {self.player1.name}\n"
+        # Format damage output with agility effects
+        p1_damage_text = f"{p1_damage}"
+        if p1_effect == "super_attack":
+            p1_damage_text += " (SUPER ATTACK!)"
+        elif p1_effect == "dodged":
+            p1_damage_text = "DODGED"
+
+        p2_damage_text = f"{p2_damage}"
+        if p2_effect == "super_attack":
+            p2_damage_text += " (SUPER ATTACK!)"
+        elif p2_effect == "dodged":
+            p2_damage_text = "DODGED"
+
+        round_log += f"{self.player1.name} deals {p1_damage_text} damage to {self.player2.name}\n"
+        round_log += f"{self.player2.name} deals {p2_damage_text} damage to {self.player1.name}\n"
         round_log += f"Round Result: {damage_status}\n"
         round_log += f"HP: {self.player1.name} {self.player1.hp}/{self.player1.max_hp}, {self.player2.name} {self.player2.hp}/{self.player2.max_hp}\n"
 
@@ -106,86 +110,63 @@ class FightSimulator:
 
         return False, ""
 
-    def calculate_damage(self, attacker: Player, defender: Player, attack_part: str, defend_parts: List[str]) -> int:
-        """Calculate damage based on balanced power vs defense system"""
+    def calculate_damage(self, attacker: Player, defender: Player, attack_part: str, defend_parts: List[str]) -> Tuple[int, str]:
+        """Calculate damage with power ratio system, agility effects, and probability-based integer conversion"""
 
-        # Check for agility dodge - scaling system
-        agility_diff = defender.agility - attacker.agility
-        dodge_chance = 0
-        if agility_diff >= 1:
-            # Scaling dodge: 20% for +1 agility, +4.5% for each additional point
-            dodge_chance = 0.20 + (agility_diff - 1) * 0.25
-            dodge_chance = min(0.9, dodge_chance)  # Cap at 85% max dodge
-        elif agility_diff == 0:
-            dodge_chance = 0.05  # 5% dodge if equal agility
+        # Constants optimized for levels 1-5 balance
+        BASE_DAMAGE = 3.5
+        POWER_FACTOR = 0.5
+        BLOCK_MULTIPLIER = 0.5
 
-        if random.random() < dodge_chance:
-            return 0  # Dodged
+        # Agility effect constants
+        SUPER_ATTACK_MULTIPLIER = 4
+        MAX_DODGE_CHANCE = 70  # 30% max
+        MAX_SUPER_ATTACK_CHANCE = 70  # 20% max
+        AGILITY_DODGE_FACTOR = 1  # 2% per agility point difference
+        AGILITY_SUPER_FACTOR = 3  # 1% per agility point difference
 
-        # Check for super attack - scaling system
-        super_attack_diff = attacker.super_attack - defender.super_attack
-        super_attack_chance = 0
+        # Calculate agility difference
+        agility_diff = attacker.agility - defender.agility
+        effect_type = "normal"
 
-        if super_attack_diff >= 1:
-            # Scaling super attack: 16% for +1 SA, +4% for each additional point
-            super_attack_chance = 0.11 + (super_attack_diff - 1) * 0.02
-            super_attack_chance = min(0.50, super_attack_chance)  # Cap at 50% max
-        elif super_attack_diff == 0 and attacker.super_attack > 0:
-            super_attack_chance = 0.08  # 8% super attack if equal and > 0
+        # Check for super attack (attacker has higher agility)
+        if agility_diff > 0:
+            super_attack_chance = min(MAX_SUPER_ATTACK_CHANCE, agility_diff * AGILITY_SUPER_FACTOR)
+            if random.random() * 100 < super_attack_chance:
+                effect_type = "super_attack"
 
-        is_super_attack = random.random() < super_attack_chance
+        # Check for dodge (defender has higher agility and no super attack)
+        elif agility_diff < 0:
+            dodge_chance = min(MAX_DODGE_CHANCE, abs(agility_diff) * AGILITY_DODGE_FACTOR)
+            if random.random() * 100 < dodge_chance:
+                return 0, "dodged"
 
-        # Calculate base damage with adjusted diminishing returns for better balance
-        power_scaling = {
-            0: 0.5,
-            1: 1.0,
-            2: 1.8,  # Adjusted to 1.8 (10% reduction from 2.0)
-            3: 2.4,  # Adjusted to 2.4 (20% reduction from 3.0)
-            4: 2.9,  # Adjusted proportionally
-            5: 3.3   # Adjusted proportionally
-        }
-        base_damage = power_scaling.get(attacker.power, 3.3 + (attacker.power - 5) * 0.25)
-        if is_super_attack:
-            if attack_part not in defend_parts:  # Undefended part
-                # Balanced damage multipliers: 20% 4.0x, 30% 3.5x, 35% 3.0x, 15% 2.5x
-                roll = random.random()
-                if roll < 0.25:
-                    base_damage *= 4.5    # 20% chance for 4.0x damage
-                elif roll < 0.40:         # 30% chance (20% + 30%)
-                    base_damage *= 4.0    # 3.5x damage
-                elif roll < 0.75:         # 35% chance (50% + 35%)
-                    base_damage *= 3.5    # 3.0x damage
-                else:                     # 15% chance (remaining)
-                    base_damage *= 3.0    # 2.5x damage
-            else:
-                # For defended part, super attack gets 2x damage multiplier
-                base_damage *= 2.0
+        # Calculate power to defense ratio
+        ratio = attacker.power / defender.defense if defender.defense > 0 else attacker.power
+        damage = BASE_DAMAGE * (ratio ** POWER_FACTOR)
 
-        # Calculate damage chance based on power vs defense
-        power_defense_diff = attacker.power - defender.defense
+        # Apply super attack multiplier if triggered
+        if effect_type == "super_attack":
+            damage *= SUPER_ATTACK_MULTIPLIER
 
-        if attack_part in defend_parts:
-            # Defended part: Base 10%, +12% per power advantage, -12% per defense advantage, range 5%-70%
-            if power_defense_diff >= 0:
-                damage_chance = min(20, max(5, 5 + (power_defense_diff * 5))) / 100
-            else:
-                damage_chance = min(5, max(5, 5 + (power_defense_diff * 5))) / 100
+        # Check if attack is blocked (defended)
+        is_blocked = attack_part in defend_parts
+        if is_blocked:
+            damage *= BLOCK_MULTIPLIER
+
+        # Probability-based integer conversion
+        # Get the base integer and fractional part
+        base_damage = int(damage)
+        fractional_part = damage - base_damage
+
+        # Determine final damage based on fractional probability
+        if random.random() < fractional_part:
+            final_damage = base_damage + 1
         else:
-            # Undefended part: Base 65%, +12% per power advantage, -12% per defense advantage, range 15%-80%
-            if power_defense_diff >= 0:
-                damage_chance = min(80, max(15, 60 + (power_defense_diff * 12))) / 100
-            else:
-                damage_chance = min(80, max(15, 60 + (power_defense_diff * 12))) / 100
+            final_damage = base_damage
 
-        # Check if damage occurs
-        if random.random() < damage_chance:
-            # Damage calculation: 80% full power, 20% power-1 (minimum 1) - enhanced power advantage
-            if random.random() < 0.80:
-                return int(base_damage)  # Full power damage
-            else:
-                return max(1, int(base_damage) - 1)  # Reduced damage
-        else:
-            return 0  # No damage
+        # Return integer damage (minimum 1) and effect type
+        return max(1, final_damage), effect_type
 
     def simulate_fight(self) -> Dict:
         """Simulate entire fight and return result"""
@@ -194,6 +175,8 @@ class FightSimulator:
 
             if fight_ended:
                 damage_percentage = (self.damage_rounds / self.round_number) * 100 if self.round_number > 0 else 0
+                avg_damage_p1 = self.player1_total_damage / self.round_number if self.round_number > 0 else 0
+                avg_damage_p2 = self.player2_total_damage / self.round_number if self.round_number > 0 else 0
                 return {
                     'winner': winner,
                     'rounds': self.round_number,
@@ -205,13 +188,17 @@ class FightSimulator:
                     'damage_stats': {
                         'damage_rounds': self.damage_rounds,
                         'total_rounds': self.round_number,
-                        'damage_percentage': round(damage_percentage, 1)
+                        'damage_percentage': round(damage_percentage, 1),
+                        'avg_damage_p1': round(avg_damage_p1, 2),
+                        'avg_damage_p2': round(avg_damage_p2, 2)
                     }
                 }
 
             # Safety check to prevent infinite loops
             if self.round_number > 100:
                 damage_percentage = (self.damage_rounds / self.round_number) * 100 if self.round_number > 0 else 0
+                avg_damage_p1 = self.player1_total_damage / self.round_number if self.round_number > 0 else 0
+                avg_damage_p2 = self.player2_total_damage / self.round_number if self.round_number > 0 else 0
                 return {
                     'winner': 'timeout',
                     'rounds': self.round_number,
@@ -223,7 +210,9 @@ class FightSimulator:
                     'damage_stats': {
                         'damage_rounds': self.damage_rounds,
                         'total_rounds': self.round_number,
-                        'damage_percentage': round(damage_percentage, 1)
+                        'damage_percentage': round(damage_percentage, 1),
+                        'avg_damage_p1': round(avg_damage_p1, 2),
+                        'avg_damage_p2': round(avg_damage_p2, 2)
                     }
                 }
 
@@ -241,8 +230,7 @@ def create_player(name: str, race: str, custom_stats: Dict = None) -> Player:
         max_hp=stats['hp'],
         power=stats['power'],
         defense=stats['defense'],
-        agility=stats['agility'],
-        super_attack=stats['super_attack']
+        agility=stats['agility']
     )
 
 def run_simulation(player1_config: Dict, player2_config: Dict, num_simulations: int = 1000) -> Dict:
@@ -254,6 +242,8 @@ def run_simulation(player1_config: Dict, player2_config: Dict, num_simulations: 
         'timeouts': 0,
         'total_rounds': 0,
         'total_damage_rounds': 0,
+        'total_damage_p1': 0,
+        'total_damage_p2': 0,
         'sample_fights': []
     }
 
@@ -280,6 +270,8 @@ def run_simulation(player1_config: Dict, player2_config: Dict, num_simulations: 
         # Track damage statistics
         if 'damage_stats' in fight_result:
             results['total_damage_rounds'] += fight_result['damage_stats']['damage_rounds']
+            results['total_damage_p1'] += fight_result['damage_stats']['avg_damage_p1'] * fight_result['rounds']
+            results['total_damage_p2'] += fight_result['damage_stats']['avg_damage_p2'] * fight_result['rounds']
 
         # Store first few fights as samples
         if i < 5:
@@ -294,6 +286,10 @@ def run_simulation(player1_config: Dict, player2_config: Dict, num_simulations: 
     # Calculate damage statistics
     results['average_damage_percentage'] = (results['total_damage_rounds'] / results['total_rounds']) * 100 if results['total_rounds'] > 0 else 0
     results['average_damage_percentage'] = round(results['average_damage_percentage'], 1)
+
+    # Calculate average damage per round across all simulations
+    results['avg_damage_per_round_p1'] = round(results['total_damage_p1'] / results['total_rounds'], 2) if results['total_rounds'] > 0 else 0
+    results['avg_damage_per_round_p2'] = round(results['total_damage_p2'] / results['total_rounds'], 2) if results['total_rounds'] > 0 else 0
 
     return results
 
