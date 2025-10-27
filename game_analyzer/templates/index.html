@@ -356,6 +356,34 @@
                 <input type="number" id="simulations" class="form-control" value="1000" min="100" max="10000">
             </div>
             <button id="simulate-btn" class="btn" onclick="runSimulation()">⚔️ Simulate Fights</button>
+            <button id="xp-calc-btn" class="btn" onclick="toggleXPCalculator()" style="margin-left: 10px; background: linear-gradient(135deg, var(--primary-gold) 0%, var(--secondary-gold) 100%);">💎 XP Calculator</button>
+        </div>
+
+        <!-- XP Calculator Section -->
+        <div id="xp-calculator" class="results-container" style="display: none;">
+            <div class="results-header">
+                <h2>💎 Experience Calculator</h2>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                <div>
+                    <label>Current XP:</label>
+                    <input type="number" id="current-xp" class="form-control" value="0" min="0" max="100000">
+                </div>
+                <div>
+                    <label>Daily Fights:</label>
+                    <input type="number" id="daily-fights" class="form-control" value="3" min="1" max="10">
+                </div>
+                <div>
+                    <label>Target Level:</label>
+                    <input type="number" id="target-level" class="form-control" value="10" min="2" max="10">
+                </div>
+                <div>
+                    <label>XP Boost (%):</label>
+                    <input type="number" id="xp-boost" class="form-control" value="0" min="0" max="500" placeholder="0-500%">
+                </div>
+            </div>
+            <button onclick="calculateXP()" class="btn" style="background: var(--primary-gold);">Calculate Progression</button>
+            <div id="xp-results" style="margin-top: 20px;"></div>
         </div>
 
         <div id="results" class="results-container">
@@ -390,7 +418,7 @@
                 const levelBonus = level - 1;
                 switch (race) {
                     case 'human':
-                        leveledStats.hp += levelBonus;
+                        leveledStats.hp += levelBonus * 2; // +2 HP per level
                         leveledStats.agility += levelBonus;
                         break;
                     case 'orc':
@@ -398,7 +426,7 @@
                         leveledStats.power += levelBonus;
                         break;
                     case 'elf':
-                        leveledStats.hp += levelBonus;
+                        leveledStats.hp += levelBonus * 2; // +2 HP per level
                         leveledStats.agility += levelBonus;
                         break;
                     case 'dwarf':
@@ -406,7 +434,7 @@
                         leveledStats.defense += levelBonus;
                         break;
                     case 'skeleton':
-                        leveledStats.hp += levelBonus * 2; // +2 HP per level
+                        leveledStats.hp += levelBonus * 3; // +3 HP per level
                         break;
                 }
             }
@@ -489,6 +517,8 @@
                     body: JSON.stringify({
                         player1: player1,
                         player2: player2,
+                        player1_level: currentLevel,
+                        player2_level: currentLevel,
                         simulations: simulations
                     })
                 });
@@ -544,6 +574,34 @@
                     </div>
                 </div>
 
+                ${results.xp_calculations ? `
+                <div style="margin-top: 25px;">
+                    <h3 style="color: var(--secondary-gold); margin-bottom: 15px;">💎 Experience Points</h3>
+                    <div class="results-grid" style="grid-template-columns: 1fr 1fr;">
+                        <div class="result-card" style="background: rgba(218, 165, 32, 0.15);">
+                            <h4 style="color: var(--primary-gold); margin-bottom: 10px;">${player1.race.toUpperCase()} Player 1</h4>
+                            <div style="font-size: 0.9em; margin-bottom: 5px;">Win: ${results.xp_calculations.player1.win_xp} XP</div>
+                            <div style="font-size: 0.9em; margin-bottom: 5px;">Draw: ${results.xp_calculations.player1.draw_xp} XP</div>
+                            <div style="font-size: 0.9em; margin-bottom: 10px;">Loss: ${results.xp_calculations.player1.loss_xp} XP</div>
+                            <div style="color: var(--primary-gold); font-weight: bold;">Expected: ${results.expected_xp.player1} XP/fight</div>
+                        </div>
+                        <div class="result-card" style="background: rgba(218, 165, 32, 0.15);">
+                            <h4 style="color: var(--primary-gold); margin-bottom: 10px;">${player2.race.toUpperCase()} Player 2</h4>
+                            <div style="font-size: 0.9em; margin-bottom: 5px;">Win: ${results.xp_calculations.player2.win_xp} XP</div>
+                            <div style="font-size: 0.9em; margin-bottom: 5px;">Draw: ${results.xp_calculations.player2.draw_xp} XP</div>
+                            <div style="font-size: 0.9em; margin-bottom: 10px;">Loss: ${results.xp_calculations.player2.loss_xp} XP</div>
+                            <div style="color: var(--primary-gold); font-weight: bold;">Expected: ${results.expected_xp.player2} XP/fight</div>
+                        </div>
+                    </div>
+                    <div style="text-align: center; margin-top: 15px; padding: 15px; background: rgba(0,0,0,0.3); border-radius: 8px;">
+                        <div style="color: var(--secondary-gold); margin-bottom: 5px;">📊 Progression Analysis</div>
+                        <div style="font-size: 0.9em;">Daily XP (3 fights): P1 ${(results.expected_xp.player1 * 3).toFixed(1)} | P2 ${(results.expected_xp.player2 * 3).toFixed(1)}</div>
+                        <div style="font-size: 0.9em;">Weekly XP: P1 ${(results.expected_xp.player1 * 21).toFixed(0)} | P2 ${(results.expected_xp.player2 * 21).toFixed(0)}</div>
+                        <div style="font-size: 0.9em; color: var(--primary-gold);">Time to Level 2 (1500 XP): P1 ${Math.ceil(1500 / (results.expected_xp.player1 * 3))} days | P2 ${Math.ceil(1500 / (results.expected_xp.player2 * 3))} days</div>
+                    </div>
+                </div>
+                ` : ''}
+
                 <div class="sample-fights">
                     <h3>📋 Sample Fight Logs</h3>
                     ${results.sample_fights.slice(0, 3).map((fight, index) => `
@@ -553,6 +611,184 @@
                             ${fight.log.slice(-3).join('<br>')}
                         </div>
                     `).join('')}
+                </div>
+            `;
+        }
+
+        function toggleXPCalculator() {
+            const calculator = document.getElementById('xp-calculator');
+            if (calculator.style.display === 'none') {
+                calculator.style.display = 'block';
+            } else {
+                calculator.style.display = 'none';
+            }
+        }
+
+        async function calculateXP() {
+            const currentXP = parseInt(document.getElementById('current-xp').value);
+            const dailyFights = parseInt(document.getElementById('daily-fights').value);
+            const targetLevel = parseInt(document.getElementById('target-level').value);
+            const xpBoostPercent = parseInt(document.getElementById('xp-boost').value) || 0;
+            const baseAvgXPPerFight = 71.5; // Average for 50% win rate against same level (updated: 110*0.5 + 55*0.3 + 0*0.2)
+
+            // Apply XP boost
+            const boostMultiplier = 1 + (xpBoostPercent / 100);
+            const avgXPPerFight = baseAvgXPPerFight * boostMultiplier;
+
+            try {
+                const response = await fetch('/xp_calculator', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        current_xp: currentXP,
+                        daily_fights: dailyFights,
+                        avg_xp_per_fight: avgXPPerFight,
+                        player_level: currentLevel,
+                        target_level: targetLevel,
+                        xp_boost_percent: xpBoostPercent
+                    })
+                });
+
+                const data = await response.json();
+                displayXPResults(data);
+
+            } catch (error) {
+                document.getElementById('xp-results').innerHTML = `<div style="color: var(--error-red);">Error: ${error.message}</div>`;
+            }
+        }
+
+        function displayXPResults(data) {
+            const resultsDiv = document.getElementById('xp-results');
+
+            const targetLevel = parseInt(document.getElementById('target-level').value);
+            let timeToTargetLevelHtml = '';
+            if (data.time_to_target_level.already_target_level) {
+                timeToTargetLevelHtml = '<div style="color: var(--success-green); font-weight: bold;">🎉 Already at target level!</div>';
+            } else {
+                timeToTargetLevelHtml = `
+                    <div style="color: var(--primary-gold); font-weight: bold;">⏰ Time to Level ${targetLevel}:</div>
+                    <div>${data.time_to_target_level.days} days | ${data.time_to_target_level.weeks} weeks | ${data.time_to_target_level.months} months</div>
+                    <div style="font-size: 0.9em; color: var(--secondary-gold);">Remaining XP: ${data.time_to_target_level.remaining_xp.toLocaleString()}</div>
+                `;
+            }
+
+            let xpScenariosHtml = '';
+            if (data.xp_scenarios) {
+                xpScenariosHtml = `
+                    <div style="margin-top: 20px;">
+                        <h4 style="color: var(--secondary-gold);">💰 XP Rewards by Opponent Level</h4>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 10px;">
+                `;
+
+                Object.entries(data.xp_scenarios).forEach(([key, scenario]) => {
+                    const levelDiff = scenario.opponent_level - currentLevel;
+                    let levelLabel = '';
+                    if (levelDiff === -1) levelLabel = '(Lower Level)';
+                    else if (levelDiff === 0) levelLabel = '(Same Level)';
+                    else if (levelDiff === 1) levelLabel = '(Higher Level)';
+
+                    // Apply XP boost to display values
+                    const xpBoostPercent = parseInt(document.getElementById('xp-boost').value) || 0;
+                    const boostMultiplier = 1 + (xpBoostPercent / 100);
+                    const boostedWinXP = Math.round(scenario.win_xp * boostMultiplier);
+                    const boostedDrawXP = Math.round(scenario.draw_xp * boostMultiplier);
+                    const boostedLossXP = Math.round(scenario.loss_xp * boostMultiplier);
+
+                    xpScenariosHtml += `
+                        <div class="result-card" style="padding: 15px;">
+                            <h5>Level ${scenario.opponent_level} ${levelLabel}</h5>
+                            <div style="font-size: 0.9em;">Win: ${boostedWinXP} XP</div>
+                            <div style="font-size: 0.9em;">Draw: ${boostedDrawXP} XP</div>
+                            <div style="font-size: 0.9em;">Loss: ${boostedLossXP} XP</div>
+                        </div>
+                    `;
+                });
+
+                xpScenariosHtml += '</div></div>';
+            }
+
+            resultsDiv.innerHTML = `
+                <div class="results-grid" style="grid-template-columns: 1fr 1fr 1fr; margin-bottom: 20px;">
+                    <div class="result-card">
+                        <h3>Current Level</h3>
+                        <div class="result-value">${data.current_level}</div>
+                    </div>
+                    <div class="result-card">
+                        <h3>Current Level XP</h3>
+                        <div class="result-value">${data.current_level_xp}</div>
+                        <div style="font-size: 0.8em; margin-top: 5px;">/ ${data.xp_for_next_level} for next level</div>
+                    </div>
+                    <div class="result-card">
+                        <h3>Total XP</h3>
+                        <div class="result-value">${data.total_xp.toLocaleString()}</div>
+                    </div>
+                </div>
+
+                <div class="results-grid" style="grid-template-columns: 1fr 1fr 1fr; margin-bottom: 20px;">
+                    <div class="result-card">
+                        <h3>Daily XP</h3>
+                        <div class="result-value">${data.daily_xp}</div>
+                        <div style="font-size: 0.8em; margin-top: 5px;">${parseInt(document.getElementById('daily-fights').value)} fights/day</div>
+                    </div>
+                    <div class="result-card">
+                        <h3>XP Boost</h3>
+                        <div class="result-value">${parseInt(document.getElementById('xp-boost').value) || 0}%</div>
+                        <div style="font-size: 0.8em; margin-top: 5px; color: var(--primary-gold);">
+                            ${parseInt(document.getElementById('xp-boost').value) > 0 ?
+                              `${(data.daily_xp / (1 + (parseInt(document.getElementById('xp-boost').value) / 100))).toFixed(0)} → ${data.daily_xp} XP/day` :
+                              'No boost active'}
+                        </div>
+                    </div>
+                    <div class="result-card">
+                        <div>${timeToTargetLevelHtml}</div>
+                    </div>
+                </div>
+
+                ${xpScenariosHtml}
+
+                ${parseInt(document.getElementById('xp-boost').value) > 0 ? `
+                <div style="margin-top: 20px; padding: 15px; background: rgba(76, 175, 80, 0.1); border: 1px solid var(--success-green); border-radius: 8px;">
+                    <h4 style="color: var(--success-green); margin-bottom: 10px;">🚀 XP Boost Impact Analysis</h4>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                        <div>
+                            <div style="color: var(--secondary-gold); margin-bottom: 5px;">⏱️ Time Savings</div>
+                            <div style="font-size: 0.9em;">
+                                Without boost: ${Math.ceil(data.time_to_target_level.remaining_xp / (data.daily_xp / (1 + (parseInt(document.getElementById('xp-boost').value) / 100))))} days to Level ${targetLevel}<br>
+                                With ${parseInt(document.getElementById('xp-boost').value)}% boost: ${data.time_to_target_level.days} days to Level ${targetLevel}<br>
+                                <span style="color: var(--success-green); font-weight: bold;">
+                                    Time saved: ${Math.ceil(data.time_to_target_level.remaining_xp / (data.daily_xp / (1 + (parseInt(document.getElementById('xp-boost').value) / 100)))) - data.time_to_target_level.days} days
+                                    (${((Math.ceil(data.time_to_target_level.remaining_xp / (data.daily_xp / (1 + (parseInt(document.getElementById('xp-boost').value) / 100)))) - data.time_to_target_level.days) / 30).toFixed(1)} months)
+                                </span>
+                            </div>
+                        </div>
+                        <div>
+                            <div style="color: var(--secondary-gold); margin-bottom: 5px;">💰 XP Multiplier</div>
+                            <div style="font-size: 0.9em;">
+                                Base XP/fight: ${(data.daily_xp / parseInt(document.getElementById('daily-fights').value) / (1 + (parseInt(document.getElementById('xp-boost').value) / 100))).toFixed(1)}<br>
+                                Boosted XP/fight: ${(data.daily_xp / parseInt(document.getElementById('daily-fights').value)).toFixed(1)}<br>
+                                <span style="color: var(--success-green); font-weight: bold;">
+                                    Multiplier: ${(1 + (parseInt(document.getElementById('xp-boost').value) / 100)).toFixed(2)}x
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                ` : ''}
+
+                <div style="margin-top: 20px; padding: 15px; background: rgba(0,0,0,0.3); border-radius: 8px;">
+                    <h4 style="color: var(--secondary-gold); margin-bottom: 10px;">📈 Level Requirements</h4>
+                    <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; font-size: 0.9em;">
+                        ${Object.entries(data.level_requirements).slice(1, 6).map(([level, xp]) =>
+                            `<div>Level ${level}: ${xp.toLocaleString()} XP</div>`
+                        ).join('')}
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; font-size: 0.9em; margin-top: 5px;">
+                        ${Object.entries(data.level_requirements).slice(6, 11).map(([level, xp]) =>
+                            `<div>Level ${level}: ${xp.toLocaleString()} XP</div>`
+                        ).join('')}
+                    </div>
                 </div>
             `;
         }

@@ -25,9 +25,9 @@ class Player:
 
 # Default race characteristics (adjusted HP and damage parameters)
 RACE_DEFAULTS = {
-    'human': {'hp': 20, 'power': 5, 'defense': 5, 'agility': 6},
+    'human': {'hp': 21, 'power': 5, 'defense': 5, 'agility': 6},
     'orc': {'hp': 20, 'power': 6, 'defense': 5, 'agility': 5},
-    'elf': {'hp': 20, 'power': 5, 'defense': 5, 'agility': 6},
+    'elf': {'hp': 21, 'power': 5, 'defense': 5, 'agility': 6},
     'dwarf': {'hp': 20, 'power': 5, 'defense': 6, 'agility': 5},
     'skeleton': {'hp': 22, 'power': 5, 'defense': 5, 'agility': 5}
 }
@@ -119,11 +119,11 @@ class FightSimulator:
         BLOCK_MULTIPLIER = 0.5
 
         # Agility effect constants
-        SUPER_ATTACK_MULTIPLIER = 4
-        MAX_DODGE_CHANCE = 70  # 30% max
-        MAX_SUPER_ATTACK_CHANCE = 70  # 20% max
+        SUPER_ATTACK_MULTIPLIER = 3.5
+        MAX_DODGE_CHANCE = 40  # 30% max
+        MAX_SUPER_ATTACK_CHANCE = 30  # 20% max
         AGILITY_DODGE_FACTOR = 1  # 2% per agility point difference
-        AGILITY_SUPER_FACTOR = 3  # 1% per agility point difference
+        AGILITY_SUPER_FACTOR = 1  # 1% per agility point difference
 
         # Calculate agility difference
         agility_diff = attacker.agility - defender.agility
@@ -293,6 +293,127 @@ def run_simulation(player1_config: Dict, player2_config: Dict, num_simulations: 
 
     return results
 
+def calculate_xp_for_fight(result: str, player_level: int, opponent_level: int) -> int:
+    """Calculate XP gained from a fight result"""
+
+    # Base XP values (calibrated for 1 week to level 2)
+    BASE_XP_WIN = 110
+    BASE_XP_DRAW = 55
+    BASE_XP_LOSS = 0  # No XP for losses
+
+    # Get base XP based on result
+    if result == 'win':
+        base_xp = BASE_XP_WIN
+    elif result == 'draw':
+        base_xp = BASE_XP_DRAW
+    else:  # loss
+        return 0  # Always 0 XP for losses
+
+    # Apply level modifier
+    level_diff = opponent_level - player_level
+
+    if level_diff == -1:  # Fighting lower level
+        if result == 'draw':
+            return 0  # No XP for draw against lower level
+        multiplier = 0.7
+    elif level_diff == 0:  # Same level
+        multiplier = 1.0
+    elif level_diff == 1:  # Fighting higher level
+        if result == 'draw':
+            return BASE_XP_WIN  # Draw against higher = win XP against same
+        multiplier = 1.5
+    else:
+        # For other level differences, use gradual scaling
+        if level_diff < -1:
+            multiplier = max(0.5, 0.7 + (level_diff + 1) * 0.1)
+        else:  # level_diff > 1
+            multiplier = min(2.0, 1.5 + (level_diff - 1) * 0.2)
+
+    return int(base_xp * multiplier)
+
+def get_xp_required_for_level(level: int) -> int:
+    """Get total XP required to reach a specific level"""
+    if level <= 1:
+        return 0
+
+    # Level 2 requires 1500 XP (1 week target)
+    # Each subsequent level requires 1.5x more than the previous level
+    total_xp = 0
+    level_2_xp = 1500
+
+    for lvl in range(2, level + 1):
+        if lvl == 2:
+            level_xp = level_2_xp
+        else:
+            # Calculate XP needed from previous level
+            prev_level_xp = get_xp_for_single_level(lvl - 1)
+            level_xp = int(prev_level_xp * 1.5)
+
+        total_xp += level_xp
+
+    return total_xp
+
+def get_xp_for_single_level(level: int) -> int:
+    """Get XP required to advance from (level-1) to level"""
+    if level <= 1:
+        return 0
+    elif level == 2:
+        return 1500  # Base requirement
+    else:
+        # Each level requires 1.5x more than the previous
+        prev_level_xp = get_xp_for_single_level(level - 1)
+        return int(prev_level_xp * 1.5)
+
+def get_current_level_from_xp(xp: int) -> tuple:
+    """Get current level and progress from total XP"""
+    if xp < 1500:
+        return 1, xp, 1500
+
+    level = 1
+    total_xp_used = 0
+
+    while level < 10:
+        next_level = level + 1
+        xp_for_next_level = get_xp_for_single_level(next_level)
+
+        if total_xp_used + xp_for_next_level > xp:
+            # Current level found
+            current_level_xp = xp - total_xp_used
+            return level, current_level_xp, xp_for_next_level
+
+        total_xp_used += xp_for_next_level
+        level += 1
+
+    # At max level (10)
+    return 10, 0, 0
+
+def calculate_time_to_target_level(current_xp: int, daily_xp: int, target_level: int = 10) -> dict:
+    """Calculate time needed to reach target level"""
+
+    total_xp_needed = get_xp_required_for_level(target_level)
+    remaining_xp = total_xp_needed - current_xp
+
+    if remaining_xp <= 0:
+        return {
+            'already_target_level': True,
+            'days': 0,
+            'weeks': 0,
+            'months': 0
+        }
+
+    days_needed = remaining_xp / daily_xp if daily_xp > 0 else float('inf')
+    weeks_needed = days_needed / 7
+    months_needed = days_needed / 30
+
+    return {
+        'already_target_level': False,
+        'total_xp_needed': total_xp_needed,
+        'remaining_xp': remaining_xp,
+        'days': round(days_needed, 1),
+        'weeks': round(weeks_needed, 1),
+        'months': round(months_needed, 1)
+    }
+
 @app.route('/')
 def index():
     """Main page with fight simulator"""
@@ -317,7 +438,85 @@ def simulate():
 
     results = run_simulation(player1_config, player2_config, num_simulations)
 
+    # Add XP calculations to results
+    player1_level = data.get('player1_level', 1)
+    player2_level = data.get('player2_level', 1)
+
+    # Calculate XP for different outcomes
+    results['xp_calculations'] = {
+        'player1': {
+            'win_xp': calculate_xp_for_fight('win', player1_level, player2_level),
+            'draw_xp': calculate_xp_for_fight('draw', player1_level, player2_level),
+            'loss_xp': calculate_xp_for_fight('loss', player1_level, player2_level)
+        },
+        'player2': {
+            'win_xp': calculate_xp_for_fight('win', player2_level, player1_level),
+            'draw_xp': calculate_xp_for_fight('draw', player2_level, player1_level),
+            'loss_xp': calculate_xp_for_fight('loss', player2_level, player1_level)
+        }
+    }
+
+    # Calculate expected XP per fight for each player
+    p1_expected_xp = (results['xp_calculations']['player1']['win_xp'] * results['player1_win_rate'] / 100 +
+                      results['xp_calculations']['player1']['draw_xp'] * results['draw_rate'] / 100 +
+                      results['xp_calculations']['player1']['loss_xp'] * results['player2_win_rate'] / 100)
+
+    p2_expected_xp = (results['xp_calculations']['player2']['win_xp'] * results['player2_win_rate'] / 100 +
+                      results['xp_calculations']['player2']['draw_xp'] * results['draw_rate'] / 100 +
+                      results['xp_calculations']['player2']['loss_xp'] * results['player1_win_rate'] / 100)
+
+    results['expected_xp'] = {
+        'player1': round(p1_expected_xp, 1),
+        'player2': round(p2_expected_xp, 1)
+    }
+
     return jsonify(results)
+
+@app.route('/xp_calculator', methods=['POST'])
+def xp_calculator():
+    """API endpoint for XP calculations"""
+    data = request.json
+
+    current_xp = data.get('current_xp', 0)
+    daily_fights = data.get('daily_fights', 3)
+    avg_xp_per_fight = data.get('avg_xp_per_fight', 69)
+    target_level = data.get('target_level', 10)
+
+    daily_xp = daily_fights * avg_xp_per_fight
+
+    # Get current level info
+    current_level, current_level_xp, xp_for_next = get_current_level_from_xp(current_xp)
+
+    # Calculate time to target level
+    time_to_target = calculate_time_to_target_level(current_xp, daily_xp, target_level)
+
+    # Calculate XP for different fight scenarios
+    player_level = data.get('player_level', current_level)
+    xp_scenarios = {}
+
+    for level_diff in [-1, 0, 1]:
+        opponent_level = player_level + level_diff
+        if opponent_level >= 1 and opponent_level <= 10:
+            scenario_name = f"vs_level_{opponent_level}"
+            xp_scenarios[scenario_name] = {
+                'opponent_level': opponent_level,
+                'win_xp': calculate_xp_for_fight('win', player_level, opponent_level),
+                'draw_xp': calculate_xp_for_fight('draw', player_level, opponent_level),
+                'loss_xp': calculate_xp_for_fight('loss', player_level, opponent_level)
+            }
+
+    return jsonify({
+        'current_level': current_level,
+        'current_level_xp': current_level_xp,
+        'xp_for_next_level': xp_for_next,
+        'total_xp': current_xp,
+        'daily_xp': daily_xp,
+        'time_to_target_level': time_to_target,
+        'xp_scenarios': xp_scenarios,
+        'level_requirements': {
+            level: get_xp_required_for_level(level) for level in range(1, 11)
+        }
+    })
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5001)
