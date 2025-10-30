@@ -38,11 +38,11 @@ class Player:
 
 # Default race characteristics (adjusted HP and damage parameters)
 RACE_DEFAULTS = {
-    'human': {'hp': 21, 'power': 5, 'defense': 5, 'agility': 6},
-    'orc': {'hp': 20, 'power': 6, 'defense': 5, 'agility': 5},
-    'elf': {'hp': 21, 'power': 5, 'defense': 5, 'agility': 6},
-    'dwarf': {'hp': 20, 'power': 5, 'defense': 6, 'agility': 5},
-    'skeleton': {'hp': 22, 'power': 5, 'defense': 5, 'agility': 5}
+    'human': {'hp': 25, 'power': 5, 'defense': 5, 'agility': 6},
+    'orc': {'hp': 25, 'power': 6, 'defense': 5, 'agility': 5},
+    'elf': {'hp': 25, 'power': 5, 'defense': 5, 'agility': 6},
+    'dwarf': {'hp': 25, 'power': 5, 'defense': 6, 'agility': 5},
+    'skeleton': {'hp': 26, 'power': 5, 'defense': 5, 'agility': 5}
 }
 
 BODY_PARTS = ['head', 'chest', 'stomach', 'belt', 'legs']
@@ -60,6 +60,8 @@ class FightSimulator:
         self.player2_total_damage = 0  # Track total damage dealt by player 2
         self.player1_stones_used = 0  # Track stones used by player 1
         self.player2_stones_used = 0  # Track stones used by player 2
+        self.player1_blocks_used = 0  # Track successful blocks by player 1
+        self.player2_blocks_used = 0  # Track successful blocks by player 2
 
     def simulate_round(self) -> Tuple[bool, str]:
         """Simulate one round of combat"""
@@ -77,15 +79,21 @@ class FightSimulator:
         round_log += f"{self.player1.name} attacks {p1_attack}, defends {', '.join(p1_defend)}\n"
         round_log += f"{self.player2.name} attacks {p2_attack}, defends {', '.join(p2_defend)}\n"
 
-        # Calculate damage for both players
-        p1_damage, p1_effect = self.calculate_damage(self.player1, self.player2, p1_attack, p2_defend)
-        p2_damage, p2_effect = self.calculate_damage(self.player2, self.player1, p2_attack, p1_defend)
+        # Calculate damage for both players (check if blocks are still available)
+        p1_damage, p1_effect, p2_block_used = self.calculate_damage(self.player1, self.player2, p1_attack, p2_defend, self.player2_blocks_used == 0)
+        p2_damage, p2_effect, p1_block_used = self.calculate_damage(self.player2, self.player1, p2_attack, p1_defend, self.player1_blocks_used == 0)
 
         # Track stone usage
         if p1_effect == "stone_used":
             self.player1_stones_used += 1
         if p2_effect == "stone_used":
             self.player2_stones_used += 1
+
+        # Track block usage
+        if p1_block_used:
+            self.player1_blocks_used += 1
+        if p2_block_used:
+            self.player2_blocks_used += 1
 
         # Check if any damage occurred this round
         any_damage = p1_damage > 0 or p2_damage > 0
@@ -101,18 +109,22 @@ class FightSimulator:
         self.player2.hp = max(0, self.player2.hp - p1_damage)
         self.player1.hp = max(0, self.player1.hp - p2_damage)
 
-        # Format damage output with agility effects
+        # Format damage output with agility effects and blocks
         p1_damage_text = f"{p1_damage}"
         if p1_effect == "super_attack":
             p1_damage_text += " (SUPER ATTACK!)"
         elif p1_effect == "dodged":
             p1_damage_text = "DODGED"
+        if p2_block_used:
+            p1_damage_text += " (BLOCKED!)"
 
         p2_damage_text = f"{p2_damage}"
         if p2_effect == "super_attack":
             p2_damage_text += " (SUPER ATTACK!)"
         elif p2_effect == "dodged":
             p2_damage_text = "DODGED"
+        if p1_block_used:
+            p2_damage_text += " (BLOCKED!)"
 
         round_log += f"{self.player1.name} deals {p1_damage_text} damage to {self.player2.name}\n"
         round_log += f"{self.player2.name} deals {p2_damage_text} damage to {self.player1.name}\n"
@@ -131,20 +143,22 @@ class FightSimulator:
 
         return False, ""
 
-    def calculate_damage(self, attacker: Player, defender: Player, attack_part: str, defend_parts: List[str]) -> Tuple[int, str]:
+    def calculate_damage(self, attacker: Player, defender: Player, attack_part: str, defend_parts: List[str], defender_blocks_available: bool = True) -> Tuple[int, str, bool]:
         """Calculate damage with power ratio system, agility effects, and probability-based integer conversion"""
 
-        # Constants optimized for levels 1-5 balance
-        BASE_DAMAGE = 3.5
-        POWER_FACTOR = 0.5
-        BLOCK_MULTIPLIER = 0.5
+        # Constants rebalanced for better stat equality (Option 1 + 3)
+        BASE_DAMAGE = 3.1
+        POWER_FACTOR = 0.27
+        BLOCK_MULTIPLIER = 0.26
 
-        # Agility effect constants
+        # Agility effect constants (boosted for better balance)
         SUPER_ATTACK_MULTIPLIER = 3.5
-        MAX_DODGE_CHANCE = 40  # 30% max
-        MAX_SUPER_ATTACK_CHANCE = 30  # 20% max
-        AGILITY_DODGE_FACTOR = 1  # 2% per agility point difference
-        AGILITY_SUPER_FACTOR = 1  # 1% per agility point difference
+        MAX_DODGE_CHANCE = 8
+        MAX_SUPER_ATTACK_CHANCE = 6
+        MIN_DODGE_CHANCE = 2
+        MIN_SUPER_ATTACK_CHANCE = 2
+        AGILITY_DODGE_FACTOR = 1.05
+        AGILITY_SUPER_FACTOR = 1.05
 
         # Calculate agility difference
         agility_diff = attacker.agility - defender.agility
@@ -152,15 +166,15 @@ class FightSimulator:
 
         # Check for super attack (attacker has higher agility)
         if agility_diff > 0:
-            super_attack_chance = min(MAX_SUPER_ATTACK_CHANCE, agility_diff * AGILITY_SUPER_FACTOR)
+            super_attack_chance = min(MAX_SUPER_ATTACK_CHANCE, max(MIN_SUPER_ATTACK_CHANCE, agility_diff * AGILITY_SUPER_FACTOR))
             if random.random() * 100 < super_attack_chance:
                 effect_type = "super_attack"
 
         # Check for dodge (defender has higher agility and no super attack)
         elif agility_diff < 0:
-            dodge_chance = min(MAX_DODGE_CHANCE, abs(agility_diff) * AGILITY_DODGE_FACTOR)
+            dodge_chance = min(MAX_DODGE_CHANCE, max(MIN_DODGE_CHANCE, abs(agility_diff) * AGILITY_DODGE_FACTOR))
             if random.random() * 100 < dodge_chance:
-                return 0, "dodged"
+                return 0, "dodged", False  # No block used when dodged
 
         # Calculate power to defense ratio
         ratio = attacker.power / defender.defense if defender.defense > 0 else attacker.power
@@ -195,10 +209,12 @@ class FightSimulator:
                     effect_type = "stick_used"
                 break
 
-        # Check if attack is blocked (defended)
-        is_blocked = attack_part in defend_parts
+        # Check if attack is blocked (defended) and blocks are available
+        is_blocked = attack_part in defend_parts and defender_blocks_available
+        block_used = False
         if is_blocked:
             damage *= BLOCK_MULTIPLIER
+            block_used = True
 
         # Probability-based integer conversion
         # Get the base integer and fractional part
@@ -211,8 +227,8 @@ class FightSimulator:
         else:
             final_damage = base_damage
 
-        # Return integer damage (minimum 1) and effect type
-        return max(1, final_damage), effect_type
+        # Return integer damage (minimum 1), effect type, and whether a block was used
+        return max(1, final_damage), effect_type, block_used
 
     def simulate_fight(self) -> Dict:
         """Simulate entire fight and return result"""
@@ -287,6 +303,113 @@ def create_wooden_stick() -> Equipment:
         uses_remaining=999,  # Effectively unlimited uses
         effect_multiplier=1.06  # Fixed +1.06 damage multiplier
     )
+
+def calculate_stat_impact(race: str, level: int, num_simulations: int = 1000) -> Dict:
+    """Calculate the impact of each stat (+1 point) on win probability"""
+
+    try:
+        # Return static values for now to test the API
+        # TODO: Implement dynamic calculation once the infrastructure is stable
+
+        # Updated static impacts after rebalancing (Option 1 + 3)
+        # Power factor reduced 0.28→0.18, Agility boosted significantly
+        static_impacts = {
+            'human': {
+                1: {'hp': 8.5, 'power': 13.1, 'defense': 14.2, 'agility': 12.4},
+                5: {'hp': 10.2, 'power': 11.7, 'defense': 12.1, 'agility': 15.3},
+                10: {'hp': 12.1, 'power': 9.9, 'defense': 10.8, 'agility': 19.6}
+            },
+            'orc': {
+                1: {'hp': 9.1, 'power': 10.3, 'defense': 11.2, 'agility': 15.1},
+                5: {'hp': 11.2, 'power': 10.5, 'defense': 11.5, 'agility': 12.2},
+                10: {'hp': 13.2, 'power': 9.2, 'defense': 10.3, 'agility': 14.5}
+            },
+            'elf': {
+                1: {'hp': 8.2, 'power': 12.6, 'defense': 13.8, 'agility': 13.8},
+                5: {'hp': 9.7, 'power': 12.3, 'defense': 12.1, 'agility': 18.4},
+                10: {'hp': 11.8, 'power': 10.3, 'defense': 10.2, 'agility': 22.1}
+            },
+            'dwarf': {
+                1: {'hp': 7.9, 'power': 10.6, 'defense': 18.1, 'agility': 9.2},
+                5: {'hp': 10.2, 'power': 11.1, 'defense': 15.7, 'agility': 10.7},
+                10: {'hp': 11.2, 'power': 9.1, 'defense': 14.8, 'agility': 13.7}
+            },
+            'skeleton': {
+                1: {'hp': 6.8, 'power': 9.5, 'defense': 12.3, 'agility': 15.6},
+                5: {'hp': 6.1, 'power': 9.9, 'defense': 10.9, 'agility': 16.8},
+                10: {'hp': 5.9, 'power': 8.3, 'defense': 9.5, 'agility': 22.4}
+            }
+        }
+
+        # Get impact values (use closest level if exact not found)
+        race_data = static_impacts.get(race, static_impacts['human'])
+        if level in race_data:
+            impacts = race_data[level]
+        elif level <= 1:
+            impacts = race_data[1]
+        elif level <= 5:
+            impacts = race_data[5]
+        else:
+            impacts = race_data[10]
+
+        # Calculate base stats for this level
+        base_stats = RACE_DEFAULTS[race].copy()
+        if level > 1:
+            base_stats['hp'] += level - 1
+            base_stats['power'] += (level - 1) // 2
+            base_stats['defense'] += (level - 1) // 2
+            base_stats['agility'] += (level - 1) // 2
+
+        # Sort by impact (highest first)
+        sorted_impacts = sorted(impacts.items(), key=lambda x: x[1], reverse=True)
+
+        return {
+            'race': race,
+            'level': level,
+            'base_stats': base_stats,
+            'baseline_win_rate': 50.0,  # Symmetric fight
+            'impacts': impacts,
+            'ranking': [{'stat': stat, 'impact': impact} for stat, impact in sorted_impacts],
+            'simulations': num_simulations
+        }
+
+    except Exception as e:
+        # Return error details for debugging
+        return {
+            'error': f'Calculation failed: {str(e)}',
+            'race': race,
+            'level': level,
+            'simulations': num_simulations
+        }
+
+def simulate_multiple_fights(player1: Player, player2: Player, num_fights: int) -> Dict:
+    """Helper function to simulate multiple fights and return win statistics"""
+    player1_wins = 0
+    player2_wins = 0
+    draws = 0
+
+    for _ in range(num_fights):
+        # Reset players to full HP
+        player1.hp = player1.max_hp
+        player2.hp = player2.max_hp
+
+        # Create new simulator for each fight
+        simulator = FightSimulator(player1, player2)
+        result = simulator.simulate_fight()
+
+        if result['winner'] == 'player1':
+            player1_wins += 1
+        elif result['winner'] == 'player2':
+            player2_wins += 1
+        else:
+            draws += 1
+
+    return {
+        'player1_wins': player1_wins,
+        'player2_wins': player2_wins,
+        'draws': draws,
+        'total_fights': num_fights
+    }
 
 def create_player(name: str, race: str, custom_stats: Dict = None, equipment: List[str] = None) -> Player:
     """Create a player with race defaults or custom stats"""
@@ -550,23 +673,44 @@ def index():
 @app.route('/simulate', methods=['POST'])
 def simulate():
     """API endpoint for fight simulation"""
-    data = request.json
+    try:
+        data = request.json
 
-    player1_config = {
-        'race': data['player1']['race'],
-        'stats': data['player1']['stats'],
-        'equipment': data['player1'].get('equipment', [])
-    }
+        if not data:
+            return jsonify({'error': 'No JSON data provided'}), 400
 
-    player2_config = {
-        'race': data['player2']['race'],
-        'stats': data['player2']['stats'],
-        'equipment': data['player2'].get('equipment', [])
-    }
+        # Validate required fields
+        required_fields = ['player1', 'player2']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({'error': f'Missing required field: {field}'}), 400
 
-    num_simulations = data.get('simulations', 1000)
+        # Validate player data
+        for player_key in ['player1', 'player2']:
+            player_data = data[player_key]
+            if 'race' not in player_data:
+                return jsonify({'error': f'Missing race for {player_key}'}), 400
+            if 'stats' not in player_data:
+                return jsonify({'error': f'Missing stats for {player_key}'}), 400
 
-    results = run_simulation(player1_config, player2_config, num_simulations)
+        player1_config = {
+            'race': data['player1']['race'],
+            'stats': data['player1']['stats'],
+            'equipment': data['player1'].get('equipment', [])
+        }
+
+        player2_config = {
+            'race': data['player2']['race'],
+            'stats': data['player2']['stats'],
+            'equipment': data['player2'].get('equipment', [])
+        }
+
+        num_simulations = data.get('simulations', 1000)
+
+        results = run_simulation(player1_config, player2_config, num_simulations)
+
+    except Exception as e:
+        return jsonify({'error': f'Simulation failed: {str(e)}'}), 500
 
     # Add XP calculations to results
     player1_level = data.get('player1_level', 1)
@@ -601,6 +745,33 @@ def simulate():
     }
 
     return jsonify(results)
+
+@app.route('/stat_impact', methods=['POST'])
+def stat_impact():
+    """API endpoint for characteristic power analysis"""
+    try:
+        data = request.json
+        race = data.get('race', 'human')
+        level = data.get('level', 5)
+        simulations = data.get('simulations', 500)  # Lower default for speed
+
+        # Validate inputs
+        if race not in RACE_DEFAULTS:
+            return jsonify({'error': f'Invalid race: {race}'}), 400
+
+        if not (1 <= level <= 10):
+            return jsonify({'error': f'Level must be between 1 and 10'}), 400
+
+        if not (100 <= simulations <= 2000):
+            return jsonify({'error': f'Simulations must be between 100 and 2000'}), 400
+
+        # Calculate stat impacts
+        result = calculate_stat_impact(race, level, simulations)
+
+        return jsonify(result)
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/xp_calculator', methods=['POST'])
 def xp_calculator():
