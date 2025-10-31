@@ -462,34 +462,53 @@
                         <label title="Each +1 Agility increases win rate by ~9.0%">Agility: <span style="color: var(--secondary-gold); font-size: 0.8em;">(+9.0%)</span></label>
                         <input type="number" id="p1-agility" class="form-control" min="0" max="10">
                     </div>
+                    <div class="stat-input">
+                        <label title="Knowledge enables magic usage. Skeleton gets +1 at level 2, +1 at level 8">Knowledge: <span style="color: var(--magic-purple, #9966cc); font-size: 0.8em;">(Magic)</span></label>
+                        <input type="number" id="p1-knowledge" class="form-control" min="0" max="10">
+                    </div>
                 </div>
 
                 <!-- Equipment Section -->
                 <div class="equipment-section">
-                    <h3>🛡️ Equipment (3 slots)</h3>
-                    <div class="equipment-slots">
-                        <div class="equipment-slot">
+                    <h3>🛡️ Basic Equipment (Stone Slots)</h3>
+                    <div class="equipment-slots" id="p1-basic-slots">
+                        <div class="equipment-slot" id="p1-basic-slot-1">
                             <label>Slot 1:</label>
                             <select id="p1-equipment-1" class="form-control">
                                 <option value="">Empty</option>
                                 <option value="stone">Stone (agility-based damage, 1 use)</option>
-                                <option value="wooden_stick">Wooden Stick (+1.06 damage, permanent)</option>
-                                <option value="wooden_stick">Wooden Stick (+1.06 damage, permanent)</option>
+                                <option value="fear_spell" id="p1-fear-option-1" style="display: none;">🔮 Fear Spell (enemy -3 power/defense, 3 mana)</option>
                             </select>
                         </div>
-                        <div class="equipment-slot">
+                        <div class="equipment-slot" id="p1-basic-slot-2">
                             <label>Slot 2:</label>
                             <select id="p1-equipment-2" class="form-control">
                                 <option value="">Empty</option>
                                 <option value="stone">Stone (agility-based damage, 1 use)</option>
+                                <option value="fear_spell" id="p1-fear-option-2" style="display: none;">🔮 Fear Spell (enemy -3 power/defense, 3 mana)</option>
+                            </select>
+                        </div>
+                        <div class="equipment-slot" id="p1-basic-slot-3" style="opacity: 0.5;">
+                            <label>Slot 3:</label>
+                            <select id="p1-equipment-3" class="form-control" disabled>
+                                <option value="">Disabled</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <h3>✋ Hand Equipment (Weapon Slots)</h3>
+                    <div class="equipment-slots" id="p1-hand-slots">
+                        <div class="equipment-slot">
+                            <label>Hand 1:</label>
+                            <select id="p1-hand-1" class="form-control">
+                                <option value="">Empty</option>
                                 <option value="wooden_stick">Wooden Stick (+1.06 damage, permanent)</option>
                             </select>
                         </div>
                         <div class="equipment-slot">
-                            <label>Slot 3:</label>
-                            <select id="p1-equipment-3" class="form-control">
+                            <label>Hand 2:</label>
+                            <select id="p1-hand-2" class="form-control">
                                 <option value="">Empty</option>
-                                <option value="stone">Stone (agility-based damage, 1 use)</option>
                                 <option value="wooden_stick">Wooden Stick (+1.06 damage, permanent)</option>
                             </select>
                         </div>
@@ -530,33 +549,53 @@
                         <label title="Each +1 Agility increases win rate by ~9.0%">Agility: <span style="color: var(--secondary-gold); font-size: 0.8em;">(+9.0%)</span></label>
                         <input type="number" id="p2-agility" class="form-control" min="0" max="10">
                     </div>
+                    <div class="stat-input">
+                        <label title="Knowledge enables magic usage. Skeleton gets +1 at level 2, +1 at level 8">Knowledge: <span style="color: var(--magic-purple, #9966cc); font-size: 0.8em;">(Magic)</span></label>
+                        <input type="number" id="p2-knowledge" class="form-control" min="0" max="10">
+                    </div>
                 </div>
 
                 <!-- Equipment Section -->
                 <div class="equipment-section">
-                    <h3>🛡️ Equipment (3 slots)</h3>
-                    <div class="equipment-slots">
-                        <div class="equipment-slot">
+                    <h3>🛡️ Basic Equipment (Stone Slots)</h3>
+                    <div class="equipment-slots" id="p2-basic-slots">
+                        <div class="equipment-slot" id="p2-basic-slot-1">
                             <label>Slot 1:</label>
                             <select id="p2-equipment-1" class="form-control">
                                 <option value="">Empty</option>
                                 <option value="stone">Stone (agility-based damage, 1 use)</option>
-                                <option value="wooden_stick">Wooden Stick (+1.06 damage, permanent)</option>
+                                <option value="fear_spell" id="p2-fear-option-1" style="display: none;">🔮 Fear Spell (enemy -3 power/defense, 3 mana)</option>
                             </select>
                         </div>
-                        <div class="equipment-slot">
+                        <div class="equipment-slot" id="p2-basic-slot-2">
                             <label>Slot 2:</label>
                             <select id="p2-equipment-2" class="form-control">
                                 <option value="">Empty</option>
                                 <option value="stone">Stone (agility-based damage, 1 use)</option>
+                                <option value="fear_spell" id="p2-fear-option-2" style="display: none;">🔮 Fear Spell (enemy -3 power/defense, 3 mana)</option>
+                            </select>
+                        </div>
+                        <div class="equipment-slot" id="p2-basic-slot-3" style="opacity: 0.5;">
+                            <label>Slot 3:</label>
+                            <select id="p2-equipment-3" class="form-control" disabled>
+                                <option value="">Disabled</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <h3>✋ Hand Equipment (Weapon Slots)</h3>
+                    <div class="equipment-slots" id="p2-hand-slots">
+                        <div class="equipment-slot">
+                            <label>Hand 1:</label>
+                            <select id="p2-hand-1" class="form-control">
+                                <option value="">Empty</option>
                                 <option value="wooden_stick">Wooden Stick (+1.06 damage, permanent)</option>
                             </select>
                         </div>
                         <div class="equipment-slot">
-                            <label>Slot 3:</label>
-                            <select id="p2-equipment-3" class="form-control">
+                            <label>Hand 2:</label>
+                            <select id="p2-hand-2" class="form-control">
                                 <option value="">Empty</option>
-                                <option value="stone">Stone (agility-based damage, 1 use)</option>
                                 <option value="wooden_stick">Wooden Stick (+1.06 damage, permanent)</option>
                             </select>
                         </div>
@@ -676,6 +715,15 @@
     <script>
         // Race defaults from Python
         const raceDefaults = {{ race_defaults | tojson }};
+
+        // Equipment slot configuration per race
+        const raceEquipmentSlots = {
+            'human': {'basic_slots': 2, 'hand_slots': 2},
+            'elf': {'basic_slots': 2, 'hand_slots': 2},
+            'orc': {'basic_slots': 1, 'hand_slots': 2},
+            'dwarf': {'basic_slots': 1, 'hand_slots': 2},
+            'skeleton': {'basic_slots': 1, 'hand_slots': 2}
+        };
 
         // Current level (1-10)
         let currentLevel = 1;
@@ -819,6 +867,17 @@
             updateRaceDefaults(1);
             updateRaceDefaults(2);
             updateStatImpactAnalysis(); // Load initial stat impact analysis
+
+            // Add event listeners for knowledge changes
+            document.getElementById('p1-knowledge').addEventListener('input', function() {
+                const knowledge = parseInt(this.value) || 0;
+                updateFearSpellVisibility(1, knowledge);
+            });
+
+            document.getElementById('p2-knowledge').addEventListener('input', function() {
+                const knowledge = parseInt(this.value) || 0;
+                updateFearSpellVisibility(2, knowledge);
+            });
         });
 
         function getLeveledStats(race, level) {
@@ -922,6 +981,15 @@
                 }
             }
 
+            // Calculate knowledge based on race and level (same logic as backend)
+            if (race === 'skeleton') {
+                leveledStats.knowledge = 0;
+                if (level >= 2) leveledStats.knowledge += 1;  // +1 at level 2
+                if (level >= 8) leveledStats.knowledge += 1;  // +1 additional at level 8
+            } else {
+                leveledStats.knowledge = 0;  // All other races stay at 0
+            }
+
             return leveledStats;
         }
 
@@ -937,6 +1005,53 @@
             }
         }
 
+        function updateEquipmentSlots(player, race) {
+            const slotConfig = raceEquipmentSlots[race] || {'basic_slots': 1, 'hand_slots': 2};
+
+            // Update basic equipment slots (for stones)
+            for (let i = 1; i <= 3; i++) {
+                const slotElement = document.getElementById(`p${player}-basic-slot-${i}`);
+                const selectElement = document.getElementById(`p${player}-equipment-${i}`);
+
+                if (i <= slotConfig.basic_slots) {
+                    // Enable slot
+                    slotElement.style.opacity = '1';
+                    selectElement.disabled = false;
+                    selectElement.innerHTML = `
+                        <option value="">Empty</option>
+                        <option value="stone">Stone (agility-based damage, 1 use)</option>
+                        <option value="fear_spell" id="p${player}-fear-option-${i}" style="display: none;">🔮 Fear Spell (enemy -3 power/defense, 3 mana)</option>
+                    `;
+                } else {
+                    // Disable slot
+                    slotElement.style.opacity = '0.5';
+                    selectElement.disabled = true;
+                    selectElement.innerHTML = '<option value="">Disabled</option>';
+                    selectElement.value = '';
+                }
+            }
+
+            // Hand slots are always enabled for all races (2 slots)
+            // No changes needed as they're already set up correctly
+        }
+
+        function updateFearSpellVisibility(player, knowledge) {
+            // Show/hide fear spell options based on knowledge >= 1
+            const fearOptions = document.querySelectorAll(`#p${player}-fear-option-1, #p${player}-fear-option-2, #p${player}-fear-option-3`);
+
+            fearOptions.forEach(option => {
+                if (knowledge >= 1) {
+                    option.style.display = 'block';
+                } else {
+                    option.style.display = 'none';
+                    // If fear spell was selected but knowledge is now < 1, reset to empty
+                    if (option.parentElement.value === 'fear_spell') {
+                        option.parentElement.value = '';
+                    }
+                }
+            });
+        }
+
         function updateRaceDefaults(player) {
             const raceSelect = document.getElementById(`p${player}-race`);
             const defaultsDiv = document.getElementById(`p${player}-defaults`);
@@ -947,7 +1062,7 @@
             // Update defaults display
             defaultsDiv.innerHTML = `
                 <strong>${race.toUpperCase()} Level ${currentLevel}:</strong><br>
-                HP: ${leveledStats.hp}, Power: ${leveledStats.power}, Defense: ${leveledStats.defense}, Agility: ${leveledStats.agility}
+                HP: ${leveledStats.hp}, Power: ${leveledStats.power}, Defense: ${leveledStats.defense}, Agility: ${leveledStats.agility}, Knowledge: ${leveledStats.knowledge}
             `;
 
             // Update input fields
@@ -955,6 +1070,13 @@
             document.getElementById(`p${player}-power`).value = leveledStats.power;
             document.getElementById(`p${player}-defense`).value = leveledStats.defense;
             document.getElementById(`p${player}-agility`).value = leveledStats.agility;
+            document.getElementById(`p${player}-knowledge`).value = leveledStats.knowledge;
+
+            // Update equipment slots based on race
+            updateEquipmentSlots(player, race);
+
+            // Update fear spell visibility based on knowledge
+            updateFearSpellVisibility(player, leveledStats.knowledge);
         }
 
         async function runSimulation() {
@@ -975,12 +1097,17 @@
                     hp: parseInt(document.getElementById('p1-hp').value),
                     power: parseInt(document.getElementById('p1-power').value),
                     defense: parseInt(document.getElementById('p1-defense').value),
-                    agility: parseInt(document.getElementById('p1-agility').value)
+                    agility: parseInt(document.getElementById('p1-agility').value),
+                    knowledge: parseInt(document.getElementById('p1-knowledge').value)
                 },
                 equipment: [
                     document.getElementById('p1-equipment-1').value || null,
                     document.getElementById('p1-equipment-2').value || null,
                     document.getElementById('p1-equipment-3').value || null
+                ].filter(item => item !== null),
+                hand_equipment: [
+                    document.getElementById('p1-hand-1').value || null,
+                    document.getElementById('p1-hand-2').value || null
                 ].filter(item => item !== null)
             };
 
@@ -990,12 +1117,17 @@
                     hp: parseInt(document.getElementById('p2-hp').value),
                     power: parseInt(document.getElementById('p2-power').value),
                     defense: parseInt(document.getElementById('p2-defense').value),
-                    agility: parseInt(document.getElementById('p2-agility').value)
+                    agility: parseInt(document.getElementById('p2-agility').value),
+                    knowledge: parseInt(document.getElementById('p2-knowledge').value)
                 },
                 equipment: [
                     document.getElementById('p2-equipment-1').value || null,
                     document.getElementById('p2-equipment-2').value || null,
                     document.getElementById('p2-equipment-3').value || null
+                ].filter(item => item !== null),
+                hand_equipment: [
+                    document.getElementById('p2-hand-1').value || null,
+                    document.getElementById('p2-hand-2').value || null
                 ].filter(item => item !== null)
             };
 

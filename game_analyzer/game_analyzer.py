@@ -30,23 +30,42 @@ class Player:
     power: int
     defense: int
     agility: int
+    knowledge: int = 0
     level: int = 1
     equipment: List[Equipment] = None
+    hand_equipment: List[Equipment] = None
+    mana: int = 0
+    max_mana: int = 0
 
     def __post_init__(self):
         if self.equipment is None:
-            self.equipment = [None, None, None]  # 3 equipment slots
+            self.equipment = [None, None, None]  # 3 basic equipment slots (for stones)
+        if self.hand_equipment is None:
+            self.hand_equipment = [None, None]  # 2 hand slots (for sticks)
 
 # Default race characteristics (adjusted HP and damage parameters)
 RACE_DEFAULTS = {
-    'human': {'hp': 25, 'power': 5, 'defense': 5, 'agility': 6},
-    'orc': {'hp': 25, 'power': 6, 'defense': 5, 'agility': 5},
-    'elf': {'hp': 25, 'power': 5, 'defense': 5, 'agility': 6},
-    'dwarf': {'hp': 25, 'power': 5, 'defense': 6, 'agility': 5},
-    'skeleton': {'hp': 26, 'power': 5, 'defense': 5, 'agility': 5}
+    'human': {'hp': 25, 'power': 5, 'defense': 5, 'agility': 6, 'knowledge': 0},
+    'orc': {'hp': 25, 'power': 6, 'defense': 5, 'agility': 5, 'knowledge': 0},
+    'elf': {'hp': 25, 'power': 5, 'defense': 5, 'agility': 6, 'knowledge': 0},
+    'dwarf': {'hp': 25, 'power': 5, 'defense': 6, 'agility': 5, 'knowledge': 0},
+    'skeleton': {'hp': 26, 'power': 5, 'defense': 5, 'agility': 5, 'knowledge': 0}
 }
 
 BODY_PARTS = ['head', 'chest', 'stomach', 'belt', 'legs']
+
+# Equipment slot configuration per race
+RACE_EQUIPMENT_SLOTS = {
+    'human': {'basic_slots': 2, 'hand_slots': 2},      # 2 basic + 2 hand (total enabled slots: 4)
+    'elf': {'basic_slots': 2, 'hand_slots': 2},        # 2 basic + 2 hand (total enabled slots: 4)
+    'orc': {'basic_slots': 1, 'hand_slots': 2},        # 1 basic + 2 hand (total enabled slots: 3)
+    'dwarf': {'basic_slots': 1, 'hand_slots': 2},      # 1 basic + 2 hand (total enabled slots: 3)
+    'skeleton': {'basic_slots': 1, 'hand_slots': 2}    # 1 basic + 2 hand (total enabled slots: 3)
+}
+
+def get_enabled_slots(race: str):
+    """Get the number of enabled slots for a race"""
+    return RACE_EQUIPMENT_SLOTS.get(race, {'basic_slots': 1, 'hand_slots': 2})
 
 class FightSimulator:
     """Fight simulation engine"""
@@ -65,6 +84,8 @@ class FightSimulator:
         self.player2_blocks_used = 0  # Track successful blocks by player 2
         self.player1_block_limit = 1  # Default block limit for player 1
         self.player2_block_limit = 1  # Default block limit for player 2
+        self.player1_fear_used = 0  # Track fear spells used by player 1
+        self.player2_fear_used = 0  # Track fear spells used by player 2
 
     def simulate_round(self) -> Tuple[bool, str]:
         """Simulate one round of combat"""
@@ -91,9 +112,43 @@ class FightSimulator:
         round_log += f"{self.player1.name} attacks {p1_attack}, defends {', '.join(p1_defend)}\n"
         round_log += f"{self.player2.name} attacks {p2_attack}, defends {', '.join(p2_defend)}\n"
 
-        # Calculate damage for both players (check if blocks are still available)
-        p1_damage, p1_effect, p2_block_used = self.calculate_damage(self.player1, self.player2, p1_attack, p2_defend, self.player2_blocks_used < self.player2_block_limit)
-        p2_damage, p2_effect, p1_block_used = self.calculate_damage(self.player2, self.player1, p2_attack, p1_defend, self.player1_blocks_used < self.player1_block_limit)
+        # Check for Fear spell usage (before damage calculation)
+        p1_casts_fear = self.check_fear_spell_usage(self.player1)
+        p2_casts_fear = self.check_fear_spell_usage(self.player2)
+
+        # Apply Fear spell effects (reduce target's power or defense by 3)
+        p1_power_reduction = 0
+        p1_defense_reduction = 0
+        p2_power_reduction = 0
+        p2_defense_reduction = 0
+
+        if p2_casts_fear:  # P2 casts fear on P1
+            if self.player1.power >= self.player1.defense:
+                p1_power_reduction = 3
+                fear_effect_p1 = "-3 power"
+            else:
+                p1_defense_reduction = 3
+                fear_effect_p1 = "-3 defense"
+
+        if p1_casts_fear:  # P1 casts fear on P2
+            if self.player2.power >= self.player2.defense:
+                p2_power_reduction = 3
+                fear_effect_p2 = "-3 power"
+            else:
+                p2_defense_reduction = 3
+                fear_effect_p2 = "-3 defense"
+
+        if p1_casts_fear:
+            round_log += f"{self.player1.name} casts FEAR SPELL! {self.player2.name} is weakened by fear ({fear_effect_p2})!\n"
+            self.player1_fear_used += 1
+
+        if p2_casts_fear:
+            round_log += f"{self.player2.name} casts FEAR SPELL! {self.player1.name} is weakened by fear ({fear_effect_p1})!\n"
+            self.player2_fear_used += 1
+
+        # Calculate damage for both players (pass power and defense reductions to main method)
+        p1_damage, p1_effect, p2_block_used = self.calculate_damage(self.player1, self.player2, p1_attack, p2_defend, self.player2_blocks_used < self.player2_block_limit, p1_power_reduction, p2_defense_reduction)
+        p2_damage, p2_effect, p1_block_used = self.calculate_damage(self.player2, self.player1, p2_attack, p1_defend, self.player1_blocks_used < self.player1_block_limit, p2_power_reduction, p1_defense_reduction)
 
         # Track stone usage
         if p1_effect == "stone_used":
@@ -155,7 +210,21 @@ class FightSimulator:
 
         return False, ""
 
-    def calculate_damage(self, attacker: Player, defender: Player, attack_part: str, defend_parts: List[str], defender_blocks_available: bool = True) -> Tuple[int, str, bool]:
+    def check_fear_spell_usage(self, caster: Player) -> bool:
+        """Check if player can and will cast Fear spell this round"""
+        # Check if player has fear spell and enough mana
+        if caster.mana < 3:  # Need 3 mana to cast fear
+            return False
+
+        for item in caster.equipment:
+            if item and item.item_type == "fear_spell":
+                # Auto-cast: always use fear spell when mana is available
+                caster.mana -= 3  # Consume mana
+                return True
+
+        return False
+
+    def calculate_damage(self, attacker: Player, defender: Player, attack_part: str, defend_parts: List[str], defender_blocks_available: bool = True, power_reduction: int = 0, defense_reduction: int = 0) -> Tuple[int, str, bool]:
         """Calculate damage with power ratio system, agility effects, and probability-based integer conversion"""
 
         # Constants rebalanced for better stat equality (Option 1 + 3)
@@ -171,6 +240,16 @@ class FightSimulator:
         MIN_SUPER_ATTACK_CHANCE = 2
         AGILITY_DODGE_FACTOR = 1.05
         AGILITY_SUPER_FACTOR = 1.05
+
+        # Apply fear power reduction temporarily if any
+        original_power = attacker.power
+        if power_reduction > 0:
+            attacker.power = max(1, attacker.power - power_reduction)
+
+        # Apply fear defense reduction temporarily if any
+        original_defense = defender.defense
+        if defense_reduction > 0:
+            defender.defense = max(1, defender.defense - defense_reduction)
 
         # Calculate agility difference
         agility_diff = attacker.agility - defender.agility
@@ -196,7 +275,7 @@ class FightSimulator:
         if effect_type == "super_attack":
             damage *= SUPER_ATTACK_MULTIPLIER
 
-        # Check for equipment usage (stone)
+        # Check for equipment usage (stone) - only in basic equipment slots
         equipment_used = False
         for i, item in enumerate(attacker.equipment):
             if item and item.item_type == "stone" and item.uses_remaining > 0:
@@ -218,8 +297,8 @@ class FightSimulator:
                     effect_type = "stone_used"
                     break
 
-        # Check for wooden stick (works every round)
-        for i, item in enumerate(attacker.equipment):
+        # Check for wooden stick (works every round) - only in hand equipment slots
+        for i, item in enumerate(attacker.hand_equipment):
             if item and item.item_type == "wooden_stick":
                 # Level-based scaling: reduce effectiveness at higher levels
                 # Wooden stick is a level 1 item, so it becomes less effective at higher levels
@@ -252,6 +331,124 @@ class FightSimulator:
         else:
             final_damage = base_damage
 
+        # Restore original power and defense
+        attacker.power = original_power
+        defender.defense = original_defense
+
+        # Return integer damage (minimum 1), effect type, and whether a block was used
+        return max(1, final_damage), effect_type, block_used
+
+    def calculate_damage_with_fear(self, attacker: Player, defender: Player, attack_part: str, defend_parts: List[str], defender_blocks_available: bool = True, power_reduction: int = 0) -> Tuple[int, str, bool]:
+        """Calculate damage with fear power reduction applied"""
+
+        # Constants for agility effects
+        BASE_DAMAGE = 4.5
+        POWER_FACTOR = 1.6
+        BLOCK_MULTIPLIER = 0.4
+        SUPER_ATTACK_MULTIPLIER = 2.4
+        MAX_DODGE_CHANCE = 8
+        MAX_SUPER_ATTACK_CHANCE = 6
+        MIN_DODGE_CHANCE = 2
+        MIN_SUPER_ATTACK_CHANCE = 2
+        AGILITY_DODGE_FACTOR = 1.05
+        AGILITY_SUPER_FACTOR = 1.05
+
+        # Apply fear power reduction temporarily
+        original_power = attacker.power
+        effective_power = max(1, attacker.power - power_reduction)  # Minimum power of 1
+        attacker.power = effective_power
+
+        # Calculate agility difference
+        agility_diff = attacker.agility - defender.agility
+        effect_type = "normal"
+
+        # Check for super attack (attacker has higher agility)
+        if agility_diff > 0:
+            super_attack_chance = min(MAX_SUPER_ATTACK_CHANCE, max(MIN_SUPER_ATTACK_CHANCE, agility_diff * AGILITY_SUPER_FACTOR))
+            if random.random() * 100 < super_attack_chance:
+                effect_type = "super_attack"
+
+        # Check for dodge (defender has higher agility and no super attack)
+        elif agility_diff < 0:
+            dodge_chance = min(MAX_DODGE_CHANCE, max(MIN_DODGE_CHANCE, abs(agility_diff) * AGILITY_DODGE_FACTOR))
+            if random.random() * 100 < dodge_chance:
+                attacker.power = original_power  # Restore original power
+                return 0, "dodged", False  # No block used when dodged
+
+        # Calculate power to defense ratio
+        ratio = attacker.power / defender.defense if defender.defense > 0 else attacker.power
+        damage = BASE_DAMAGE * (ratio ** POWER_FACTOR)
+
+        # Apply super attack multiplier if triggered
+        if effect_type == "super_attack":
+            damage *= SUPER_ATTACK_MULTIPLIER
+
+        # Check for equipment usage (stone) - only in basic equipment slots
+        equipment_used = False
+        for i, item in enumerate(attacker.equipment):
+            if item and item.item_type == "stone" and item.uses_remaining > 0:
+                # Calculate stone success chance: 25% + agility_diff * 1% (0-100%)
+                stone_success_chance = min(100, max(0, 25 + agility_diff * 1))
+                if random.random() * 100 < stone_success_chance:
+                    # Calculate dynamic multiplier: 1.1 + agility_diff * 0.1
+                    stone_multiplier = 1.1 + agility_diff * 0.1
+
+                    # Level-based scaling: reduce effectiveness at higher levels
+                    # Stone is a level 1 item, so it becomes less effective at higher levels
+                    level_penalty = 1.0 - (attacker.level - 1) * 0.15  # 15% reduction per level above 1
+                    level_penalty = max(0.3, level_penalty)  # Minimum 30% effectiveness
+                    stone_multiplier = 1.0 + (stone_multiplier - 1.0) * level_penalty
+
+                    damage *= stone_multiplier
+                    item.uses_remaining -= 1
+                    equipment_used = True
+                    effect_type = "stone_used"
+                    break
+
+        # Check for wooden stick (works every round) - only in hand equipment slots
+        for i, item in enumerate(attacker.hand_equipment):
+            if item and item.item_type == "wooden_stick":
+                # Level-based scaling: reduce effectiveness at higher levels
+                # Wooden stick is a level 1 item, so it becomes less effective at higher levels
+                level_penalty = 1.0 - (attacker.level - 1) * 0.10  # 10% reduction per level above 1
+                level_penalty = max(0.4, level_penalty)  # Minimum 40% effectiveness
+                scaled_multiplier = 1.0 + (item.effect_multiplier - 1.0) * level_penalty
+
+                damage *= scaled_multiplier
+                if effect_type == "stone_used":
+                    effect_type = "stone_and_stick"
+                else:
+                    effect_type = "stick_used"
+                break
+
+        # Check if attack is blocked (defended) and blocks are available
+        is_blocked = attack_part in defend_parts and defender_blocks_available
+        block_used = False
+        if is_blocked:
+            damage *= BLOCK_MULTIPLIER
+            block_used = True
+
+        # Probability-based integer conversion
+        # Get the base integer and fractional part
+        base_damage = int(damage)
+        fractional_part = damage - base_damage
+
+        # Determine final damage based on fractional probability
+        if random.random() < fractional_part:
+            final_damage = base_damage + 1
+        else:
+            final_damage = base_damage
+
+        # Restore original power
+        attacker.power = original_power
+
+        # Modify effect type if fear was applied
+        if power_reduction > 0:
+            if effect_type == "normal":
+                effect_type = "feared"
+            else:
+                effect_type = f"{effect_type}_feared"
+
         # Return integer damage (minimum 1), effect type, and whether a block was used
         return max(1, final_damage), effect_type, block_used
 
@@ -282,6 +479,12 @@ class FightSimulator:
                     'equipment_stats': {
                         'player1_stones_used': self.player1_stones_used,
                         'player2_stones_used': self.player2_stones_used
+                    },
+                    'magic_stats': {
+                        'player1_fear_used': self.player1_fear_used,
+                        'player2_fear_used': self.player2_fear_used,
+                        'player1_final_mana': self.player1.mana,
+                        'player2_final_mana': self.player2.mana
                     }
                 }
 
@@ -308,6 +511,12 @@ class FightSimulator:
                     'equipment_stats': {
                         'player1_stones_used': self.player1_stones_used,
                         'player2_stones_used': self.player2_stones_used
+                    },
+                    'magic_stats': {
+                        'player1_fear_used': self.player1_fear_used,
+                        'player2_fear_used': self.player2_fear_used,
+                        'player1_final_mana': self.player1.mana,
+                        'player2_final_mana': self.player2.mana
                     }
                 }
 
@@ -327,6 +536,15 @@ def create_wooden_stick() -> Equipment:
         item_type="wooden_stick",
         uses_remaining=999,  # Effectively unlimited uses
         effect_multiplier=1.06  # Fixed +1.06 damage multiplier
+    )
+
+def create_fear_spell() -> Equipment:
+    """Create a fear spell equipment item"""
+    return Equipment(
+        name="Fear Spell",
+        item_type="fear_spell",
+        uses_remaining=999,  # Spell stays in slot, limited by mana
+        effect_multiplier=1.0  # No damage multiplier, special effect
     )
 
 def calculate_stat_impact(race: str, level: int, num_simulations: int = 1000) -> Dict:
@@ -436,12 +654,38 @@ def simulate_multiple_fights(player1: Player, player2: Player, num_fights: int) 
         'total_fights': num_fights
     }
 
-def create_player(name: str, race: str, custom_stats: Dict = None, equipment: List[str] = None, level: int = 1) -> Player:
+def calculate_knowledge_for_level(race: str, level: int) -> int:
+    """Calculate knowledge stat based on race and level"""
+    # Base knowledge from race defaults
+    base_knowledge = RACE_DEFAULTS[race]['knowledge']
+
+    # Special bonuses for skeleton
+    if race == 'skeleton':
+        bonus_knowledge = 0
+        if level >= 2:
+            bonus_knowledge += 1  # +1 knowledge at level 2
+        if level >= 8:
+            bonus_knowledge += 1  # +1 additional knowledge at level 8 (total +2)
+        return base_knowledge + bonus_knowledge
+
+    # All other races: no knowledge bonuses per level
+    return base_knowledge
+
+def create_player(name: str, race: str, custom_stats: Dict = None, equipment: List[str] = None, hand_equipment: List[str] = None, level: int = 1) -> Player:
     """Create a player with race defaults or custom stats"""
     stats = RACE_DEFAULTS[race].copy()
 
     if custom_stats:
         stats.update(custom_stats)
+
+    # Calculate knowledge based on race and level
+    knowledge = calculate_knowledge_for_level(race, level)
+    # Allow custom knowledge override
+    if custom_stats and 'knowledge' in custom_stats:
+        knowledge = custom_stats['knowledge']
+
+    # Calculate mana based on knowledge (1 knowledge = 3 mana)
+    max_mana = knowledge * 3
 
     player = Player(
         name=name,
@@ -451,20 +695,34 @@ def create_player(name: str, race: str, custom_stats: Dict = None, equipment: Li
         power=stats['power'],
         defense=stats['defense'],
         agility=stats['agility'],
-        level=level
+        knowledge=knowledge,
+        level=level,
+        mana=max_mana,
+        max_mana=max_mana
     )
 
-    # Add equipment if specified
+    # Get enabled slot counts for this race
+    slot_config = get_enabled_slots(race)
+    enabled_basic_slots = slot_config['basic_slots']
+    enabled_hand_slots = slot_config['hand_slots']
+
+    # Add basic equipment (stones and fear spells) if specified
     if equipment:
-        stick_count = 0
         for i, item_type in enumerate(equipment):
-            if i < 3:
+            if i < enabled_basic_slots and i < 3:  # Only use enabled slots
                 if item_type == "stone":
                     player.equipment[i] = create_stone()
-                elif item_type == "wooden_stick" and stick_count == 0:
-                    player.equipment[i] = create_wooden_stick()
-                    stick_count += 1
-                # Ignore additional wooden sticks (only 1 allowed)
+                elif item_type == "fear_spell" and knowledge >= 1:
+                    player.equipment[i] = create_fear_spell()
+                # Ignore wooden sticks in basic slots
+
+    # Add hand equipment (wooden sticks only) if specified
+    if hand_equipment:
+        for i, item_type in enumerate(hand_equipment):
+            if i < enabled_hand_slots and i < 2:  # Only use enabled hand slots
+                if item_type == "wooden_stick":
+                    player.hand_equipment[i] = create_wooden_stick()
+                # Ignore stones in hand slots
 
     return player
 
@@ -481,13 +739,15 @@ def run_simulation(player1_config: Dict, player2_config: Dict, num_simulations: 
         'total_damage_p2': 0,
         'total_stones_used_p1': 0,
         'total_stones_used_p2': 0,
+        'total_fear_used_p1': 0,
+        'total_fear_used_p2': 0,
         'sample_fights': []
     }
 
     for i in range(num_simulations):
         # Create fresh players for each simulation
-        player1 = create_player("Player 1", player1_config['race'], player1_config.get('stats'), player1_config.get('equipment'), player1_level)
-        player2 = create_player("Player 2", player2_config['race'], player2_config.get('stats'), player2_config.get('equipment'), player2_level)
+        player1 = create_player("Player 1", player1_config['race'], player1_config.get('stats'), player1_config.get('equipment'), player1_config.get('hand_equipment'), player1_level)
+        player2 = create_player("Player 2", player2_config['race'], player2_config.get('stats'), player2_config.get('equipment'), player2_config.get('hand_equipment'), player2_level)
 
         simulator = FightSimulator(player1, player2)
         # Set force_no_blocks mode if requested
@@ -521,6 +781,11 @@ def run_simulation(player1_config: Dict, player2_config: Dict, num_simulations: 
             results['total_stones_used_p1'] += fight_result['equipment_stats']['player1_stones_used']
             results['total_stones_used_p2'] += fight_result['equipment_stats']['player2_stones_used']
 
+        # Track magic statistics
+        if 'magic_stats' in fight_result:
+            results['total_fear_used_p1'] += fight_result['magic_stats']['player1_fear_used']
+            results['total_fear_used_p2'] += fight_result['magic_stats']['player2_fear_used']
+
         # Store first few fights as samples
         if i < 5:
             results['sample_fights'].append(fight_result)
@@ -542,6 +807,10 @@ def run_simulation(player1_config: Dict, player2_config: Dict, num_simulations: 
     # Calculate average stones used per fight
     results['avg_stones_used_p1'] = round(results['total_stones_used_p1'] / num_simulations, 1) if num_simulations > 0 else 0
     results['avg_stones_used_p2'] = round(results['total_stones_used_p2'] / num_simulations, 1) if num_simulations > 0 else 0
+
+    # Calculate average fear spells used per fight
+    results['avg_fear_used_p1'] = round(results['total_fear_used_p1'] / num_simulations, 1) if num_simulations > 0 else 0
+    results['avg_fear_used_p2'] = round(results['total_fear_used_p2'] / num_simulations, 1) if num_simulations > 0 else 0
 
     return results
 
@@ -853,6 +1122,71 @@ def xp_calculator():
             level: get_xp_required_for_level(level) for level in range(1, 11)
         }
     })
+
+@app.route('/logic')
+def logic():
+    """API endpoint to show game logic information"""
+    logic_info = {
+        "knowledge_stat": {
+            "description": "Knowledge stat enables magic usage and determines spell power",
+            "default_value": 0,
+            "gain_per_level": {
+                "human": 0,
+                "orc": 0,
+                "elf": 0,
+                "dwarf": 0,
+                "skeleton": "Special bonuses: +1 at level 2, +1 at level 8 (max 2)"
+            },
+            "skeleton_progression": {
+                "level_1": 0,
+                "level_2": 1,
+                "level_3-7": 1,
+                "level_8+": 2
+            },
+            "future_magic_system": {
+                "basic_requirement": "knowledge > 0",
+                "spell_power": "Scales with knowledge level",
+                "skeleton_advantage": "Natural magic affinity"
+            }
+        },
+        "equipment_scaling": {
+            "stone": {
+                "description": "Level 1 item - effectiveness decreases with player level",
+                "base_success": "25% + agility_diff * 1%",
+                "base_multiplier": "1.1 + agility_diff * 0.1",
+                "level_penalty": "15% reduction per level above 1",
+                "minimum_effectiveness": "30%"
+            },
+            "wooden_stick": {
+                "description": "Level 1 item - effectiveness decreases with player level",
+                "base_multiplier": "1.06x damage",
+                "level_penalty": "10% reduction per level above 1",
+                "minimum_effectiveness": "40%"
+            },
+            "scaling_formula": "1.0 + (base_multiplier - 1.0) * level_penalty"
+        },
+        "xp_system": {
+            "win_vs_player": 6,
+            "draw_vs_player": 3,
+            "beat_bot": 2,
+            "level_requirements": {
+                "level_2": 82,
+                "progression": "Exponential scaling with 1.5x multiplier"
+            }
+        },
+        "combat_mechanics": {
+            "base_damage": 3.1,
+            "power_factor": 0.27,
+            "block_multiplier": 0.26,
+            "super_attack_multiplier": 3.5,
+            "agility_effects": {
+                "dodge_chance": "2-8% based on agility difference",
+                "super_attack_chance": "2-6% based on agility difference"
+            }
+        }
+    }
+
+    return json.dumps(logic_info, indent=2)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5001)
