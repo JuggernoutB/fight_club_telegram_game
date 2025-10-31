@@ -30,6 +30,7 @@ class Player:
     power: int
     defense: int
     agility: int
+    level: int = 1
     equipment: List[Equipment] = None
 
     def __post_init__(self):
@@ -62,6 +63,8 @@ class FightSimulator:
         self.player2_stones_used = 0  # Track stones used by player 2
         self.player1_blocks_used = 0  # Track successful blocks by player 1
         self.player2_blocks_used = 0  # Track successful blocks by player 2
+        self.player1_block_limit = 1  # Default block limit for player 1
+        self.player2_block_limit = 1  # Default block limit for player 2
 
     def simulate_round(self) -> Tuple[bool, str]:
         """Simulate one round of combat"""
@@ -73,6 +76,15 @@ class FightSimulator:
         p2_attack = random.choice(BODY_PARTS)
         p2_defend = [random.choice(BODY_PARTS)]
 
+        # Special mode: force no blocks if enabled
+        if hasattr(self, 'force_no_blocks') and self.force_no_blocks:
+            # Ensure defenders never match attackers
+            available_parts = [part for part in BODY_PARTS if part != p1_attack]
+            p2_defend = [random.choice(available_parts)]
+
+            available_parts = [part for part in BODY_PARTS if part != p2_attack]
+            p1_defend = [random.choice(available_parts)]
+
         # Simplified system - no dual defense
 
         round_log = f"Round {self.round_number}:\n"
@@ -80,8 +92,8 @@ class FightSimulator:
         round_log += f"{self.player2.name} attacks {p2_attack}, defends {', '.join(p2_defend)}\n"
 
         # Calculate damage for both players (check if blocks are still available)
-        p1_damage, p1_effect, p2_block_used = self.calculate_damage(self.player1, self.player2, p1_attack, p2_defend, self.player2_blocks_used == 0)
-        p2_damage, p2_effect, p1_block_used = self.calculate_damage(self.player2, self.player1, p2_attack, p1_defend, self.player1_blocks_used == 0)
+        p1_damage, p1_effect, p2_block_used = self.calculate_damage(self.player1, self.player2, p1_attack, p2_defend, self.player2_blocks_used < self.player2_block_limit)
+        p2_damage, p2_effect, p1_block_used = self.calculate_damage(self.player2, self.player1, p2_attack, p1_defend, self.player1_blocks_used < self.player1_block_limit)
 
         # Track stone usage
         if p1_effect == "stone_used":
@@ -193,6 +205,13 @@ class FightSimulator:
                 if random.random() * 100 < stone_success_chance:
                     # Calculate dynamic multiplier: 1.1 + agility_diff * 0.1
                     stone_multiplier = 1.1 + agility_diff * 0.1
+
+                    # Level-based scaling: reduce effectiveness at higher levels
+                    # Stone is a level 1 item, so it becomes less effective at higher levels
+                    level_penalty = 1.0 - (attacker.level - 1) * 0.15  # 15% reduction per level above 1
+                    level_penalty = max(0.3, level_penalty)  # Minimum 30% effectiveness
+                    stone_multiplier = 1.0 + (stone_multiplier - 1.0) * level_penalty
+
                     damage *= stone_multiplier
                     item.uses_remaining -= 1
                     equipment_used = True
@@ -202,7 +221,13 @@ class FightSimulator:
         # Check for wooden stick (works every round)
         for i, item in enumerate(attacker.equipment):
             if item and item.item_type == "wooden_stick":
-                damage *= item.effect_multiplier  # +1.1 damage
+                # Level-based scaling: reduce effectiveness at higher levels
+                # Wooden stick is a level 1 item, so it becomes less effective at higher levels
+                level_penalty = 1.0 - (attacker.level - 1) * 0.10  # 10% reduction per level above 1
+                level_penalty = max(0.4, level_penalty)  # Minimum 40% effectiveness
+                scaled_multiplier = 1.0 + (item.effect_multiplier - 1.0) * level_penalty
+
+                damage *= scaled_multiplier
                 if effect_type == "stone_used":
                     effect_type = "stone_and_stick"
                 else:
@@ -411,7 +436,7 @@ def simulate_multiple_fights(player1: Player, player2: Player, num_fights: int) 
         'total_fights': num_fights
     }
 
-def create_player(name: str, race: str, custom_stats: Dict = None, equipment: List[str] = None) -> Player:
+def create_player(name: str, race: str, custom_stats: Dict = None, equipment: List[str] = None, level: int = 1) -> Player:
     """Create a player with race defaults or custom stats"""
     stats = RACE_DEFAULTS[race].copy()
 
@@ -425,7 +450,8 @@ def create_player(name: str, race: str, custom_stats: Dict = None, equipment: Li
         max_hp=stats['hp'],
         power=stats['power'],
         defense=stats['defense'],
-        agility=stats['agility']
+        agility=stats['agility'],
+        level=level
     )
 
     # Add equipment if specified
@@ -442,7 +468,7 @@ def create_player(name: str, race: str, custom_stats: Dict = None, equipment: Li
 
     return player
 
-def run_simulation(player1_config: Dict, player2_config: Dict, num_simulations: int = 1000) -> Dict:
+def run_simulation(player1_config: Dict, player2_config: Dict, num_simulations: int = 1000, force_no_blocks: bool = False, player1_block_limit: int = 1, player2_block_limit: int = 1, player1_level: int = 1, player2_level: int = 1) -> Dict:
     """Run multiple simulations and return win/loss statistics"""
     results = {
         'player1_wins': 0,
@@ -460,10 +486,16 @@ def run_simulation(player1_config: Dict, player2_config: Dict, num_simulations: 
 
     for i in range(num_simulations):
         # Create fresh players for each simulation
-        player1 = create_player("Player 1", player1_config['race'], player1_config.get('stats'), player1_config.get('equipment'))
-        player2 = create_player("Player 2", player2_config['race'], player2_config.get('stats'), player2_config.get('equipment'))
+        player1 = create_player("Player 1", player1_config['race'], player1_config.get('stats'), player1_config.get('equipment'), player1_level)
+        player2 = create_player("Player 2", player2_config['race'], player2_config.get('stats'), player2_config.get('equipment'), player2_level)
 
         simulator = FightSimulator(player1, player2)
+        # Set force_no_blocks mode if requested
+        if force_no_blocks:
+            simulator.force_no_blocks = True
+        # Set custom block limits
+        simulator.player1_block_limit = player1_block_limit
+        simulator.player2_block_limit = player2_block_limit
         fight_result = simulator.simulate_fight()
 
         # Count results
@@ -516,10 +548,10 @@ def run_simulation(player1_config: Dict, player2_config: Dict, num_simulations: 
 def calculate_xp_for_fight(result: str, player_level: int, opponent_level: int) -> int:
     """Calculate XP gained from a fight result"""
 
-    # Base XP values (calibrated for 1 week to level 2)
-    BASE_XP_WIN = 110
-    BASE_XP_DRAW = 55
-    BASE_XP_LOSS = 0  # No XP for losses
+    # New XP system with lower values
+    BASE_XP_WIN = 6      # Win against player
+    BASE_XP_DRAW = 3     # Draw against player
+    BASE_XP_LOSS = 2     # Beat bot (reward for trying)
 
     # Get base XP based on result
     if result == 'win':
@@ -527,7 +559,7 @@ def calculate_xp_for_fight(result: str, player_level: int, opponent_level: int) 
     elif result == 'draw':
         base_xp = BASE_XP_DRAW
     else:  # loss
-        return 0  # Always 0 XP for losses
+        base_xp = BASE_XP_LOSS  # Beat bot gives some XP
 
     # Apply level modifier
     level_diff = opponent_level - player_level
@@ -556,10 +588,10 @@ def get_xp_required_for_level(level: int) -> int:
     if level <= 1:
         return 0
 
-    # Level 2 requires 1500 XP (1 week target)
+    # Level 2 requires 82 XP (adjusted for new XP values)
     # Each subsequent level requires 1.5x more than the previous level
     total_xp = 0
-    level_2_xp = 1500
+    level_2_xp = 82
 
     for lvl in range(2, level + 1):
         if lvl == 2:
@@ -578,7 +610,7 @@ def get_xp_for_single_level(level: int) -> int:
     if level <= 1:
         return 0
     elif level == 2:
-        return 1500  # Base requirement
+        return 82  # New base requirement
     else:
         # Each level requires 1.5x more than the previous
         prev_level_xp = get_xp_for_single_level(level - 1)
@@ -586,8 +618,8 @@ def get_xp_for_single_level(level: int) -> int:
 
 def get_current_level_from_xp(xp: int) -> tuple:
     """Get current level and progress from total XP"""
-    if xp < 1500:
-        return 1, xp, 1500
+    if xp < 82:
+        return 1, xp, 82
 
     level = 1
     total_xp_used = 0
@@ -706,15 +738,18 @@ def simulate():
         }
 
         num_simulations = data.get('simulations', 1000)
+        force_no_blocks = data.get('force_no_blocks', False)
+        player1_block_limit = data.get('player1_block_limit', 1)
+        player2_block_limit = data.get('player2_block_limit', 1)
+        player1_level = data.get('player1_level', 1)
+        player2_level = data.get('player2_level', 1)
 
-        results = run_simulation(player1_config, player2_config, num_simulations)
+        results = run_simulation(player1_config, player2_config, num_simulations, force_no_blocks, player1_block_limit, player2_block_limit, player1_level, player2_level)
 
     except Exception as e:
         return jsonify({'error': f'Simulation failed: {str(e)}'}), 500
 
     # Add XP calculations to results
-    player1_level = data.get('player1_level', 1)
-    player2_level = data.get('player2_level', 1)
 
     # Calculate XP for different outcomes
     results['xp_calculations'] = {
@@ -780,7 +815,7 @@ def xp_calculator():
 
     current_xp = data.get('current_xp', 0)
     daily_fights = data.get('daily_fights', 3)
-    avg_xp_per_fight = data.get('avg_xp_per_fight', 69)
+    avg_xp_per_fight = data.get('avg_xp_per_fight', 4.3)
     target_level = data.get('target_level', 10)
 
     daily_xp = daily_fights * avg_xp_per_fight

@@ -275,6 +275,15 @@
             font-size: 0.9em;
         }
 
+        .fight-log-complete {
+            line-height: 1.4;
+            white-space: pre-wrap;
+        }
+
+        .fight-log-complete br {
+            margin-bottom: 8px;
+        }
+
         .stat-impact-display {
             background: rgba(0,0,0,0.3);
             border: 1px solid var(--border);
@@ -567,8 +576,62 @@
             </div>
             <div class="form-group">
                 <label for="simulations">Number of Simulations:</label>
-                <input type="number" id="simulations" class="form-control" value="1000" min="100" max="10000">
+                <select id="simulations" class="form-control">
+                    <option value="1" selected>1 (Single Fight)</option>
+                    <option value="10">10</option>
+                    <option value="100">100</option>
+                    <option value="1000">1000</option>
+                    <option value="5000">5000</option>
+                    <option value="10000">10000</option>
+                </select>
             </div>
+
+            <div class="form-group" style="margin-top: 15px;">
+                <label>🛡️ Block Limits per Player:</label>
+                <div style="display: flex; gap: 15px; align-items: center; margin-top: 8px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <label for="player1-blocks" style="font-size: 0.9em;">Player 1:</label>
+                        <select id="player1-blocks" class="form-control" style="width: 80px;">
+                            <option value="0">0</option>
+                            <option value="1" selected>1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="5">5</option>
+                            <option value="10">10</option>
+                            <option value="999">∞</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <label for="player2-blocks" style="font-size: 0.9em;">Player 2:</label>
+                        <select id="player2-blocks" class="form-control" style="width: 80px;">
+                            <option value="0">0</option>
+                            <option value="1" selected>1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="5">5</option>
+                            <option value="10">10</option>
+                            <option value="999">∞</option>
+                        </select>
+                    </div>
+                </div>
+                <p style="font-size: 0.7em; color: var(--text-secondary); margin: 5px 0 0 0;">
+                    Default: 1 block per player per fight. Set to 0 for no blocks, ∞ for unlimited blocks.
+                </p>
+            </div>
+
+            <div class="form-group" style="margin-top: 15px;">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="checkbox" id="force-no-blocks" style="transform: scale(1.2);">
+                    <span>🚫 Force No Blocks (Test Mode)</span>
+                    <span style="font-size: 0.8em; color: var(--secondary-gold); margin-left: 5px;">
+                        - Overrides block limits above
+                    </span>
+                </label>
+                <p style="font-size: 0.7em; color: var(--text-secondary); margin: 5px 0 0 28px;">
+                    Players will never defend the same body part being attacked, ensuring all attacks hit.
+                </p>
+            </div>
+
             <button id="simulate-btn" class="btn" onclick="runSimulation()">⚔️ Simulate Fights</button>
             <button id="xp-calc-btn" class="btn" onclick="toggleXPCalculator()" style="margin-left: 10px; background: linear-gradient(135deg, var(--primary-gold) 0%, var(--secondary-gold) 100%);">💎 XP Calculator</button>
         </div>
@@ -937,6 +1000,9 @@
             };
 
             const simulations = parseInt(document.getElementById('simulations').value);
+            const forceNoBlocks = document.getElementById('force-no-blocks').checked;
+            const player1Blocks = parseInt(document.getElementById('player1-blocks').value);
+            const player2Blocks = parseInt(document.getElementById('player2-blocks').value);
 
             try {
                 const response = await fetch('/simulate', {
@@ -949,7 +1015,10 @@
                         player2: player2,
                         player1_level: currentLevel,
                         player2_level: currentLevel,
-                        simulations: simulations
+                        simulations: simulations,
+                        force_no_blocks: forceNoBlocks,
+                        player1_block_limit: player1Blocks,
+                        player2_block_limit: player2Blocks
                     })
                 });
 
@@ -1035,18 +1104,21 @@
                         <div style="color: var(--secondary-gold); margin-bottom: 5px;">📊 Progression Analysis</div>
                         <div style="font-size: 0.9em;">Daily XP (3 fights): P1 ${((results.expected_xp?.player1 || 0) * 3).toFixed(1)} | P2 ${((results.expected_xp?.player2 || 0) * 3).toFixed(1)}</div>
                         <div style="font-size: 0.9em;">Weekly XP: P1 ${((results.expected_xp?.player1 || 0) * 21).toFixed(0)} | P2 ${((results.expected_xp?.player2 || 0) * 21).toFixed(0)}</div>
-                        <div style="font-size: 0.9em; color: var(--primary-gold);">Time to Level 2 (1500 XP): P1 ${Math.ceil(1500 / ((results.expected_xp?.player1 || 1) * 3))} days | P2 ${Math.ceil(1500 / ((results.expected_xp?.player2 || 1) * 3))} days</div>
+                        <div style="font-size: 0.9em; color: var(--primary-gold);">Time to Level 2 (82 XP): P1 ${Math.ceil(82 / ((results.expected_xp?.player1 || 1) * 3))} days | P2 ${Math.ceil(82 / ((results.expected_xp?.player2 || 1) * 3))} days</div>
                     </div>
                 </div>
                 ` : ''}
 
                 <div class="sample-fights">
-                    <h3>📋 Sample Fight Logs</h3>
-                    ${results.sample_fights.slice(0, 3).map((fight, index) => `
+                    <h3>📋 ${results.sample_fights.length === 1 ? 'Complete Fight Log' : 'Sample Fight Logs'}</h3>
+                    ${results.sample_fights.slice(0, results.sample_fights.length === 1 ? 1 : 3).map((fight, index) => `
                         <div class="fight-sample">
-                            <strong>Sample Fight ${index + 1} - Winner: ${fight.winner === 'player1' ? 'Player 1' : fight.winner === 'player2' ? 'Player 2' : 'Draw'} (${fight.rounds} rounds)</strong><br>
+                            <strong>${results.sample_fights.length === 1 ? 'Fight Result' : `Sample Fight ${index + 1}`} - Winner: ${fight.winner === 'player1' ? 'Player 1' : fight.winner === 'player2' ? 'Player 2' : 'Draw'} (${fight.rounds} rounds)</strong><br>
                             ${fight.damage_stats ? `<em>Damage occurred in ${fight.damage_stats.damage_rounds}/${fight.damage_stats.total_rounds} rounds (${fight.damage_stats.damage_percentage}%)</em><br>` : ''}
-                            ${fight.log.slice(-3).join('<br>')}
+                            ${fight.final_hp ? `<em>Final HP: Player 1: ${fight.final_hp.player1}/${fight.final_hp.player1 + (fight.damage_stats?.total_damage_p1 || 0)}, Player 2: ${fight.final_hp.player2}/${fight.final_hp.player2 + (fight.damage_stats?.total_damage_p2 || 0)}</em><br>` : ''}
+                            <div class="${results.sample_fights.length === 1 ? 'fight-log-complete' : ''}" style="max-height: ${results.sample_fights.length === 1 ? 'none' : '150px'}; overflow-y: ${results.sample_fights.length === 1 ? 'visible' : 'auto'}; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px; margin-top: 10px; font-family: monospace; font-size: 0.85em;">
+                                ${results.sample_fights.length === 1 ? fight.log.join('<br><br>') : fight.log.slice(-3).join('<br>')}
+                            </div>
                         </div>
                     `).join('')}
                 </div>
@@ -1067,7 +1139,7 @@
             const dailyFights = parseInt(document.getElementById('daily-fights').value);
             const targetLevel = parseInt(document.getElementById('target-level').value);
             const xpBoostPercent = parseInt(document.getElementById('xp-boost').value) || 0;
-            const baseAvgXPPerFight = 71.5; // Average for 50% win rate against same level (updated: 110*0.5 + 55*0.3 + 0*0.2)
+            const baseAvgXPPerFight = 4.3; // Average for 50% win rate against same level (6*0.5 + 3*0.3 + 2*0.2 = 4.3)
 
             // Apply XP boost
             const boostMultiplier = 1 + (xpBoostPercent / 100);
