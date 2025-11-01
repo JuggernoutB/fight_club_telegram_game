@@ -479,6 +479,7 @@
                                 <option value="stone">Stone (agility-based damage, 1 use)</option>
                                 <option value="big_stone">Big Stone (agility-based damage, 1 use, level 2)</option>
                                 <option value="fear_spell" id="p1-fear-option-1" style="display: none;">🔮 Fear Spell (enemy -3 power/defense, 3 mana)</option>
+                                <option value="scream_spell" id="p1-scream-option-1" style="display: none;">😱 Scream Spell (35% chance +1 damage, 4 mana)</option>
                             </select>
                         </div>
                         <div class="equipment-slot" id="p1-basic-slot-2">
@@ -488,6 +489,7 @@
                                 <option value="stone">Stone (agility-based damage, 1 use)</option>
                                 <option value="big_stone">Big Stone (agility-based damage, 1 use, level 2)</option>
                                 <option value="fear_spell" id="p1-fear-option-2" style="display: none;">🔮 Fear Spell (enemy -3 power/defense, 3 mana)</option>
+                                <option value="scream_spell" id="p1-scream-option-2" style="display: none;">😱 Scream Spell (35% chance +1 damage, 4 mana)</option>
                             </select>
                         </div>
                         <div class="equipment-slot" id="p1-basic-slot-3" style="opacity: 0.5;">
@@ -572,6 +574,7 @@
                                 <option value="stone">Stone (agility-based damage, 1 use)</option>
                                 <option value="big_stone">Big Stone (agility-based damage, 1 use, level 2)</option>
                                 <option value="fear_spell" id="p2-fear-option-1" style="display: none;">🔮 Fear Spell (enemy -3 power/defense, 3 mana)</option>
+                                <option value="scream_spell" id="p2-scream-option-1" style="display: none;">😱 Scream Spell (35% chance +1 damage, 4 mana)</option>
                             </select>
                         </div>
                         <div class="equipment-slot" id="p2-basic-slot-2">
@@ -581,6 +584,7 @@
                                 <option value="stone">Stone (agility-based damage, 1 use)</option>
                                 <option value="big_stone">Big Stone (agility-based damage, 1 use, level 2)</option>
                                 <option value="fear_spell" id="p2-fear-option-2" style="display: none;">🔮 Fear Spell (enemy -3 power/defense, 3 mana)</option>
+                                <option value="scream_spell" id="p2-scream-option-2" style="display: none;">😱 Scream Spell (35% chance +1 damage, 4 mana)</option>
                             </select>
                         </div>
                         <div class="equipment-slot" id="p2-basic-slot-3" style="opacity: 0.5;">
@@ -884,11 +888,13 @@
             document.getElementById('p1-knowledge').addEventListener('input', function() {
                 const knowledge = parseInt(this.value) || 0;
                 updateFearSpellVisibility(1, knowledge);
+                updateScreamSpellVisibility(1, knowledge);
             });
 
             document.getElementById('p2-knowledge').addEventListener('input', function() {
                 const knowledge = parseInt(this.value) || 0;
                 updateFearSpellVisibility(2, knowledge);
+                updateScreamSpellVisibility(2, knowledge);
             });
         });
 
@@ -1034,6 +1040,7 @@
                         <option value="stone">Stone (agility-based damage, 1 use)</option>
                         <option value="big_stone">Big Stone (agility-based damage, 1 use, level 2)</option>
                         <option value="fear_spell" id="p${player}-fear-option-${i}" style="display: none;">🔮 Fear Spell (enemy -3 power/defense, 3 mana)</option>
+                        <option value="scream_spell" id="p${player}-scream-option-${i}" style="display: none;">😱 Scream Spell (35% chance +1 damage, 4 mana)</option>
                     `;
                 } else {
                     // Disable slot
@@ -1065,6 +1072,23 @@
             });
         }
 
+        function updateScreamSpellVisibility(player, knowledge) {
+            // Show/hide scream spell options based on knowledge >= 2
+            const screamOptions = document.querySelectorAll(`#p${player}-scream-option-1, #p${player}-scream-option-2, #p${player}-scream-option-3`);
+
+            screamOptions.forEach(option => {
+                if (knowledge >= 2) {
+                    option.style.display = 'block';
+                } else {
+                    option.style.display = 'none';
+                    // If scream spell was selected but knowledge is now < 2, reset to empty
+                    if (option.parentElement.value === 'scream_spell') {
+                        option.parentElement.value = '';
+                    }
+                }
+            });
+        }
+
         function updateRaceDefaults(player) {
             const raceSelect = document.getElementById(`p${player}-race`);
             const defaultsDiv = document.getElementById(`p${player}-defaults`);
@@ -1090,6 +1114,7 @@
 
             // Update fear spell visibility based on knowledge
             updateFearSpellVisibility(player, leveledStats.knowledge);
+            updateScreamSpellVisibility(player, leveledStats.knowledge);
         }
 
         async function runSimulation() {

@@ -86,6 +86,10 @@ class FightSimulator:
         self.player2_block_limit = 1  # Default block limit for player 2
         self.player1_fear_used = 0  # Track fear spells used by player 1
         self.player2_fear_used = 0  # Track fear spells used by player 2
+        self.player1_scream_used = 0  # Track scream spells used by player 1
+        self.player2_scream_used = 0  # Track scream spells used by player 2
+        self.player1_scream_active = False  # Track if player 1's scream buff is active
+        self.player2_scream_active = False  # Track if player 2's scream buff is active
 
     def simulate_round(self) -> Tuple[bool, str]:
         """Simulate one round of combat"""
@@ -115,6 +119,10 @@ class FightSimulator:
         # Check for Fear spell usage (before damage calculation)
         p1_casts_fear = self.check_fear_spell_usage(self.player1)
         p2_casts_fear = self.check_fear_spell_usage(self.player2)
+
+        # Check for Scream spell usage (before damage calculation)
+        p1_casts_scream = self.check_scream_spell_usage(self.player1)
+        p2_casts_scream = self.check_scream_spell_usage(self.player2)
 
         # Apply Fear spell effects (reduce target's power or defense by 3)
         p1_power_reduction = 0
@@ -146,9 +154,20 @@ class FightSimulator:
             round_log += f"{self.player2.name} casts FEAR SPELL! {self.player1.name} is weakened by fear ({fear_effect_p1})!\n"
             self.player2_fear_used += 1
 
+        # Apply Scream spell effects (35% chance of +1 damage for rest of fight)
+        if p1_casts_scream:
+            round_log += f"{self.player1.name} casts SCREAM SPELL! Gains 35% chance of +1 damage!\n"
+            self.player1_scream_used += 1
+            self.player1_scream_active = True
+
+        if p2_casts_scream:
+            round_log += f"{self.player2.name} casts SCREAM SPELL! Gains 35% chance of +1 damage!\n"
+            self.player2_scream_used += 1
+            self.player2_scream_active = True
+
         # Calculate damage for both players (pass power and defense reductions to main method)
-        p1_damage, p1_effect, p2_block_used = self.calculate_damage(self.player1, self.player2, p1_attack, p2_defend, self.player2_blocks_used < self.player2_block_limit, p1_power_reduction, p2_defense_reduction)
-        p2_damage, p2_effect, p1_block_used = self.calculate_damage(self.player2, self.player1, p2_attack, p1_defend, self.player1_blocks_used < self.player1_block_limit, p2_power_reduction, p1_defense_reduction)
+        p1_damage, p1_effect, p2_block_used = self.calculate_damage(self.player1, self.player2, p1_attack, p2_defend, self.player2_blocks_used < self.player2_block_limit, p1_power_reduction, p2_defense_reduction, self.player1_scream_active)
+        p2_damage, p2_effect, p1_block_used = self.calculate_damage(self.player2, self.player1, p2_attack, p1_defend, self.player1_blocks_used < self.player1_block_limit, p2_power_reduction, p1_defense_reduction, self.player2_scream_active)
 
         # Track stone usage
         if p1_effect == "stone_used":
@@ -224,7 +243,27 @@ class FightSimulator:
 
         return False
 
-    def calculate_damage(self, attacker: Player, defender: Player, attack_part: str, defend_parts: List[str], defender_blocks_available: bool = True, power_reduction: int = 0, defense_reduction: int = 0) -> Tuple[int, str, bool]:
+    def check_scream_spell_usage(self, caster: Player) -> bool:
+        """Check if player can and will cast Scream spell this round"""
+        # Check if player has scream spell, enough mana, and hasn't used it yet
+        if caster.mana < 4:  # Need 4 mana to cast scream
+            return False
+
+        # Check if scream is already active for this player
+        if caster == self.player1 and self.player1_scream_active:
+            return False
+        if caster == self.player2 and self.player2_scream_active:
+            return False
+
+        for item in caster.equipment:
+            if item and item.item_type == "scream_spell":
+                # Auto-cast: use scream spell when mana is available and not already active
+                caster.mana -= 4  # Consume mana
+                return True
+
+        return False
+
+    def calculate_damage(self, attacker: Player, defender: Player, attack_part: str, defend_parts: List[str], defender_blocks_available: bool = True, power_reduction: int = 0, defense_reduction: int = 0, scream_active: bool = False) -> Tuple[int, str, bool]:
         """Calculate damage with power ratio system, agility effects, and probability-based integer conversion"""
 
         # Constants rebalanced for better stat equality (Option 1 + 3)
@@ -398,6 +437,11 @@ class FightSimulator:
         else:
             final_damage = base_damage
 
+        # Apply scream spell damage buff (35% chance of +1 damage)
+        if scream_active:
+            if random.random() < 0.35:  # 35% chance
+                final_damage += 1
+
         # Restore original power and defense
         attacker.power = original_power
         defender.defense = original_defense
@@ -405,7 +449,7 @@ class FightSimulator:
         # Return integer damage (minimum 1), effect type, and whether a block was used
         return max(1, final_damage), effect_type, block_used
 
-    def calculate_damage_with_fear(self, attacker: Player, defender: Player, attack_part: str, defend_parts: List[str], defender_blocks_available: bool = True, power_reduction: int = 0) -> Tuple[int, str, bool]:
+    def calculate_damage_with_fear(self, attacker: Player, defender: Player, attack_part: str, defend_parts: List[str], defender_blocks_available: bool = True, power_reduction: int = 0, scream_active: bool = False) -> Tuple[int, str, bool]:
         """Calculate damage with fear power reduction applied"""
 
         # Constants for agility effects
@@ -573,6 +617,11 @@ class FightSimulator:
         else:
             final_damage = base_damage
 
+        # Apply scream spell damage buff (35% chance of +1 damage)
+        if scream_active:
+            if random.random() < 0.35:  # 35% chance
+                final_damage += 1
+
         # Restore original power
         attacker.power = original_power
 
@@ -679,6 +728,15 @@ def create_fear_spell() -> Equipment:
         item_type="fear_spell",
         uses_remaining=999,  # Spell stays in slot, limited by mana
         effect_multiplier=1.0  # No damage multiplier, special effect
+    )
+
+def create_scream_spell() -> Equipment:
+    """Create a scream spell equipment item"""
+    return Equipment(
+        name="Scream Spell",
+        item_type="scream_spell",
+        uses_remaining=999,  # Spell stays in slot, limited by mana
+        effect_multiplier=1.0  # No direct damage multiplier, provides permanent +1 damage buff
     )
 
 def create_big_stone() -> Equipment:
@@ -877,6 +935,8 @@ def create_player(name: str, race: str, custom_stats: Dict = None, equipment: Li
                     player.equipment[i] = create_big_stone()
                 elif item_type == "fear_spell" and knowledge >= 1:
                     player.equipment[i] = create_fear_spell()
+                elif item_type == "scream_spell" and knowledge >= 2:
+                    player.equipment[i] = create_scream_spell()
                 # Ignore wooden sticks and slingshot in basic slots
 
     # Add hand equipment (wooden sticks and slingshot) if specified
