@@ -297,21 +297,72 @@ class FightSimulator:
                     effect_type = "stone_used"
                     break
 
-        # Check for wooden stick (works every round) - only in hand equipment slots
-        for i, item in enumerate(attacker.hand_equipment):
-            if item and item.item_type == "wooden_stick":
-                # Level-based scaling: reduce effectiveness at higher levels
-                # Wooden stick is a level 1 item, so it becomes less effective at higher levels
-                level_penalty = 1.0 - (attacker.level - 1) * 0.10  # 10% reduction per level above 1
-                level_penalty = max(0.4, level_penalty)  # Minimum 40% effectiveness
-                scaled_multiplier = 1.0 + (item.effect_multiplier - 1.0) * level_penalty
+        # Check for equipment usage (big stone) - only in basic equipment slots
+        for i, item in enumerate(attacker.equipment):
+            if item and item.item_type == "big_stone" and item.uses_remaining > 0:
+                # Calculate big stone success chance: same as stone
+                stone_success_chance = min(100, max(0, 25 + agility_diff * 1))
+                if random.random() * 100 < stone_success_chance:
+                    # Calculate dynamic multiplier: same as stone
+                    stone_multiplier = 1.1 + agility_diff * 0.1
 
-                damage *= scaled_multiplier
-                if effect_type == "stone_used":
-                    effect_type = "stone_and_stick"
-                else:
-                    effect_type = "stick_used"
-                break
+                    # Level-based scaling: big stone is a level 2 item, optimal at level 2
+                    level_penalty = 1.0 - (attacker.level - 2) * 0.15  # 15% reduction per level above 2
+                    level_penalty = max(0.3, level_penalty)  # Minimum 30% effectiveness
+                    stone_multiplier = 1.0 + (stone_multiplier - 1.0) * level_penalty
+
+                    damage *= stone_multiplier
+                    item.uses_remaining -= 1
+                    equipment_used = True
+                    if effect_type == "stone_used":
+                        effect_type = "stones_used"  # Both stones used
+                    else:
+                        effect_type = "big_stone_used"
+                    break
+
+        # Check for wooden sticks and big wooden sticks (works every round) - only in hand equipment slots
+        stick_count = 0
+        stick_multipliers = []
+
+        # Count sticks and prepare multipliers
+        for i, item in enumerate(attacker.hand_equipment):
+            if item and item.item_type in ["wooden_stick", "big_wooden_stick"]:
+                stick_count += 1
+
+                if item.item_type == "wooden_stick":
+                    # Level-based scaling: wooden stick is a level 1 item
+                    level_penalty = 1.0 - (attacker.level - 1) * 0.10  # 10% reduction per level above 1
+                    level_penalty = max(0.4, level_penalty)  # Minimum 40% effectiveness
+                elif item.item_type == "big_wooden_stick":
+                    # Level-based scaling: big wooden stick is a level 2 item
+                    level_penalty = 1.0 - (attacker.level - 2) * 0.10  # 10% reduction per level above 2
+                    level_penalty = max(0.4, level_penalty)  # Minimum 40% effectiveness
+
+                scaled_multiplier = 1.0 + (item.effect_multiplier - 1.0) * level_penalty
+                stick_multipliers.append(scaled_multiplier)
+
+        # Apply stick multipliers with dual stick penalty if needed
+        if stick_count == 2:
+            # When using 2 sticks, each stick's effect is reduced by 35%
+            dual_stick_penalty = 0.65  # 100% - 35% = 65%
+            for multiplier in stick_multipliers:
+                reduced_multiplier = 1.0 + (multiplier - 1.0) * dual_stick_penalty
+                damage *= reduced_multiplier
+        else:
+            # Single stick: apply full effect
+            for multiplier in stick_multipliers:
+                damage *= multiplier
+
+        # Update effect type based on stick usage
+        if stick_count > 0:
+            if effect_type == "stone_used" or effect_type == "big_stone_used":
+                effect_type = "stone_and_stick"
+            elif effect_type == "stones_used":
+                effect_type = "stones_and_stick"
+            elif stick_count == 2:
+                effect_type = "dual_sticks_used"
+            else:
+                effect_type = "stick_used"
 
         # Check if attack is blocked (defended) and blocks are available
         is_blocked = attack_part in defend_parts and defender_blocks_available
@@ -405,21 +456,72 @@ class FightSimulator:
                     effect_type = "stone_used"
                     break
 
-        # Check for wooden stick (works every round) - only in hand equipment slots
-        for i, item in enumerate(attacker.hand_equipment):
-            if item and item.item_type == "wooden_stick":
-                # Level-based scaling: reduce effectiveness at higher levels
-                # Wooden stick is a level 1 item, so it becomes less effective at higher levels
-                level_penalty = 1.0 - (attacker.level - 1) * 0.10  # 10% reduction per level above 1
-                level_penalty = max(0.4, level_penalty)  # Minimum 40% effectiveness
-                scaled_multiplier = 1.0 + (item.effect_multiplier - 1.0) * level_penalty
+        # Check for equipment usage (big stone) - only in basic equipment slots
+        for i, item in enumerate(attacker.equipment):
+            if item and item.item_type == "big_stone" and item.uses_remaining > 0:
+                # Calculate big stone success chance: same as stone
+                stone_success_chance = min(100, max(0, 25 + agility_diff * 1))
+                if random.random() * 100 < stone_success_chance:
+                    # Calculate dynamic multiplier: same as stone
+                    stone_multiplier = 1.1 + agility_diff * 0.1
 
-                damage *= scaled_multiplier
-                if effect_type == "stone_used":
-                    effect_type = "stone_and_stick"
-                else:
-                    effect_type = "stick_used"
-                break
+                    # Level-based scaling: big stone is a level 2 item, optimal at level 2
+                    level_penalty = 1.0 - (attacker.level - 2) * 0.15  # 15% reduction per level above 2
+                    level_penalty = max(0.3, level_penalty)  # Minimum 30% effectiveness
+                    stone_multiplier = 1.0 + (stone_multiplier - 1.0) * level_penalty
+
+                    damage *= stone_multiplier
+                    item.uses_remaining -= 1
+                    equipment_used = True
+                    if effect_type == "stone_used":
+                        effect_type = "stones_used"  # Both stones used
+                    else:
+                        effect_type = "big_stone_used"
+                    break
+
+        # Check for wooden sticks and big wooden sticks (works every round) - only in hand equipment slots
+        stick_count = 0
+        stick_multipliers = []
+
+        # Count sticks and prepare multipliers
+        for i, item in enumerate(attacker.hand_equipment):
+            if item and item.item_type in ["wooden_stick", "big_wooden_stick"]:
+                stick_count += 1
+
+                if item.item_type == "wooden_stick":
+                    # Level-based scaling: wooden stick is a level 1 item
+                    level_penalty = 1.0 - (attacker.level - 1) * 0.10  # 10% reduction per level above 1
+                    level_penalty = max(0.4, level_penalty)  # Minimum 40% effectiveness
+                elif item.item_type == "big_wooden_stick":
+                    # Level-based scaling: big wooden stick is a level 2 item
+                    level_penalty = 1.0 - (attacker.level - 2) * 0.10  # 10% reduction per level above 2
+                    level_penalty = max(0.4, level_penalty)  # Minimum 40% effectiveness
+
+                scaled_multiplier = 1.0 + (item.effect_multiplier - 1.0) * level_penalty
+                stick_multipliers.append(scaled_multiplier)
+
+        # Apply stick multipliers with dual stick penalty if needed
+        if stick_count == 2:
+            # When using 2 sticks, each stick's effect is reduced by 35%
+            dual_stick_penalty = 0.65  # 100% - 35% = 65%
+            for multiplier in stick_multipliers:
+                reduced_multiplier = 1.0 + (multiplier - 1.0) * dual_stick_penalty
+                damage *= reduced_multiplier
+        else:
+            # Single stick: apply full effect
+            for multiplier in stick_multipliers:
+                damage *= multiplier
+
+        # Update effect type based on stick usage
+        if stick_count > 0:
+            if effect_type == "stone_used" or effect_type == "big_stone_used":
+                effect_type = "stone_and_stick"
+            elif effect_type == "stones_used":
+                effect_type = "stones_and_stick"
+            elif stick_count == 2:
+                effect_type = "dual_sticks_used"
+            else:
+                effect_type = "stick_used"
 
         # Check if attack is blocked (defended) and blocks are available
         is_blocked = attack_part in defend_parts and defender_blocks_available
@@ -545,6 +647,24 @@ def create_fear_spell() -> Equipment:
         item_type="fear_spell",
         uses_remaining=999,  # Spell stays in slot, limited by mana
         effect_multiplier=1.0  # No damage multiplier, special effect
+    )
+
+def create_big_stone() -> Equipment:
+    """Create a big stone equipment item (level 2 item)"""
+    return Equipment(
+        name="Big Stone",
+        item_type="big_stone",
+        uses_remaining=1,
+        effect_multiplier=1.0  # Will be calculated dynamically based on agility, same as stone
+    )
+
+def create_big_wooden_stick() -> Equipment:
+    """Create a big wooden stick equipment item (level 2 item)"""
+    return Equipment(
+        name="Big Wooden Stick",
+        item_type="big_wooden_stick",
+        uses_remaining=999,  # Effectively unlimited uses
+        effect_multiplier=1.06  # Fixed +1.06 damage multiplier, same as wooden stick
     )
 
 def calculate_stat_impact(race: str, level: int, num_simulations: int = 1000) -> Dict:
@@ -712,6 +832,8 @@ def create_player(name: str, race: str, custom_stats: Dict = None, equipment: Li
             if i < enabled_basic_slots and i < 3:  # Only use enabled slots
                 if item_type == "stone":
                     player.equipment[i] = create_stone()
+                elif item_type == "big_stone":
+                    player.equipment[i] = create_big_stone()
                 elif item_type == "fear_spell" and knowledge >= 1:
                     player.equipment[i] = create_fear_spell()
                 # Ignore wooden sticks in basic slots
@@ -722,6 +844,8 @@ def create_player(name: str, race: str, custom_stats: Dict = None, equipment: Li
             if i < enabled_hand_slots and i < 2:  # Only use enabled hand slots
                 if item_type == "wooden_stick":
                     player.hand_equipment[i] = create_wooden_stick()
+                elif item_type == "big_wooden_stick":
+                    player.hand_equipment[i] = create_big_wooden_stick()
                 # Ignore stones in hand slots
 
     return player
@@ -857,19 +981,11 @@ def get_xp_required_for_level(level: int) -> int:
     if level <= 1:
         return 0
 
-    # Level 2 requires 82 XP (adjusted for new XP values)
-    # Each subsequent level requires 1.5x more than the previous level
+    # Calculate total XP by summing all level requirements
     total_xp = 0
-    level_2_xp = 82
 
     for lvl in range(2, level + 1):
-        if lvl == 2:
-            level_xp = level_2_xp
-        else:
-            # Calculate XP needed from previous level
-            prev_level_xp = get_xp_for_single_level(lvl - 1)
-            level_xp = int(prev_level_xp * 1.5)
-
+        level_xp = get_xp_for_single_level(lvl)
         total_xp += level_xp
 
     return total_xp
@@ -879,11 +995,17 @@ def get_xp_for_single_level(level: int) -> int:
     if level <= 1:
         return 0
     elif level == 2:
-        return 82  # New base requirement
+        return 82  # Keep base requirement same
+    elif level == 3:
+        return 218  # 300 total - 82 = 218 for level 3
+    elif level == 4:
+        return 780  # 1080 total - 300 = 780 for level 4
     else:
-        # Each level requires 1.5x more than the previous
+        # For levels 5+, use escalating multiplier starting at 3.6x
         prev_level_xp = get_xp_for_single_level(level - 1)
-        return int(prev_level_xp * 1.5)
+        # Increase multiplier slightly each level: 3.6, 3.7, 3.8, etc.
+        multiplier = 3.5 + (level - 4) * 0.1
+        return int(prev_level_xp * multiplier)
 
 def get_current_level_from_xp(xp: int) -> tuple:
     """Get current level and progress from total XP"""
@@ -997,13 +1119,15 @@ def simulate():
         player1_config = {
             'race': data['player1']['race'],
             'stats': data['player1']['stats'],
-            'equipment': data['player1'].get('equipment', [])
+            'equipment': data['player1'].get('equipment', []),
+            'hand_equipment': data['player1'].get('hand_equipment', [])
         }
 
         player2_config = {
             'race': data['player2']['race'],
             'stats': data['player2']['stats'],
-            'equipment': data['player2'].get('equipment', [])
+            'equipment': data['player2'].get('equipment', []),
+            'hand_equipment': data['player2'].get('hand_equipment', [])
         }
 
         num_simulations = data.get('simulations', 1000)

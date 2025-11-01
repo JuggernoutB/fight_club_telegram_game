@@ -477,6 +477,7 @@
                             <select id="p1-equipment-1" class="form-control">
                                 <option value="">Empty</option>
                                 <option value="stone">Stone (agility-based damage, 1 use)</option>
+                                <option value="big_stone">Big Stone (agility-based damage, 1 use, level 2)</option>
                                 <option value="fear_spell" id="p1-fear-option-1" style="display: none;">🔮 Fear Spell (enemy -3 power/defense, 3 mana)</option>
                             </select>
                         </div>
@@ -485,6 +486,7 @@
                             <select id="p1-equipment-2" class="form-control">
                                 <option value="">Empty</option>
                                 <option value="stone">Stone (agility-based damage, 1 use)</option>
+                                <option value="big_stone">Big Stone (agility-based damage, 1 use, level 2)</option>
                                 <option value="fear_spell" id="p1-fear-option-2" style="display: none;">🔮 Fear Spell (enemy -3 power/defense, 3 mana)</option>
                             </select>
                         </div>
@@ -503,6 +505,7 @@
                             <select id="p1-hand-1" class="form-control">
                                 <option value="">Empty</option>
                                 <option value="wooden_stick">Wooden Stick (+1.06 damage, permanent)</option>
+                                <option value="big_wooden_stick">Big Wooden Stick (+1.06 damage, permanent, level 2)</option>
                             </select>
                         </div>
                         <div class="equipment-slot">
@@ -510,6 +513,7 @@
                             <select id="p1-hand-2" class="form-control">
                                 <option value="">Empty</option>
                                 <option value="wooden_stick">Wooden Stick (+1.06 damage, permanent)</option>
+                                <option value="big_wooden_stick">Big Wooden Stick (+1.06 damage, permanent, level 2)</option>
                             </select>
                         </div>
                     </div>
@@ -564,6 +568,7 @@
                             <select id="p2-equipment-1" class="form-control">
                                 <option value="">Empty</option>
                                 <option value="stone">Stone (agility-based damage, 1 use)</option>
+                                <option value="big_stone">Big Stone (agility-based damage, 1 use, level 2)</option>
                                 <option value="fear_spell" id="p2-fear-option-1" style="display: none;">🔮 Fear Spell (enemy -3 power/defense, 3 mana)</option>
                             </select>
                         </div>
@@ -572,6 +577,7 @@
                             <select id="p2-equipment-2" class="form-control">
                                 <option value="">Empty</option>
                                 <option value="stone">Stone (agility-based damage, 1 use)</option>
+                                <option value="big_stone">Big Stone (agility-based damage, 1 use, level 2)</option>
                                 <option value="fear_spell" id="p2-fear-option-2" style="display: none;">🔮 Fear Spell (enemy -3 power/defense, 3 mana)</option>
                             </select>
                         </div>
@@ -590,6 +596,7 @@
                             <select id="p2-hand-1" class="form-control">
                                 <option value="">Empty</option>
                                 <option value="wooden_stick">Wooden Stick (+1.06 damage, permanent)</option>
+                                <option value="big_wooden_stick">Big Wooden Stick (+1.06 damage, permanent, level 2)</option>
                             </select>
                         </div>
                         <div class="equipment-slot">
@@ -597,6 +604,7 @@
                             <select id="p2-hand-2" class="form-control">
                                 <option value="">Empty</option>
                                 <option value="wooden_stick">Wooden Stick (+1.06 damage, permanent)</option>
+                                <option value="big_wooden_stick">Big Wooden Stick (+1.06 damage, permanent, level 2)</option>
                             </select>
                         </div>
                     </div>
@@ -1020,6 +1028,7 @@
                     selectElement.innerHTML = `
                         <option value="">Empty</option>
                         <option value="stone">Stone (agility-based damage, 1 use)</option>
+                        <option value="big_stone">Big Stone (agility-based damage, 1 use, level 2)</option>
                         <option value="fear_spell" id="p${player}-fear-option-${i}" style="display: none;">🔮 Fear Spell (enemy -3 power/defense, 3 mana)</option>
                     `;
                 } else {
