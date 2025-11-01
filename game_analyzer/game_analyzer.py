@@ -291,10 +291,16 @@ class FightSimulator:
                     level_penalty = max(0.3, level_penalty)  # Minimum 30% effectiveness
                     stone_multiplier = 1.0 + (stone_multiplier - 1.0) * level_penalty
 
+                    # Check for slingshot enhancement (in hand equipment)
+                    has_slingshot = any(equip and equip.item_type == "slingshot" for equip in attacker.hand_equipment)
+                    if has_slingshot:
+                        slingshot_bonus = 0.3  # 30% additional multiplier when using slingshot
+                        stone_multiplier += slingshot_bonus
+
                     damage *= stone_multiplier
                     item.uses_remaining -= 1
                     equipment_used = True
-                    effect_type = "stone_used"
+                    effect_type = "stone_with_slingshot" if has_slingshot else "stone_used"
                     break
 
         # Check for equipment usage (big stone) - only in basic equipment slots
@@ -311,13 +317,19 @@ class FightSimulator:
                     level_penalty = max(0.3, level_penalty)  # Minimum 30% effectiveness
                     stone_multiplier = 1.0 + (stone_multiplier - 1.0) * level_penalty
 
+                    # Check for slingshot enhancement (in hand equipment)
+                    has_slingshot = any(equip and equip.item_type == "slingshot" for equip in attacker.hand_equipment)
+                    if has_slingshot:
+                        slingshot_bonus = 0.3  # 30% additional multiplier when using slingshot
+                        stone_multiplier += slingshot_bonus
+
                     damage *= stone_multiplier
                     item.uses_remaining -= 1
                     equipment_used = True
-                    if effect_type == "stone_used":
-                        effect_type = "stones_used"  # Both stones used
+                    if "stone_with_slingshot" in effect_type or effect_type == "stone_used":
+                        effect_type = "stones_with_slingshot" if has_slingshot else "stones_used"  # Both stones used
                     else:
-                        effect_type = "big_stone_used"
+                        effect_type = "big_stone_with_slingshot" if has_slingshot else "big_stone_used"
                     break
 
         # Check for wooden sticks and big wooden sticks (works every round) - only in hand equipment slots
@@ -355,7 +367,11 @@ class FightSimulator:
 
         # Update effect type based on stick usage
         if stick_count > 0:
-            if effect_type == "stone_used" or effect_type == "big_stone_used":
+            if "stone_with_slingshot" in effect_type or "big_stone_with_slingshot" in effect_type:
+                effect_type = "stone_slingshot_and_stick"
+            elif "stones_with_slingshot" in effect_type:
+                effect_type = "stones_slingshot_and_stick"
+            elif effect_type == "stone_used" or effect_type == "big_stone_used":
                 effect_type = "stone_and_stick"
             elif effect_type == "stones_used":
                 effect_type = "stones_and_stick"
@@ -450,10 +466,16 @@ class FightSimulator:
                     level_penalty = max(0.3, level_penalty)  # Minimum 30% effectiveness
                     stone_multiplier = 1.0 + (stone_multiplier - 1.0) * level_penalty
 
+                    # Check for slingshot enhancement (in hand equipment)
+                    has_slingshot = any(equip and equip.item_type == "slingshot" for equip in attacker.hand_equipment)
+                    if has_slingshot:
+                        slingshot_bonus = 0.3  # 30% additional multiplier when using slingshot
+                        stone_multiplier += slingshot_bonus
+
                     damage *= stone_multiplier
                     item.uses_remaining -= 1
                     equipment_used = True
-                    effect_type = "stone_used"
+                    effect_type = "stone_with_slingshot" if has_slingshot else "stone_used"
                     break
 
         # Check for equipment usage (big stone) - only in basic equipment slots
@@ -470,13 +492,19 @@ class FightSimulator:
                     level_penalty = max(0.3, level_penalty)  # Minimum 30% effectiveness
                     stone_multiplier = 1.0 + (stone_multiplier - 1.0) * level_penalty
 
+                    # Check for slingshot enhancement (in hand equipment)
+                    has_slingshot = any(equip and equip.item_type == "slingshot" for equip in attacker.hand_equipment)
+                    if has_slingshot:
+                        slingshot_bonus = 0.3  # 30% additional multiplier when using slingshot
+                        stone_multiplier += slingshot_bonus
+
                     damage *= stone_multiplier
                     item.uses_remaining -= 1
                     equipment_used = True
-                    if effect_type == "stone_used":
-                        effect_type = "stones_used"  # Both stones used
+                    if "stone_with_slingshot" in effect_type or effect_type == "stone_used":
+                        effect_type = "stones_with_slingshot" if has_slingshot else "stones_used"  # Both stones used
                     else:
-                        effect_type = "big_stone_used"
+                        effect_type = "big_stone_with_slingshot" if has_slingshot else "big_stone_used"
                     break
 
         # Check for wooden sticks and big wooden sticks (works every round) - only in hand equipment slots
@@ -514,7 +542,11 @@ class FightSimulator:
 
         # Update effect type based on stick usage
         if stick_count > 0:
-            if effect_type == "stone_used" or effect_type == "big_stone_used":
+            if "stone_with_slingshot" in effect_type or "big_stone_with_slingshot" in effect_type:
+                effect_type = "stone_slingshot_and_stick"
+            elif "stones_with_slingshot" in effect_type:
+                effect_type = "stones_slingshot_and_stick"
+            elif effect_type == "stone_used" or effect_type == "big_stone_used":
                 effect_type = "stone_and_stick"
             elif effect_type == "stones_used":
                 effect_type = "stones_and_stick"
@@ -665,6 +697,15 @@ def create_big_wooden_stick() -> Equipment:
         item_type="big_wooden_stick",
         uses_remaining=999,  # Effectively unlimited uses
         effect_multiplier=1.06  # Fixed +1.06 damage multiplier, same as wooden stick
+    )
+
+def create_slingshot() -> Equipment:
+    """Create a slingshot equipment item (enhances stone effectiveness)"""
+    return Equipment(
+        name="Slingshot",
+        item_type="slingshot",
+        uses_remaining=999,  # Effectively unlimited uses
+        effect_multiplier=1.0  # No direct damage multiplier, enhances stone effectiveness instead
     )
 
 def calculate_stat_impact(race: str, level: int, num_simulations: int = 1000) -> Dict:
@@ -836,16 +877,21 @@ def create_player(name: str, race: str, custom_stats: Dict = None, equipment: Li
                     player.equipment[i] = create_big_stone()
                 elif item_type == "fear_spell" and knowledge >= 1:
                     player.equipment[i] = create_fear_spell()
-                # Ignore wooden sticks in basic slots
+                # Ignore wooden sticks and slingshot in basic slots
 
-    # Add hand equipment (wooden sticks only) if specified
+    # Add hand equipment (wooden sticks and slingshot) if specified
     if hand_equipment:
+        # Check for slingshot limit (only 1 slingshot allowed per player)
+        slingshot_count = sum(1 for item in hand_equipment if item == "slingshot")
+
         for i, item_type in enumerate(hand_equipment):
             if i < enabled_hand_slots and i < 2:  # Only use enabled hand slots
                 if item_type == "wooden_stick":
                     player.hand_equipment[i] = create_wooden_stick()
                 elif item_type == "big_wooden_stick":
                     player.hand_equipment[i] = create_big_wooden_stick()
+                elif item_type == "slingshot" and slingshot_count <= 1:
+                    player.hand_equipment[i] = create_slingshot()
                 # Ignore stones in hand slots
 
     return player
