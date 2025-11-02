@@ -477,7 +477,7 @@
                             <select id="p1-equipment-1" class="form-control">
                                 <option value="">Empty</option>
                                 <option value="stone">Stone (agility-based damage, 1 use)</option>
-                                <option value="big_stone">Big Stone (agility-based damage, 1 use, level 2)</option>
+                                <option value="big_stone" id="p1-big-stone-option-1" style="display: none;">Big Stone (agility-based damage, 1 use, level 2)</option>
                                 <option value="fear_spell" id="p1-fear-option-1" style="display: none;">🔮 Fear Spell (enemy -3 power/defense, 3 mana)</option>
                                 <option value="scream_spell" id="p1-scream-option-1" style="display: none;">😱 Scream Spell (35% chance +1 damage, 4 mana)</option>
                             </select>
@@ -487,7 +487,7 @@
                             <select id="p1-equipment-2" class="form-control">
                                 <option value="">Empty</option>
                                 <option value="stone">Stone (agility-based damage, 1 use)</option>
-                                <option value="big_stone">Big Stone (agility-based damage, 1 use, level 2)</option>
+                                <option value="big_stone" id="p1-big-stone-option-2" style="display: none;">Big Stone (agility-based damage, 1 use, level 2)</option>
                                 <option value="fear_spell" id="p1-fear-option-2" style="display: none;">🔮 Fear Spell (enemy -3 power/defense, 3 mana)</option>
                                 <option value="scream_spell" id="p1-scream-option-2" style="display: none;">😱 Scream Spell (35% chance +1 damage, 4 mana)</option>
                             </select>
@@ -507,8 +507,8 @@
                             <select id="p1-hand-1" class="form-control">
                                 <option value="">Empty</option>
                                 <option value="wooden_stick">Wooden Stick (+1.06 damage, permanent)</option>
-                                <option value="big_wooden_stick">Big Wooden Stick (+1.06 damage, permanent, level 2)</option>
-                                <option value="slingshot">🎯 Slingshot (enhances stone damage +30%)</option>
+                                <option value="big_wooden_stick" id="p1-big-stick-hand-1" style="display: none;">Big Wooden Stick (+1.06 damage, permanent, level 2)</option>
+                                <option value="slingshot" id="p1-slingshot-hand-1">🎯 Slingshot (enhances stone damage +30%, requires both hands)</option>
                             </select>
                         </div>
                         <div class="equipment-slot">
@@ -516,8 +516,8 @@
                             <select id="p1-hand-2" class="form-control">
                                 <option value="">Empty</option>
                                 <option value="wooden_stick">Wooden Stick (+1.06 damage, permanent)</option>
-                                <option value="big_wooden_stick">Big Wooden Stick (+1.06 damage, permanent, level 2)</option>
-                                <option value="slingshot">🎯 Slingshot (enhances stone damage +30%)</option>
+                                <option value="big_wooden_stick" id="p1-big-stick-hand-2" style="display: none;">Big Wooden Stick (+1.06 damage, permanent, level 2)</option>
+                                <option value="slingshot" id="p1-slingshot-hand-2">🎯 Slingshot (enhances stone damage +30%, requires both hands)</option>
                             </select>
                         </div>
                     </div>
@@ -572,7 +572,7 @@
                             <select id="p2-equipment-1" class="form-control">
                                 <option value="">Empty</option>
                                 <option value="stone">Stone (agility-based damage, 1 use)</option>
-                                <option value="big_stone">Big Stone (agility-based damage, 1 use, level 2)</option>
+                                <option value="big_stone" id="p2-big-stone-option-1" style="display: none;">Big Stone (agility-based damage, 1 use, level 2)</option>
                                 <option value="fear_spell" id="p2-fear-option-1" style="display: none;">🔮 Fear Spell (enemy -3 power/defense, 3 mana)</option>
                                 <option value="scream_spell" id="p2-scream-option-1" style="display: none;">😱 Scream Spell (35% chance +1 damage, 4 mana)</option>
                             </select>
@@ -582,7 +582,7 @@
                             <select id="p2-equipment-2" class="form-control">
                                 <option value="">Empty</option>
                                 <option value="stone">Stone (agility-based damage, 1 use)</option>
-                                <option value="big_stone">Big Stone (agility-based damage, 1 use, level 2)</option>
+                                <option value="big_stone" id="p2-big-stone-option-2" style="display: none;">Big Stone (agility-based damage, 1 use, level 2)</option>
                                 <option value="fear_spell" id="p2-fear-option-2" style="display: none;">🔮 Fear Spell (enemy -3 power/defense, 3 mana)</option>
                                 <option value="scream_spell" id="p2-scream-option-2" style="display: none;">😱 Scream Spell (35% chance +1 damage, 4 mana)</option>
                             </select>
@@ -602,8 +602,8 @@
                             <select id="p2-hand-1" class="form-control">
                                 <option value="">Empty</option>
                                 <option value="wooden_stick">Wooden Stick (+1.06 damage, permanent)</option>
-                                <option value="big_wooden_stick">Big Wooden Stick (+1.06 damage, permanent, level 2)</option>
-                                <option value="slingshot">🎯 Slingshot (enhances stone damage +30%)</option>
+                                <option value="big_wooden_stick" id="p2-big-stick-hand-1" style="display: none;">Big Wooden Stick (+1.06 damage, permanent, level 2)</option>
+                                <option value="slingshot" id="p2-slingshot-hand-1">🎯 Slingshot (enhances stone damage +30%, requires both hands)</option>
                             </select>
                         </div>
                         <div class="equipment-slot">
@@ -611,8 +611,8 @@
                             <select id="p2-hand-2" class="form-control">
                                 <option value="">Empty</option>
                                 <option value="wooden_stick">Wooden Stick (+1.06 damage, permanent)</option>
-                                <option value="big_wooden_stick">Big Wooden Stick (+1.06 damage, permanent, level 2)</option>
-                                <option value="slingshot">🎯 Slingshot (enhances stone damage +30%)</option>
+                                <option value="big_wooden_stick" id="p2-big-stick-hand-2" style="display: none;">Big Wooden Stick (+1.06 damage, permanent, level 2)</option>
+                                <option value="slingshot" id="p2-slingshot-hand-2">🎯 Slingshot (enhances stone damage +30%, requires both hands)</option>
                             </select>
                         </div>
                     </div>
@@ -896,6 +896,20 @@
                 updateFearSpellVisibility(2, knowledge);
                 updateScreamSpellVisibility(2, knowledge);
             });
+
+            // Add event listeners for hand equipment changes (slingshot mutual exclusion)
+            document.getElementById('p1-hand-1').addEventListener('change', function() {
+                updateSlingshotAvailability(1);
+            });
+            document.getElementById('p1-hand-2').addEventListener('change', function() {
+                updateSlingshotAvailability(1);
+            });
+            document.getElementById('p2-hand-1').addEventListener('change', function() {
+                updateSlingshotAvailability(2);
+            });
+            document.getElementById('p2-hand-2').addEventListener('change', function() {
+                updateSlingshotAvailability(2);
+            });
         });
 
         function getLeveledStats(race, level) {
@@ -1038,7 +1052,7 @@
                     selectElement.innerHTML = `
                         <option value="">Empty</option>
                         <option value="stone">Stone (agility-based damage, 1 use)</option>
-                        <option value="big_stone">Big Stone (agility-based damage, 1 use, level 2)</option>
+                        <option value="big_stone" id="p${player}-big-stone-option-${i}" style="display: none;">Big Stone (agility-based damage, 1 use, level 2)</option>
                         <option value="fear_spell" id="p${player}-fear-option-${i}" style="display: none;">🔮 Fear Spell (enemy -3 power/defense, 3 mana)</option>
                         <option value="scream_spell" id="p${player}-scream-option-${i}" style="display: none;">😱 Scream Spell (35% chance +1 damage, 4 mana)</option>
                     `;
@@ -1089,6 +1103,90 @@
             });
         }
 
+        function updateSlingshotAvailability(player) {
+            // Get both hand equipment selects for the player
+            const hand1Select = document.getElementById(`p${player}-hand-1`);
+            const hand2Select = document.getElementById(`p${player}-hand-2`);
+
+            // Check if slingshot is selected in either hand
+            const hand1HasSlingshot = hand1Select.value === 'slingshot';
+            const hand2HasSlingshot = hand2Select.value === 'slingshot';
+
+            // If hand 1 has slingshot, disable hand 2 entirely (slingshot needs both hands)
+            if (hand1HasSlingshot) {
+                hand2Select.disabled = true;
+                hand2Select.style.opacity = '0.5';
+                hand2Select.value = '';  // Clear any selection in hand 2
+                // Add visual indicator
+                const hand2Label = hand2Select.parentElement.querySelector('label');
+                if (hand2Label && !hand2Label.textContent.includes('(Disabled)')) {
+                    hand2Label.textContent = hand2Label.textContent.replace('Hand 2:', 'Hand 2: (Disabled - Slingshot uses both hands)');
+                }
+            } else {
+                hand2Select.disabled = false;
+                hand2Select.style.opacity = '1';
+                // Remove visual indicator
+                const hand2Label = hand2Select.parentElement.querySelector('label');
+                if (hand2Label) {
+                    hand2Label.textContent = 'Hand 2:';
+                }
+            }
+
+            // If hand 2 has slingshot, disable hand 1 entirely (slingshot needs both hands)
+            if (hand2HasSlingshot) {
+                hand1Select.disabled = true;
+                hand1Select.style.opacity = '0.5';
+                hand1Select.value = '';  // Clear any selection in hand 1
+                // Add visual indicator
+                const hand1Label = hand1Select.parentElement.querySelector('label');
+                if (hand1Label && !hand1Label.textContent.includes('(Disabled)')) {
+                    hand1Label.textContent = hand1Label.textContent.replace('Hand 1:', 'Hand 1: (Disabled - Slingshot uses both hands)');
+                }
+            } else {
+                hand1Select.disabled = false;
+                hand1Select.style.opacity = '1';
+                // Remove visual indicator
+                const hand1Label = hand1Select.parentElement.querySelector('label');
+                if (hand1Label) {
+                    hand1Label.textContent = 'Hand 1:';
+                }
+            }
+        }
+
+        function updateBigStoneVisibility(player, level) {
+            // Show/hide big stone options based on level >= 2
+            const bigStoneOptions = document.querySelectorAll(`#p${player}-big-stone-option-1, #p${player}-big-stone-option-2, #p${player}-big-stone-option-3`);
+
+            bigStoneOptions.forEach(option => {
+                if (level >= 2) {
+                    option.style.display = 'block';
+                } else {
+                    option.style.display = 'none';
+                    // If big stone was selected but level is now < 2, reset to empty
+                    if (option.parentElement.value === 'big_stone') {
+                        option.parentElement.value = '';
+                    }
+                }
+            });
+        }
+
+        function updateBigStickVisibility(player, level) {
+            // Show/hide big wooden stick options based on level >= 2
+            const bigStickOptions = document.querySelectorAll(`#p${player}-big-stick-hand-1, #p${player}-big-stick-hand-2`);
+
+            bigStickOptions.forEach(option => {
+                if (level >= 2) {
+                    option.style.display = 'block';
+                } else {
+                    option.style.display = 'none';
+                    // If big wooden stick was selected but level is now < 2, reset to empty
+                    if (option.parentElement.value === 'big_wooden_stick') {
+                        option.parentElement.value = '';
+                    }
+                }
+            });
+        }
+
         function updateRaceDefaults(player) {
             const raceSelect = document.getElementById(`p${player}-race`);
             const defaultsDiv = document.getElementById(`p${player}-defaults`);
@@ -1115,6 +1213,10 @@
             // Update fear spell visibility based on knowledge
             updateFearSpellVisibility(player, leveledStats.knowledge);
             updateScreamSpellVisibility(player, leveledStats.knowledge);
+
+            // Update level 2+ equipment visibility
+            updateBigStoneVisibility(player, currentLevel);
+            updateBigStickVisibility(player, currentLevel);
         }
 
         async function runSimulation() {
