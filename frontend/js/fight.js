@@ -10,7 +10,7 @@ function updatePlayerStats(player) {
         ${renderHPBar(player.hp, player.maxHP || 20)}
         <p>Power: ${player.power}</p>
         <p>Agility: ${player.agility}</p>
-        <p>Protection: ${player.protection}</p>
+        <p>Protection: ${player.defense}</p>
     `;
 }
 
@@ -24,7 +24,7 @@ function updateBotStats(bot) {
         ${renderHPBar(bot.hp, 20)}
         <p>Power: ${bot.power}</p>
         <p>Agility: ${bot.agility}</p>
-        <p>Protection: ${bot.protection}</p>
+        <p>Protection: ${bot.defense}</p>
     `;
 }
 
@@ -62,7 +62,7 @@ function showFightScreen(profile) {
                         </div>
                         <div class="mini-stat">
                             <div class="mini-stat-label">🛡️ PRO</div>
-                            <div class="mini-stat-value">${profile.protection}</div>
+                            <div class="mini-stat-value">${profile.defense}</div>
                         </div>
                     </div>
                 </div>
@@ -296,7 +296,7 @@ function updateBotStatsNew(bot) {
         </div>
         <div class="mini-stat">
             <div class="mini-stat-label">🛡️ PRO</div>
-            <div class="mini-stat-value">${bot.protection}</div>
+            <div class="mini-stat-value">${bot.defense}</div>
         </div>
     `;
 }

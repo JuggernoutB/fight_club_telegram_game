@@ -11,14 +11,7 @@ function checkProfile() {
 }
 
 function showCreateProfile() {
-    const basePoints = 5;
-    let remainingPoints = basePoints;
-    const allocation = {
-        hp: 0,
-        power: 0,
-        agility: 0,
-        protection: 0
-    };
+    // No stat allocation - players get default race stats only
 
     document.body.innerHTML = `
         <div class="game-container">
@@ -41,106 +34,23 @@ function showCreateProfile() {
 
                 <div class="form-group">
                     <label for="race">Choose Your Race</label>
-                    <select id="race" class="form-select" onchange="updateRaceBonus()">
-                        <option value="human">🧑 Human (+2 HP)</option>
-                        <option value="elf" selected>🧝 Elf (+2 Agility)</option>
-                        <option value="dwarf">🧔 Dwarf (+2 Protection)</option>
-                        <option value="orc">👹 Orc (+2 Power)</option>
+                    <select id="race" class="form-select">
+                        <option value="human">🧑 Human (HP:25, PWR:5, DEF:5, AGL:6, KNW:0)</option>
+                        <option value="orc">👹 Orc (HP:25, PWR:6, DEF:5, AGL:5, KNW:0)</option>
+                        <option value="elf" selected>🧝 Elf (HP:25, PWR:5, DEF:5, AGL:6, KNW:0)</option>
+                        <option value="dwarf">🧔 Dwarf (HP:25, PWR:5, DEF:6, AGL:5, KNW:0)</option>
+                        <option value="skeleton">💀 Skeleton (HP:26, PWR:5, DEF:5, AGL:5, KNW:0)</option>
                     </select>
                 </div>
 
-                <div class="stats-container">
-                    <div class="stats-header">
-                        <div class="points-remaining">
-                            <span id="pointsRemaining">${remainingPoints}</span> Points Remaining
-                        </div>
-                    </div>
-
-                    <div class="stat-row">
-                        <div class="stat-name">❤️ HP</div>
-                        <div class="stat-value" id="hpVal">0</div>
-                        <div class="stat-controls">
-                            <button class="stat-button" onclick="changeAllocation('hp', -1)">−</button>
-                            <button class="stat-button" onclick="changeAllocation('hp', 1)">+</button>
-                        </div>
-                    </div>
-
-                    <div class="stat-row">
-                        <div class="stat-name">⚔️ Power</div>
-                        <div class="stat-value" id="powerVal">0</div>
-                        <div class="stat-controls">
-                            <button class="stat-button" onclick="changeAllocation('power', -1)">−</button>
-                            <button class="stat-button" onclick="changeAllocation('power', 1)">+</button>
-                        </div>
-                    </div>
-
-                    <div class="stat-row">
-                        <div class="stat-name">💨 Agility</div>
-                        <div class="stat-value" id="agilityVal">0</div>
-                        <div class="stat-controls">
-                            <button class="stat-button" onclick="changeAllocation('agility', -1)">−</button>
-                            <button class="stat-button" onclick="changeAllocation('agility', 1)">+</button>
-                        </div>
-                    </div>
-
-                    <div class="stat-row">
-                        <div class="stat-name">🛡️ Protection</div>
-                        <div class="stat-value" id="protectionVal">0</div>
-                        <div class="stat-controls">
-                            <button class="stat-button" onclick="changeAllocation('protection', -1)">−</button>
-                            <button class="stat-button" onclick="changeAllocation('protection', 1)">+</button>
-                        </div>
-                    </div>
-                </div>
-
-                <button id="createProfileBtn" class="btn-primary" onclick="createProfileWithAllocation()" disabled>
+                <button id="createProfileBtn" class="btn-primary" onclick="createProfile()">
                     ⚔️ Create Fighter
                 </button>
             </div>
         </div>
     `;
 
-    // Expose to global so buttons can call these functions
-    window.remainingPoints = remainingPoints;
-    window.allocation = allocation;
-
-    window.changeAllocation = function(attr, delta) {
-        if (delta > 0 && window.remainingPoints <= 0) return;
-        if (delta < 0 && window.allocation[attr] <= 0) return;
-
-        window.allocation[attr] += delta;
-        window.remainingPoints -= delta;
-
-        if (window.remainingPoints < 0) {
-            window.remainingPoints = 0; // safety
-        }
-
-        // Update UI
-        document.getElementById(`${attr}Val`).textContent = window.allocation[attr];
-        document.getElementById("pointsRemaining").textContent = window.remainingPoints;
-
-        // Update button states
-        updateButtonStates();
-
-        // Enable create button only if all points allocated
-        document.getElementById("createProfileBtn").disabled = (window.remainingPoints !== 0);
-    };
-
-    function updateButtonStates() {
-        const stats = ['hp', 'power', 'agility', 'protection'];
-
-        stats.forEach(stat => {
-            const statRow = document.querySelector(`#${stat}Val`).closest('.stat-row');
-            const minusBtn = statRow.querySelector('.stat-button:first-child');
-            const plusBtn = statRow.querySelector('.stat-button:last-child');
-
-            // Disable minus button if stat is 0
-            minusBtn.disabled = window.allocation[stat] <= 0;
-
-            // Disable plus button if no points remaining
-            plusBtn.disabled = window.remainingPoints <= 0;
-        });
-    }
+    // No stat allocation needed - players get default race stats
 
     window.updateRaceBonus = function() {
         const race = document.getElementById("race").value;
@@ -183,12 +93,13 @@ function showCreateProfile() {
             "human": "🧑",
             "elf": "🧝",
             "dwarf": "🧔",
-            "orc": "👹"
+            "orc": "👹",
+            "skeleton": "💀"
         };
         return raceAvatars[race] || "👤";
     }
 
-    window.createProfileWithAllocation = function() {
+    window.createProfile = function() {
         console.log("Create Fighter button clicked!"); // Debug log
 
         const nickname = document.getElementById("nickname").value.trim();
@@ -199,21 +110,13 @@ function showCreateProfile() {
             return;
         }
 
-        console.log("Remaining points:", window.remainingPoints); // Debug log
-        if (window.remainingPoints !== 0) {
-            alert("Please allocate all extra points.");
-            return;
-        }
-
         const race = document.getElementById("race").value;
         console.log("Race:", race); // Debug log
-        console.log("Allocation:", window.allocation); // Debug log
 
         createProfileAPI({
             telegram_id: telegram_id,
             nickname: nickname,
-            race: race,
-            extra_points: window.allocation
+            race: race
         })
         .then(data => {
             console.log("Profile creation response:", data); // Debug log
@@ -314,12 +217,16 @@ function showGame(profile) {
                         <div class="stat-value">${profile.power}</div>
                     </div>
                     <div class="stat-card">
+                        <div class="stat-label">🛡️ Defense</div>
+                        <div class="stat-value">${profile.defense}</div>
+                    </div>
+                    <div class="stat-card">
                         <div class="stat-label">💨 Agility</div>
                         <div class="stat-value">${profile.agility}</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-label">🛡️ Protection</div>
-                        <div class="stat-value">${profile.protection}</div>
+                        <div class="stat-label">🧠 Knowledge</div>
+                        <div class="stat-value">${profile.knowledge}</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-label">🏆 Race</div>
@@ -381,7 +288,8 @@ function getRaceAvatar(race) {
         "human": "🧑",
         "elf": "🧝",
         "dwarf": "🧔",
-        "orc": "👹"
+        "orc": "👹",
+        "skeleton": "💀"
     };
     return raceAvatars[race] || "👤";
 }

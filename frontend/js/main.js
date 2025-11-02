@@ -411,8 +411,12 @@ function startPvPFight(fight_id, opponentNickname) {
                             <div class="mini-stat-value">${data.playerStats.agility || '-'}</div>
                         </div>
                         <div class="mini-stat">
-                            <div class="mini-stat-label">🛡️ PRO</div>
-                            <div class="mini-stat-value">${data.playerStats.protection || '-'}</div>
+                            <div class="mini-stat-label">🛡️ DEF</div>
+                            <div class="mini-stat-value">${data.playerStats.defense || '-'}</div>
+                        </div>
+                        <div class="mini-stat">
+                            <div class="mini-stat-label">🧠 KNW</div>
+                            <div class="mini-stat-value">${data.playerStats.knowledge || '-'}</div>
                         </div>
                     `;
                 }
@@ -434,8 +438,12 @@ function startPvPFight(fight_id, opponentNickname) {
                             <div class="mini-stat-value">${data.opponentStats.agility || '-'}</div>
                         </div>
                         <div class="mini-stat">
-                            <div class="mini-stat-label">🛡️ PRO</div>
-                            <div class="mini-stat-value">${data.opponentStats.protection || '-'}</div>
+                            <div class="mini-stat-label">🛡️ DEF</div>
+                            <div class="mini-stat-value">${data.opponentStats.defense || '-'}</div>
+                        </div>
+                        <div class="mini-stat">
+                            <div class="mini-stat-label">🧠 KNW</div>
+                            <div class="mini-stat-value">${data.opponentStats.knowledge || '-'}</div>
                         </div>
                     `;
                 }

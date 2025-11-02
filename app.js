@@ -15,9 +15,42 @@ try {
     const data = fs.readFileSync(DATA_FILE, "utf8");
     playerProfiles = JSON.parse(data);
     console.log("Loaded player profiles from file.");
+
+    // Migrate old profiles to new stat system
+    migratePlayerProfiles();
   }
 } catch (err) {
   console.error("Error loading profiles file:", err);
+}
+
+function migratePlayerProfiles() {
+  let needsSave = false;
+
+  Object.keys(playerProfiles).forEach(playerId => {
+    const profile = playerProfiles[playerId];
+
+    // Migrate defense to defense
+    if (profile.defense !== undefined && profile.defense === undefined) {
+      profile.defense = profile.defense;
+      delete profile.defense;
+      needsSave = true;
+      console.log(`Migrated ${profile.nickname}: defense -> defense`);
+    }
+
+    // Add knowledge stat if missing or recalculate for current level
+    const correctKnowledge = calculateKnowledgeForLevel(profile.race, profile.level || 1);
+    if (profile.knowledge === undefined || profile.knowledge !== correctKnowledge) {
+      const oldKnowledge = profile.knowledge || 0;
+      profile.knowledge = correctKnowledge;
+      needsSave = true;
+      console.log(`Updated knowledge for ${profile.nickname}: ${oldKnowledge} -> ${correctKnowledge} (level ${profile.level || 1})`);
+    }
+  });
+
+  if (needsSave) {
+    saveProfiles();
+    console.log("Profile migration completed and saved.");
+  }
 }
 
 const app = express();
@@ -39,15 +72,128 @@ function saveProfiles() {
   }
 }
 
-function checkLevelUp(profile) {
-  const XP_PER_LEVEL = 10;
+// XP system matching game analyzer
+function calculateXpForFight(result, playerLevel, opponentLevel) {
+  // Base XP values from analyzer
+  const BASE_XP_WIN = 6;      // Win against player
+  const BASE_XP_DRAW = 3;     // Draw against player
+  const BASE_XP_LOSS = 2;     // Beat bot (reward for trying)
 
-  while (profile.experience >= XP_PER_LEVEL) {
-    profile.experience -= XP_PER_LEVEL;
-    profile.level += 1;
-    profile.extra_points += 3;
-    console.log(`${profile.nickname} leveled up! Now at level ${profile.level}`);
+  // Get base XP based on result
+  let baseXp;
+  if (result === 'win') {
+    baseXp = BASE_XP_WIN;
+  } else if (result === 'draw') {
+    baseXp = BASE_XP_DRAW;
+  } else { // loss
+    baseXp = BASE_XP_LOSS;  // Beat bot gives some XP
   }
+
+  // Apply level modifier
+  const levelDiff = opponentLevel - playerLevel;
+
+  let multiplier;
+  if (levelDiff === -1) {  // Fighting lower level
+    if (result === 'draw') {
+      return 0;  // No XP for draw against lower level
+    }
+    multiplier = 0.7;
+  } else if (levelDiff === 0) {  // Same level
+    multiplier = 1.0;
+  } else if (levelDiff === 1) {  // Fighting higher level
+    if (result === 'draw') {
+      return BASE_XP_WIN;  // Draw against higher = win XP against same
+    }
+    multiplier = 1.5;
+  } else {
+    // For other level differences, use gradual scaling
+    if (levelDiff < -1) {
+      multiplier = Math.max(0.5, 0.7 + (levelDiff + 1) * 0.1);
+    } else { // levelDiff > 1
+      multiplier = Math.min(2.0, 1.5 + (levelDiff - 1) * 0.2);
+    }
+  }
+
+  return Math.floor(baseXp * multiplier);
+}
+
+function getXpForSingleLevel(level) {
+  // XP required to advance from (level-1) to level
+  if (level <= 1) {
+    return 0;
+  } else if (level === 2) {
+    return 82;  // Keep base requirement same
+  } else if (level === 3) {
+    return 218;  // 300 total - 82 = 218 for level 3
+  } else if (level === 4) {
+    return 780;  // 1080 total - 300 = 780 for level 4
+  } else {
+    // For levels 5+, use escalating multiplier starting at 3.6x
+    const prevLevelXp = getXpForSingleLevel(level - 1);
+    // Increase multiplier slightly each level: 3.6, 3.7, 3.8, etc.
+    const multiplier = 3.5 + (level - 4) * 0.1;
+    return Math.floor(prevLevelXp * multiplier);
+  }
+}
+
+function getXpRequiredForLevel(level) {
+  // Get total XP required to reach a specific level
+  if (level <= 1) {
+    return 0;
+  }
+
+  let totalXp = 0;
+  for (let lvl = 2; lvl <= level; lvl++) {
+    totalXp += getXpForSingleLevel(lvl);
+  }
+  return totalXp;
+}
+
+function calculateKnowledgeForLevel(race, level) {
+  // Calculate knowledge stat based on race and level (from analyzer)
+  let baseKnowledge = 0; // All races start with 0 knowledge
+
+  // Special bonuses for skeleton only
+  if (race === 'skeleton') {
+    let bonusKnowledge = 0;
+    if (level >= 2) {
+      bonusKnowledge += 1;  // +1 knowledge at level 2
+    }
+    if (level >= 8) {
+      bonusKnowledge += 1;  // +1 additional knowledge at level 8 (total +2)
+    }
+    return baseKnowledge + bonusKnowledge;
+  }
+
+  // All other races: no knowledge bonuses per level
+  return baseKnowledge;
+}
+
+function checkLevelUp(profile) {
+  let leveledUp = false;
+
+  while (true) {
+    const nextLevel = profile.level + 1;
+    const xpNeeded = getXpRequiredForLevel(nextLevel);
+
+    if (profile.experience >= xpNeeded) {
+      profile.level = nextLevel;
+
+      // Update knowledge based on race and new level
+      const newKnowledge = calculateKnowledgeForLevel(profile.race, profile.level);
+      if (newKnowledge !== profile.knowledge) {
+        profile.knowledge = newKnowledge;
+        console.log(`${profile.nickname} gained knowledge! Now has ${newKnowledge} knowledge`);
+      }
+
+      leveledUp = true;
+      console.log(`${profile.nickname} leveled up! Now at level ${profile.level} (${profile.experience}/${xpNeeded} XP)`);
+    } else {
+      break;
+    }
+  }
+
+  return leveledUp;
 }
 
 // Reset profiles (both in-memory and file) - useful for tests
@@ -64,9 +210,9 @@ function resetProfiles() {
 // Routes here:
 
 app.post("/create-profile", (req, res) => {
-  const { telegram_id, nickname, race, extra_points } = req.body;
+  const { telegram_id, nickname, race } = req.body;
 
-  if (!telegram_id || !nickname || !race || !extra_points) {
+  if (!telegram_id || !nickname || !race) {
     return res.status(400).json({ message: "Missing required fields." });
   }
 
@@ -74,50 +220,44 @@ app.post("/create-profile", (req, res) => {
     return res.status(400).json({ message: "Profile already exists." });
   }
 
-  // Base stats
+  // Base stats matching game analyzer
   let baseStats = {
-    hp: 20,
-    power: 2,
-    agility: 2,
-    protection: 2
+    hp: 25,
+    power: 5,
+    defense: 5,
+    agility: 6,
+    knowledge: 0
   };
 
-  // Apply race bonuses
+  // Apply race bonuses to match game analyzer
   switch (race) {
     case "human":
-      baseStats.hp += 2;
-      break;
-    case "elf":
-      baseStats.agility += 2;
-      break;
-    case "dwarf":
-      baseStats.protection += 2;
+      // Human: hp: 25, power: 5, defense: 5, agility: 6, knowledge: 0 (default values)
       break;
     case "orc":
-      baseStats.power += 2;
+      // Orc: hp: 25, power: 6, defense: 5, agility: 5, knowledge: 0
+      baseStats.power = 6;
+      baseStats.agility = 5;
+      break;
+    case "elf":
+      // Elf: hp: 25, power: 5, defense: 5, agility: 6, knowledge: 0 (same as human)
+      break;
+    case "dwarf":
+      // Dwarf: hp: 25, power: 5, defense: 6, agility: 5, knowledge: 0
+      baseStats.defense = 6;
+      baseStats.agility = 5;
+      break;
+    case "skeleton":
+      // Skeleton: hp: 26, power: 5, defense: 5, agility: 5, knowledge: 0
+      baseStats.hp = 26;
+      baseStats.agility = 5;
       break;
     default:
       return res.status(400).json({ message: "Invalid race selected." });
   }
 
-  // Validate extra_points keys and values (non-negative integers)
-  const keys = ["hp", "power", "agility", "protection"];
-  for (const key of keys) {
-    if (!(key in extra_points) || typeof extra_points[key] !== "number" || extra_points[key] < 0) {
-      return res.status(400).json({ message: `Invalid extra points for ${key}.` });
-    }
-  }
-
-  // Calculate total allocated points, must be exactly 5 (for initial creation)
-  const totalAllocated = keys.reduce((sum, key) => sum + extra_points[key], 0);
-  if (totalAllocated !== 5) {
-    return res.status(400).json({ message: "You must allocate exactly 5 extra points." });
-  }
-
-  // Add allocated points to base stats
-  keys.forEach(key => {
-    baseStats[key] += extra_points[key];
-  });
+  // No additional points by default - user starts with default race stats only
+  // Remove extra points allocation system for new registrations
 
   // Create profile object
   playerProfiles[telegram_id] = {
@@ -125,8 +265,9 @@ app.post("/create-profile", (req, res) => {
     race,
     hp: baseStats.hp,
     power: baseStats.power,
+    defense: baseStats.defense,
     agility: baseStats.agility,
-    protection: baseStats.protection,
+    knowledge: baseStats.knowledge,
     experience: 0,
     level: 1,
     extra_points: 0,
@@ -179,7 +320,7 @@ app.post("/fight", (req, res) => {
     }
   } else {
     // Bot defends
-    const diff = player.power - bot.protection;
+    const diff = player.power - bot.defense;
     if (diff <= 0) {
       log.push(`Bot blocked your attack to the ${hit}.`);
     } else {
@@ -207,7 +348,7 @@ app.post("/fight", (req, res) => {
       log.push(`You dodged the bot's attack to your ${botHit}.`);
     }
   } else {
-    const diff = bot.power - player.protection;
+    const diff = bot.power - player.defense;
     if (diff <= 0) {
       log.push(`You blocked the bot's attack to your ${botHit}.`);
     } else {
@@ -234,8 +375,11 @@ app.post("/fight", (req, res) => {
   } else if (bot.hp <= 0) {
     fightResult = "won";
     log.push("You won the fight!");
-    log.push("You gained 1 experience point.");
-    player.experience += 1;
+
+    // Calculate XP using new system (bot fights count as "loss" - reward for trying)
+    const xpGained = calculateXpForFight("loss", player.level, 1); // Bot is level 1
+    log.push(`You gained ${xpGained} experience points.`);
+    player.experience += xpGained;
     checkLevelUp(player);
     delete player.currentHP;
     delete player.currentBot;
@@ -273,7 +417,7 @@ app.post("/allocate-points", (req, res) => {
     return res.status(400).json({ message: "Profile not found." });
   }
 
-  const keys = ["hp", "power", "agility", "protection"];
+  const keys = ["hp", "power", "agility", "defense"];
 
   // Validate allocation keys and values
   for (const key of keys) {
@@ -326,7 +470,7 @@ app.post("/start-fight", (req, res) => {
     hp: 20,
     power: 2,
     agility: 2,
-    protection: 2
+    defense: 2
   };
 
   // Track current HP during fight separately from profile HP stat
@@ -358,7 +502,7 @@ app.post("/spend-points", (req, res) => {
     (points.hp || 0) + 
     (points.power || 0) + 
     (points.agility || 0) + 
-    (points.protection || 0);
+    (points.defense || 0);
 
   if (totalPointsToSpend > profile.extra_points) {
     return res.status(400).json({ message: "Not enough extra points" });
@@ -368,7 +512,7 @@ app.post("/spend-points", (req, res) => {
   profile.hp += points.hp || 0;
   profile.power += points.power || 0;
   profile.agility += points.agility || 0;
-  profile.protection += points.protection || 0;
+  profile.defense += points.defense || 0;
 
   profile.extra_points -= totalPointsToSpend;
 
@@ -398,8 +542,9 @@ app.get("/profile/:telegram_id", (req, res) => {
         race: profile.race,
         hp: profile.hp,
         power: profile.power,
+        defense: profile.defense,
         agility: profile.agility,
-        protection: profile.protection,
+        knowledge: profile.knowledge,
         experience: profile.experience,
         level: profile.level,
         extra_points: profile.extra_points
@@ -608,14 +753,16 @@ app.post("/join-fight", (req, res) => {
       maxHP: playerProfiles[challenger_id].hp,
       power: playerProfiles[challenger_id].power,
       agility: playerProfiles[challenger_id].agility,
-      protection: playerProfiles[challenger_id].protection
+      defense: playerProfiles[challenger_id].defense,
+      knowledge: playerProfiles[challenger_id].knowledge
     },
     player2_stats: {
       hp: playerProfiles[target_id].hp,  // Always start at full HP
       maxHP: playerProfiles[target_id].hp,
       power: playerProfiles[target_id].power,
       agility: playerProfiles[target_id].agility,
-      protection: playerProfiles[target_id].protection
+      defense: playerProfiles[target_id].defense,
+      knowledge: playerProfiles[target_id].knowledge
     },
     player1_action: null,
     player2_action: null,
@@ -686,14 +833,16 @@ app.post("/create-pvp-fight", (req, res) => {
       maxHP: playerProfiles[player_id].hp,
       power: playerProfiles[player_id].power,
       agility: playerProfiles[player_id].agility,
-      protection: playerProfiles[player_id].protection
+      defense: playerProfiles[player_id].defense,
+      knowledge: playerProfiles[player_id].knowledge
     },
     player2_stats: {
       hp: playerProfiles[opponent_id].hp,
       maxHP: playerProfiles[opponent_id].hp,
       power: playerProfiles[opponent_id].power,
       agility: playerProfiles[opponent_id].agility,
-      protection: playerProfiles[opponent_id].protection
+      defense: playerProfiles[opponent_id].defense,
+      knowledge: playerProfiles[opponent_id].knowledge
     },
     player1_action: null,
     player2_action: null,
@@ -857,7 +1006,7 @@ function processRound(fight_id) {
     }
   } else {
     // Player 2 defends against Player 1's attack
-    const diff = player1.power - player2.protection;
+    const diff = player1.power - player2.defense;
     if (diff <= 0) {
       roundLog.push(`${playerProfiles[fight.player2_id].nickname} blocked ${playerProfiles[fight.player1_id].nickname}'s attack to the ${p1Action.hit}.`);
     } else {
@@ -887,7 +1036,7 @@ function processRound(fight_id) {
     }
   } else {
     // Player 1 defends against Player 2's attack
-    const diff = player2.power - player1.protection;
+    const diff = player2.power - player1.defense;
     if (diff <= 0) {
       roundLog.push(`${playerProfiles[fight.player1_id].nickname} blocked ${playerProfiles[fight.player2_id].nickname}'s attack to the ${p2Action.hit}.`);
     } else {
@@ -926,13 +1075,36 @@ function processRound(fight_id) {
       loserProfile = playerProfiles[fight.player2_id];
     }
 
-    // Award XP if there's a winner
-    let xpGained = 0;
+    // Award XP using new system
+    let winnerXp = 0;
+    let loserXp = 0;
+
     if (winner !== "Draw") {
-      xpGained = 1; // Same as bot fights
-      winnerProfile.experience = (winnerProfile.experience || 0) + xpGained;
+      // Winner gets win XP
+      winnerXp = calculateXpForFight("win", winnerProfile.level, loserProfile.level);
+      winnerProfile.experience = (winnerProfile.experience || 0) + winnerXp;
+
+      // Loser gets loss XP
+      loserXp = calculateXpForFight("loss", loserProfile.level, winnerProfile.level);
+      loserProfile.experience = (loserProfile.experience || 0) + loserXp;
+
       checkLevelUp(winnerProfile);
+      checkLevelUp(loserProfile);
       saveProfiles();
+    } else {
+      // Draw - both players get draw XP
+      const player1Xp = calculateXpForFight("draw", playerProfiles[fight.player1_id].level, playerProfiles[fight.player2_id].level);
+      const player2Xp = calculateXpForFight("draw", playerProfiles[fight.player2_id].level, playerProfiles[fight.player1_id].level);
+
+      playerProfiles[fight.player1_id].experience = (playerProfiles[fight.player1_id].experience || 0) + player1Xp;
+      playerProfiles[fight.player2_id].experience = (playerProfiles[fight.player2_id].experience || 0) + player2Xp;
+
+      checkLevelUp(playerProfiles[fight.player1_id]);
+      checkLevelUp(playerProfiles[fight.player2_id]);
+      saveProfiles();
+
+      winnerXp = player1Xp; // For logging
+      loserXp = player2Xp;
     }
 
     fight.status = 'fight_complete';
@@ -1002,8 +1174,16 @@ function handleRoundTimeout(fight_id) {
   } else if (!p1Submitted) {
     // Player 1 timed out - Player 2 wins
     const winnerProfile = playerProfiles[fight.player2_id];
-    winnerProfile.experience = (winnerProfile.experience || 0) + 1;
+    const loserProfile = playerProfiles[fight.player1_id];
+
+    const winnerXp = calculateXpForFight("win", winnerProfile.level, loserProfile.level);
+    const loserXp = calculateXpForFight("loss", loserProfile.level, winnerProfile.level);
+
+    winnerProfile.experience = (winnerProfile.experience || 0) + winnerXp;
+    loserProfile.experience = (loserProfile.experience || 0) + loserXp;
+
     checkLevelUp(winnerProfile);
+    checkLevelUp(loserProfile);
     saveProfiles();
 
     fight.status = 'fight_complete';
@@ -1017,8 +1197,16 @@ function handleRoundTimeout(fight_id) {
   } else if (!p2Submitted) {
     // Player 2 timed out - Player 1 wins
     const winnerProfile = playerProfiles[fight.player1_id];
-    winnerProfile.experience = (winnerProfile.experience || 0) + 1;
+    const loserProfile = playerProfiles[fight.player2_id];
+
+    const winnerXp = calculateXpForFight("win", winnerProfile.level, loserProfile.level);
+    const loserXp = calculateXpForFight("loss", loserProfile.level, winnerProfile.level);
+
+    winnerProfile.experience = (winnerProfile.experience || 0) + winnerXp;
+    loserProfile.experience = (loserProfile.experience || 0) + loserXp;
+
     checkLevelUp(winnerProfile);
+    checkLevelUp(loserProfile);
     saveProfiles();
 
     fight.status = 'fight_complete';
