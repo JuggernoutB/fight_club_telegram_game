@@ -511,6 +511,7 @@
                                 <option value="wooden_stick">Wooden Stick (+1.06 damage, permanent)</option>
                                 <option value="big_wooden_stick" id="p1-big-stick-hand-1" style="display: none;">Big Wooden Stick (+1.06 damage, permanent, level 2)</option>
                                 <option value="knife" id="p1-knife-hand-1" style="display: none;">🔪 Knife (+1.04 damage, no dual-wield penalty, level 2)</option>
+                                <option value="small_club" id="p1-small-club-hand-1" style="display: none;">🏏 Small Club (+1.06 damage, dual-wield penalty 25%, level 3)</option>
                                 <option value="slingshot" id="p1-slingshot-hand-1">🎯 Slingshot (enhances stone damage +30%, requires both hands)</option>
                             </select>
                         </div>
@@ -521,6 +522,7 @@
                                 <option value="wooden_stick">Wooden Stick (+1.06 damage, permanent)</option>
                                 <option value="big_wooden_stick" id="p1-big-stick-hand-2" style="display: none;">Big Wooden Stick (+1.06 damage, permanent, level 2)</option>
                                 <option value="knife" id="p1-knife-hand-2" style="display: none;">🔪 Knife (+1.04 damage, no dual-wield penalty, level 2)</option>
+                                <option value="small_club" id="p1-small-club-hand-2" style="display: none;">🏏 Small Club (+1.06 damage, dual-wield penalty 25%, level 3)</option>
                                 <option value="slingshot" id="p1-slingshot-hand-2">🎯 Slingshot (enhances stone damage +30%, requires both hands)</option>
                             </select>
                         </div>
@@ -610,6 +612,7 @@
                                 <option value="wooden_stick">Wooden Stick (+1.06 damage, permanent)</option>
                                 <option value="big_wooden_stick" id="p2-big-stick-hand-1" style="display: none;">Big Wooden Stick (+1.06 damage, permanent, level 2)</option>
                                 <option value="knife" id="p2-knife-hand-1" style="display: none;">🔪 Knife (+1.04 damage, no dual-wield penalty, level 2)</option>
+                                <option value="small_club" id="p2-small-club-hand-1" style="display: none;">🏏 Small Club (+1.06 damage, dual-wield penalty 25%, level 3)</option>
                                 <option value="slingshot" id="p2-slingshot-hand-1">🎯 Slingshot (enhances stone damage +30%, requires both hands)</option>
                             </select>
                         </div>
@@ -620,6 +623,7 @@
                                 <option value="wooden_stick">Wooden Stick (+1.06 damage, permanent)</option>
                                 <option value="big_wooden_stick" id="p2-big-stick-hand-2" style="display: none;">Big Wooden Stick (+1.06 damage, permanent, level 2)</option>
                                 <option value="knife" id="p2-knife-hand-2" style="display: none;">🔪 Knife (+1.04 damage, no dual-wield penalty, level 2)</option>
+                                <option value="small_club" id="p2-small-club-hand-2" style="display: none;">🏏 Small Club (+1.06 damage, dual-wield penalty 25%, level 3)</option>
                                 <option value="slingshot" id="p2-slingshot-hand-2">🎯 Slingshot (enhances stone damage +30%, requires both hands)</option>
                             </select>
                         </div>
@@ -1230,6 +1234,23 @@
             });
         }
 
+        function updateSmallClubVisibility(player, level) {
+            // Show/hide small club options based on level >= 3
+            const smallClubOptions = document.querySelectorAll(`#p${player}-small-club-hand-1, #p${player}-small-club-hand-2`);
+
+            smallClubOptions.forEach(option => {
+                if (level >= 3) {
+                    option.style.display = 'block';
+                } else {
+                    option.style.display = 'none';
+                    // If small club was selected but level is now < 3, reset to empty
+                    if (option.parentElement.value === 'small_club') {
+                        option.parentElement.value = '';
+                    }
+                }
+            });
+        }
+
         function updateRaceDefaults(player) {
             const raceSelect = document.getElementById(`p${player}-race`);
             const defaultsDiv = document.getElementById(`p${player}-defaults`);
@@ -1263,6 +1284,7 @@
             updateKnifeVisibility(player, currentLevel);
             // Update level 3+ equipment visibility
             updateMetalBallVisibility(player, currentLevel);
+            updateSmallClubVisibility(player, currentLevel);
         }
 
         async function runSimulation() {

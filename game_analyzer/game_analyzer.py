@@ -417,7 +417,7 @@ class FightSimulator:
         stick_count = 0
         stick_multipliers = []
 
-        # Count sticks and prepare multipliers
+        # Count sticks and prepare multipliers (excluding small clubs)
         for i, item in enumerate(attacker.hand_equipment):
             if item and item.item_type in ["wooden_stick", "big_wooden_stick"]:
                 stick_count += 1
@@ -446,6 +446,39 @@ class FightSimulator:
             for multiplier in stick_multipliers:
                 damage *= multiplier
 
+        # Handle small clubs separately (with dual-wield penalty, but higher than single club)
+        small_club_count = 0
+        small_club_multipliers = []
+
+        # Count small clubs and prepare multipliers
+        for i, item in enumerate(attacker.hand_equipment):
+            if item and item.item_type == "small_club":
+                small_club_count += 1
+
+                # Level-based scaling: small club is a level 3 item, decreased at level 4+
+                if attacker.level >= 4:
+                    level_penalty = 1.0 - (attacker.level - 3) * 0.15  # 15% reduction per level above 3
+                    level_penalty = max(0.3, level_penalty)  # Minimum 30% effectiveness
+                else:
+                    # At level 3, full effectiveness
+                    level_penalty = 1.0
+
+                scaled_multiplier = 1.0 + (item.effect_multiplier - 1.0) * level_penalty
+                small_club_multipliers.append(scaled_multiplier)
+
+        # Apply small club multipliers with special dual-wield penalty
+        if small_club_count == 2:
+            # When using 2 small clubs, each club's effect is reduced by 25% (less penalty than sticks)
+            # But total damage is still higher than using 1 small club
+            dual_club_penalty = 0.75  # 100% - 25% = 75% (better than sticks' 65%)
+            for multiplier in small_club_multipliers:
+                reduced_multiplier = 1.0 + (multiplier - 1.0) * dual_club_penalty
+                damage *= reduced_multiplier
+        else:
+            # Single small club: apply full effect
+            for multiplier in small_club_multipliers:
+                damage *= multiplier
+
         # Handle knives separately (no dual-wield penalty)
         knife_count = 0
         knife_multipliers = []
@@ -466,8 +499,9 @@ class FightSimulator:
         for multiplier in knife_multipliers:
             damage *= multiplier
 
-        # Update effect type based on stick usage
-        if stick_count > 0:
+        # Update effect type based on stick/club usage
+        total_melee_count = stick_count + small_club_count
+        if total_melee_count > 0:
             if "stone_with_slingshot" in effect_type or "big_stone_with_slingshot" in effect_type or "metal_ball_with_slingshot" in effect_type:
                 effect_type = "stone_slingshot_and_stick"
             elif "stones_with_slingshot" in effect_type or "multiple_projectiles_with_slingshot" in effect_type:
@@ -668,7 +702,7 @@ class FightSimulator:
         stick_count = 0
         stick_multipliers = []
 
-        # Count sticks and prepare multipliers
+        # Count sticks and prepare multipliers (excluding small clubs)
         for i, item in enumerate(attacker.hand_equipment):
             if item and item.item_type in ["wooden_stick", "big_wooden_stick"]:
                 stick_count += 1
@@ -697,6 +731,39 @@ class FightSimulator:
             for multiplier in stick_multipliers:
                 damage *= multiplier
 
+        # Handle small clubs separately (with dual-wield penalty, but higher than single club)
+        small_club_count = 0
+        small_club_multipliers = []
+
+        # Count small clubs and prepare multipliers
+        for i, item in enumerate(attacker.hand_equipment):
+            if item and item.item_type == "small_club":
+                small_club_count += 1
+
+                # Level-based scaling: small club is a level 3 item, decreased at level 4+
+                if attacker.level >= 4:
+                    level_penalty = 1.0 - (attacker.level - 3) * 0.15  # 15% reduction per level above 3
+                    level_penalty = max(0.3, level_penalty)  # Minimum 30% effectiveness
+                else:
+                    # At level 3, full effectiveness
+                    level_penalty = 1.0
+
+                scaled_multiplier = 1.0 + (item.effect_multiplier - 1.0) * level_penalty
+                small_club_multipliers.append(scaled_multiplier)
+
+        # Apply small club multipliers with special dual-wield penalty
+        if small_club_count == 2:
+            # When using 2 small clubs, each club's effect is reduced by 25% (less penalty than sticks)
+            # But total damage is still higher than using 1 small club
+            dual_club_penalty = 0.75  # 100% - 25% = 75% (better than sticks' 65%)
+            for multiplier in small_club_multipliers:
+                reduced_multiplier = 1.0 + (multiplier - 1.0) * dual_club_penalty
+                damage *= reduced_multiplier
+        else:
+            # Single small club: apply full effect
+            for multiplier in small_club_multipliers:
+                damage *= multiplier
+
         # Handle knives separately (no dual-wield penalty)
         knife_count = 0
         knife_multipliers = []
@@ -717,8 +784,9 @@ class FightSimulator:
         for multiplier in knife_multipliers:
             damage *= multiplier
 
-        # Update effect type based on stick usage
-        if stick_count > 0:
+        # Update effect type based on stick/club usage
+        total_melee_count = stick_count + small_club_count
+        if total_melee_count > 0:
             if "stone_with_slingshot" in effect_type or "big_stone_with_slingshot" in effect_type or "metal_ball_with_slingshot" in effect_type:
                 effect_type = "stone_slingshot_and_stick"
             elif "stones_with_slingshot" in effect_type or "multiple_projectiles_with_slingshot" in effect_type:
@@ -923,6 +991,15 @@ def create_metal_ball() -> Equipment:
         effect_multiplier=1.0  # Will be calculated dynamically based on agility, same as big stone at level 2
     )
 
+def create_small_club() -> Equipment:
+    """Create a small club equipment item (level 3 item, dual-wield with penalty)"""
+    return Equipment(
+        name="Small Club",
+        item_type="small_club",
+        uses_remaining=999,  # Effectively unlimited uses like sticks
+        effect_multiplier=1.06  # Same as big stick at level 2, but with level scaling and dual-wield penalty
+    )
+
 def create_slingshot() -> Equipment:
     """Create a slingshot equipment item (enhances stone effectiveness)"""
     return Equipment(
@@ -1120,6 +1197,8 @@ def create_player(name: str, race: str, custom_stats: Dict = None, equipment: Li
                     player.hand_equipment[i] = create_big_wooden_stick()
                 elif item_type == "knife":
                     player.hand_equipment[i] = create_knife()
+                elif item_type == "small_club":
+                    player.hand_equipment[i] = create_small_club()
                 elif item_type == "slingshot" and slingshot_count <= 1:
                     player.hand_equipment[i] = create_slingshot()
                 # Ignore stones in hand slots
