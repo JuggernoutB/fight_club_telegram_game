@@ -479,24 +479,33 @@ class FightSimulator:
             for multiplier in small_club_multipliers:
                 damage *= multiplier
 
-        # Handle knives separately (no dual-wield penalty)
-        knife_count = 0
-        knife_multipliers = []
+        # Handle knives and blades separately (no dual-wield penalty)
+        knife_blade_count = 0
+        knife_blade_multipliers = []
 
-        # Count knives and prepare multipliers
+        # Count knives and blades and prepare multipliers
         for i, item in enumerate(attacker.hand_equipment):
-            if item and item.item_type == "knife":
-                knife_count += 1
+            if item and item.item_type in ["knife", "blade"]:
+                knife_blade_count += 1
 
-                # Level-based scaling: knife is a level 2 item
-                level_penalty = 1.0 - (attacker.level - 2) * 0.10  # 10% reduction per level above 2
-                level_penalty = max(0.4, level_penalty)  # Minimum 40% effectiveness
+                if item.item_type == "knife":
+                    # Level-based scaling: knife is a level 2 item
+                    level_penalty = 1.0 - (attacker.level - 2) * 0.10  # 10% reduction per level above 2
+                    level_penalty = max(0.4, level_penalty)  # Minimum 40% effectiveness
+                elif item.item_type == "blade":
+                    # Level-based scaling: blade is a level 3 item, decreased at level 4+
+                    if attacker.level >= 4:
+                        level_penalty = 1.0 - (attacker.level - 3) * 0.15  # 15% reduction per level above 3
+                        level_penalty = max(0.3, level_penalty)  # Minimum 30% effectiveness
+                    else:
+                        # At level 3, full effectiveness
+                        level_penalty = 1.0
 
                 scaled_multiplier = 1.0 + (item.effect_multiplier - 1.0) * level_penalty
-                knife_multipliers.append(scaled_multiplier)
+                knife_blade_multipliers.append(scaled_multiplier)
 
-        # Apply knife multipliers (NO dual-wield penalty - this is the knife advantage)
-        for multiplier in knife_multipliers:
+        # Apply knife/blade multipliers (NO dual-wield penalty - this is the knife/blade advantage)
+        for multiplier in knife_blade_multipliers:
             damage *= multiplier
 
         # Update effect type based on stick/club usage
@@ -515,17 +524,17 @@ class FightSimulator:
             else:
                 effect_type = "stick_used"
 
-        # Update effect type based on knife usage
-        if knife_count > 0:
+        # Update effect type based on knife/blade usage
+        if knife_blade_count > 0:
             if stick_count > 0:
-                # Mixed weapons (sticks and knives)
-                if knife_count == 2:
+                # Mixed weapons (sticks and knives/blades)
+                if knife_blade_count == 2:
                     effect_type = f"{effect_type}_and_dual_knives"
-                elif knife_count == 1:
+                elif knife_blade_count == 1:
                     effect_type = f"{effect_type}_and_knife"
             else:
-                # Only knives
-                if knife_count == 2:
+                # Only knives/blades
+                if knife_blade_count == 2:
                     effect_type = "dual_knives_used"
                 else:
                     effect_type = "knife_used"
@@ -764,24 +773,33 @@ class FightSimulator:
             for multiplier in small_club_multipliers:
                 damage *= multiplier
 
-        # Handle knives separately (no dual-wield penalty)
-        knife_count = 0
-        knife_multipliers = []
+        # Handle knives and blades separately (no dual-wield penalty)
+        knife_blade_count = 0
+        knife_blade_multipliers = []
 
-        # Count knives and prepare multipliers
+        # Count knives and blades and prepare multipliers
         for i, item in enumerate(attacker.hand_equipment):
-            if item and item.item_type == "knife":
-                knife_count += 1
+            if item and item.item_type in ["knife", "blade"]:
+                knife_blade_count += 1
 
-                # Level-based scaling: knife is a level 2 item
-                level_penalty = 1.0 - (attacker.level - 2) * 0.10  # 10% reduction per level above 2
-                level_penalty = max(0.4, level_penalty)  # Minimum 40% effectiveness
+                if item.item_type == "knife":
+                    # Level-based scaling: knife is a level 2 item
+                    level_penalty = 1.0 - (attacker.level - 2) * 0.10  # 10% reduction per level above 2
+                    level_penalty = max(0.4, level_penalty)  # Minimum 40% effectiveness
+                elif item.item_type == "blade":
+                    # Level-based scaling: blade is a level 3 item, decreased at level 4+
+                    if attacker.level >= 4:
+                        level_penalty = 1.0 - (attacker.level - 3) * 0.15  # 15% reduction per level above 3
+                        level_penalty = max(0.3, level_penalty)  # Minimum 30% effectiveness
+                    else:
+                        # At level 3, full effectiveness
+                        level_penalty = 1.0
 
                 scaled_multiplier = 1.0 + (item.effect_multiplier - 1.0) * level_penalty
-                knife_multipliers.append(scaled_multiplier)
+                knife_blade_multipliers.append(scaled_multiplier)
 
-        # Apply knife multipliers (NO dual-wield penalty - this is the knife advantage)
-        for multiplier in knife_multipliers:
+        # Apply knife/blade multipliers (NO dual-wield penalty - this is the knife/blade advantage)
+        for multiplier in knife_blade_multipliers:
             damage *= multiplier
 
         # Update effect type based on stick/club usage
@@ -800,17 +818,17 @@ class FightSimulator:
             else:
                 effect_type = "stick_used"
 
-        # Update effect type based on knife usage
-        if knife_count > 0:
+        # Update effect type based on knife/blade usage
+        if knife_blade_count > 0:
             if stick_count > 0:
-                # Mixed weapons (sticks and knives)
-                if knife_count == 2:
+                # Mixed weapons (sticks and knives/blades)
+                if knife_blade_count == 2:
                     effect_type = f"{effect_type}_and_dual_knives"
-                elif knife_count == 1:
+                elif knife_blade_count == 1:
                     effect_type = f"{effect_type}_and_knife"
             else:
-                # Only knives
-                if knife_count == 2:
+                # Only knives/blades
+                if knife_blade_count == 2:
                     effect_type = "dual_knives_used"
                 else:
                     effect_type = "knife_used"
@@ -998,6 +1016,15 @@ def create_small_club() -> Equipment:
         item_type="small_club",
         uses_remaining=999,  # Effectively unlimited uses like sticks
         effect_multiplier=1.06  # Same as big stick at level 2, but with level scaling and dual-wield penalty
+    )
+
+def create_blade() -> Equipment:
+    """Create a blade equipment item (level 3 item, no dual-wield penalty)"""
+    return Equipment(
+        name="Blade",
+        item_type="blade",
+        uses_remaining=999,  # Effectively unlimited uses like knives
+        effect_multiplier=1.04  # Same as knife at level 2, but with level 3+ scaling
     )
 
 def create_slingshot() -> Equipment:
@@ -1199,6 +1226,8 @@ def create_player(name: str, race: str, custom_stats: Dict = None, equipment: Li
                     player.hand_equipment[i] = create_knife()
                 elif item_type == "small_club":
                     player.hand_equipment[i] = create_small_club()
+                elif item_type == "blade":
+                    player.hand_equipment[i] = create_blade()
                 elif item_type == "slingshot" and slingshot_count <= 1:
                     player.hand_equipment[i] = create_slingshot()
                 # Ignore stones in hand slots
