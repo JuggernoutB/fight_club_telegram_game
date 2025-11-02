@@ -397,6 +397,12 @@ function startPvPFight(fight_id, opponentNickname) {
             if (data.playerStats) {
                 document.getElementById('playerHPText').textContent = `${data.playerStats.hp}/${data.playerStats.maxHP} HP`;
                 document.getElementById('playerHPBar').innerHTML = renderHPBar(data.playerStats.hp, data.playerStats.maxHP);
+                if (data.playerStats.mana !== undefined && data.playerStats.maxMana !== undefined) {
+                    const manaElement = document.getElementById('playerManaText');
+                    const manaBarElement = document.getElementById('playerManaBar');
+                    if (manaElement) manaElement.textContent = `${data.playerStats.mana}/${data.playerStats.maxMana} MP`;
+                    if (manaBarElement) manaBarElement.innerHTML = renderManaBar(data.playerStats.mana, data.playerStats.maxMana);
+                }
 
                 // Update player stats display
                 const playerStats = document.getElementById('playerStats');
@@ -424,6 +430,12 @@ function startPvPFight(fight_id, opponentNickname) {
             if (data.opponentStats) {
                 document.getElementById('opponentHPText').textContent = `${data.opponentStats.hp}/${data.opponentStats.maxHP} HP`;
                 document.getElementById('opponentHPBar').innerHTML = renderHPBar(data.opponentStats.hp, data.opponentStats.maxHP);
+                if (data.opponentStats.mana !== undefined && data.opponentStats.maxMana !== undefined) {
+                    const manaElement = document.getElementById('opponentManaText');
+                    const manaBarElement = document.getElementById('opponentManaBar');
+                    if (manaElement) manaElement.textContent = `${data.opponentStats.mana}/${data.opponentStats.maxMana} MP`;
+                    if (manaBarElement) manaBarElement.innerHTML = renderManaBar(data.opponentStats.mana, data.opponentStats.maxMana);
+                }
 
                 // Update opponent stats display
                 const opponentStats = document.getElementById('opponentStats');

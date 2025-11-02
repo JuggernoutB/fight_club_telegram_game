@@ -45,6 +45,15 @@ function migratePlayerProfiles() {
       needsSave = true;
       console.log(`Updated knowledge for ${profile.nickname}: ${oldKnowledge} -> ${correctKnowledge} (level ${profile.level || 1})`);
     }
+
+    // Add mana fields if missing or recalculate based on knowledge
+    const correctMaxMana = profile.knowledge * 3;
+    if (profile.maxMana === undefined || profile.maxMana !== correctMaxMana) {
+      profile.maxMana = correctMaxMana;
+      profile.mana = correctMaxMana; // Start with full mana
+      needsSave = true;
+      console.log(`Updated mana for ${profile.nickname}: ${correctMaxMana} max mana`);
+    }
   });
 
   if (needsSave) {
@@ -151,7 +160,7 @@ function getXpRequiredForLevel(level) {
 
 function calculateKnowledgeForLevel(race, level) {
   // Calculate knowledge stat based on race and level (from analyzer)
-  let baseKnowledge = 0; // All races start with 0 knowledge
+  let baseKnowledge = 0; // Most races start with 0 knowledge (0 mana)
 
   // Special bonuses for skeleton only
   if (race === 'skeleton') {
@@ -165,7 +174,7 @@ function calculateKnowledgeForLevel(race, level) {
     return baseKnowledge + bonusKnowledge;
   }
 
-  // All other races: no knowledge bonuses per level
+  // All other races: no knowledge bonuses per level (0 knowledge = 0 mana)
   return baseKnowledge;
 }
 
@@ -183,7 +192,11 @@ function checkLevelUp(profile) {
       const newKnowledge = calculateKnowledgeForLevel(profile.race, profile.level);
       if (newKnowledge !== profile.knowledge) {
         profile.knowledge = newKnowledge;
-        console.log(`${profile.nickname} gained knowledge! Now has ${newKnowledge} knowledge`);
+        // Recalculate mana based on new knowledge (1 knowledge = 3 mana)
+        const newMaxMana = newKnowledge * 3;
+        profile.maxMana = newMaxMana;
+        profile.mana = newMaxMana; // Restore to full mana on level up
+        console.log(`${profile.nickname} gained knowledge! Now has ${newKnowledge} knowledge and ${newMaxMana} mana`);
       }
 
       leveledUp = true;
@@ -259,6 +272,9 @@ app.post("/create-profile", (req, res) => {
   // No additional points by default - user starts with default race stats only
   // Remove extra points allocation system for new registrations
 
+  // Calculate mana based on knowledge (1 knowledge = 3 mana)
+  const maxMana = baseStats.knowledge * 3;
+
   // Create profile object
   playerProfiles[telegram_id] = {
     nickname,
@@ -268,6 +284,8 @@ app.post("/create-profile", (req, res) => {
     defense: baseStats.defense,
     agility: baseStats.agility,
     knowledge: baseStats.knowledge,
+    mana: maxMana,
+    maxMana: maxMana,
     experience: 0,
     level: 1,
     extra_points: 0,
@@ -545,6 +563,8 @@ app.get("/profile/:telegram_id", (req, res) => {
         defense: profile.defense,
         agility: profile.agility,
         knowledge: profile.knowledge,
+        mana: profile.mana,
+        maxMana: profile.maxMana,
         experience: profile.experience,
         level: profile.level,
         extra_points: profile.extra_points
@@ -754,7 +774,9 @@ app.post("/join-fight", (req, res) => {
       power: playerProfiles[challenger_id].power,
       agility: playerProfiles[challenger_id].agility,
       defense: playerProfiles[challenger_id].defense,
-      knowledge: playerProfiles[challenger_id].knowledge
+      knowledge: playerProfiles[challenger_id].knowledge,
+      mana: playerProfiles[challenger_id].mana,
+      maxMana: playerProfiles[challenger_id].maxMana
     },
     player2_stats: {
       hp: playerProfiles[target_id].hp,  // Always start at full HP
@@ -762,7 +784,9 @@ app.post("/join-fight", (req, res) => {
       power: playerProfiles[target_id].power,
       agility: playerProfiles[target_id].agility,
       defense: playerProfiles[target_id].defense,
-      knowledge: playerProfiles[target_id].knowledge
+      knowledge: playerProfiles[target_id].knowledge,
+      mana: playerProfiles[target_id].mana,
+      maxMana: playerProfiles[target_id].maxMana
     },
     player1_action: null,
     player2_action: null,
@@ -834,7 +858,9 @@ app.post("/create-pvp-fight", (req, res) => {
       power: playerProfiles[player_id].power,
       agility: playerProfiles[player_id].agility,
       defense: playerProfiles[player_id].defense,
-      knowledge: playerProfiles[player_id].knowledge
+      knowledge: playerProfiles[player_id].knowledge,
+      mana: playerProfiles[player_id].mana,
+      maxMana: playerProfiles[player_id].maxMana
     },
     player2_stats: {
       hp: playerProfiles[opponent_id].hp,
@@ -842,7 +868,9 @@ app.post("/create-pvp-fight", (req, res) => {
       power: playerProfiles[opponent_id].power,
       agility: playerProfiles[opponent_id].agility,
       defense: playerProfiles[opponent_id].defense,
-      knowledge: playerProfiles[opponent_id].knowledge
+      knowledge: playerProfiles[opponent_id].knowledge,
+      mana: playerProfiles[opponent_id].mana,
+      maxMana: playerProfiles[opponent_id].maxMana
     },
     player1_action: null,
     player2_action: null,

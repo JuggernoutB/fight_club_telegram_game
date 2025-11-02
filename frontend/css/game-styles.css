@@ -418,6 +418,10 @@ body {
   background: linear-gradient(90deg, var(--accent-fire) 0%, var(--secondary-gold) 100%);
 }
 
+.mana-bar {
+  background: linear-gradient(90deg, #4169E1 0%, #6495ED 50%, #87CEEB 100%);
+}
+
 /* Main Game Screen Styles */
 .player-info {
   padding: 20px;
@@ -1025,6 +1029,16 @@ body {
 }
 
 .hp-label {
+  font-size: 14px;
+  color: var(--secondary-gold);
+  margin-bottom: 4px;
+}
+
+.fighter-mana {
+  margin-bottom: 12px;
+}
+
+.mana-label {
   font-size: 14px;
   color: var(--secondary-gold);
   margin-bottom: 4px;

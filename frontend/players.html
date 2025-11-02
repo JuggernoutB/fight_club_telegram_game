@@ -625,6 +625,10 @@
                                 <div id="playerHPText">Loading...</div>
                                 <div id="playerHPBar">Loading...</div>
                             </div>
+                            <div class="fighter-mana">
+                                <div id="playerManaText">Loading...</div>
+                                <div id="playerManaBar">Loading...</div>
+                            </div>
                             <div class="equipment-slots">
                                 <div class="basic-slots">
                                     <div class="equipment-slot basic-slot selectable" data-slot="helmet" title="Helmet"></div>
@@ -662,6 +666,10 @@
                             <div class="fighter-hp">
                                 <div id="opponentHPText">Loading...</div>
                                 <div id="opponentHPBar">Loading...</div>
+                            </div>
+                            <div class="fighter-mana">
+                                <div id="opponentManaText">Loading...</div>
+                                <div id="opponentManaBar">Loading...</div>
                             </div>
                             <div class="equipment-slots">
                                 <div class="basic-slots">
@@ -1014,14 +1022,18 @@
                             updatePvPFighterImages(data.opponentProfile);
                         }
 
-                        // Also update HP displays immediately
+                        // Also update HP and Mana displays immediately
                         if (data.playerStats) {
                             document.getElementById('playerHPText').textContent = `${data.playerStats.hp}/${data.playerStats.maxHP} HP`;
                             document.getElementById('playerHPBar').innerHTML = renderHPBar(data.playerStats.hp, data.playerStats.maxHP);
+                            document.getElementById('playerManaText').textContent = `${data.playerStats.mana}/${data.playerStats.maxMana} MP`;
+                            document.getElementById('playerManaBar').innerHTML = renderManaBar(data.playerStats.mana, data.playerStats.maxMana);
                         }
                         if (data.opponentStats) {
                             document.getElementById('opponentHPText').textContent = `${data.opponentStats.hp}/${data.opponentStats.maxHP} HP`;
                             document.getElementById('opponentHPBar').innerHTML = renderHPBar(data.opponentStats.hp, data.opponentStats.maxHP);
+                            document.getElementById('opponentManaText').textContent = `${data.opponentStats.mana}/${data.opponentStats.maxMana} MP`;
+                            document.getElementById('opponentManaBar').innerHTML = renderManaBar(data.opponentStats.mana, data.opponentStats.maxMana);
                         }
                     })
                     .catch(error => {
@@ -1139,12 +1151,16 @@
                     if (data.playerStats) {
                         document.getElementById('playerHPText').textContent = `${data.playerStats.hp}/${data.playerStats.maxHP} HP`;
                         document.getElementById('playerHPBar').innerHTML = renderHPBar(data.playerStats.hp, data.playerStats.maxHP);
+                        document.getElementById('playerManaText').textContent = `${data.playerStats.mana}/${data.playerStats.maxMana} MP`;
+                        document.getElementById('playerManaBar').innerHTML = renderManaBar(data.playerStats.mana, data.playerStats.maxMana);
                     }
 
                     // Update opponent stats
                     if (data.opponentStats) {
                         document.getElementById('opponentHPText').textContent = `${data.opponentStats.hp}/${data.opponentStats.maxHP} HP`;
                         document.getElementById('opponentHPBar').innerHTML = renderHPBar(data.opponentStats.hp, data.opponentStats.maxHP);
+                        document.getElementById('opponentManaText').textContent = `${data.opponentStats.mana}/${data.opponentStats.maxMana} MP`;
+                        document.getElementById('opponentManaBar').innerHTML = renderManaBar(data.opponentStats.mana, data.opponentStats.maxMana);
                     }
 
                     // Update fighter images if we have opponent profile data
@@ -1193,14 +1209,18 @@
             // Show the log area (it's hidden initially)
             fightLog.style.display = 'block';
 
-            // Keep HP values updated during round results
+            // Keep HP and Mana values updated during round results
             if (window.lastPlayerStats) {
                 document.getElementById('playerHPText').textContent = `${window.lastPlayerStats.hp}/${window.lastPlayerStats.maxHP} HP`;
                 document.getElementById('playerHPBar').innerHTML = renderHPBar(window.lastPlayerStats.hp, window.lastPlayerStats.maxHP);
+                document.getElementById('playerManaText').textContent = `${window.lastPlayerStats.mana}/${window.lastPlayerStats.maxMana} MP`;
+                document.getElementById('playerManaBar').innerHTML = renderManaBar(window.lastPlayerStats.mana, window.lastPlayerStats.maxMana);
             }
             if (window.lastOpponentStats) {
                 document.getElementById('opponentHPText').textContent = `${window.lastOpponentStats.hp}/${window.lastOpponentStats.maxHP} HP`;
                 document.getElementById('opponentHPBar').innerHTML = renderHPBar(window.lastOpponentStats.hp, window.lastOpponentStats.maxHP);
+                document.getElementById('opponentManaText').textContent = `${window.lastOpponentStats.mana}/${window.lastOpponentStats.maxMana} MP`;
+                document.getElementById('opponentManaBar').innerHTML = renderManaBar(window.lastOpponentStats.mana, window.lastOpponentStats.maxMana);
             }
 
             // Replace content with only the latest round messages and highlight damage values

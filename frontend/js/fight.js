@@ -342,6 +342,12 @@ function fight(profile) {
 function updatePlayerStatsNew(player) {
     document.getElementById("playerHPText").textContent = `${player.hp}/${player.maxHP || 20}`;
     document.getElementById("playerHPBar").innerHTML = renderHPBar(player.hp, player.maxHP || 20);
+    if (player.mana !== undefined && player.maxMana !== undefined) {
+        const manaElement = document.getElementById("playerManaText");
+        const manaBarElement = document.getElementById("playerManaBar");
+        if (manaElement) manaElement.textContent = `${player.mana}/${player.maxMana} MP`;
+        if (manaBarElement) manaBarElement.innerHTML = renderManaBar(player.mana, player.maxMana);
+    }
 }
 
 function showFightLog(logMessages, fightResult) {

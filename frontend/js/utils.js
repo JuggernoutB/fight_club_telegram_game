@@ -16,6 +16,15 @@ function renderXPBar(current, max) {
     `;
 }
 
+function renderManaBar(current, max) {
+    const percentage = max > 0 ? Math.min((current / max) * 100, 100) : 0;
+    return `
+        <div class="progress-bar">
+            <div class="progress-fill mana-bar" style="width: ${percentage}%;"></div>
+        </div>
+    `;
+}
+
 function getXpForSingleLevel(level) {
     // XP required to advance from (level-1) to level
     if (level <= 1) {
