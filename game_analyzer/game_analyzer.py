@@ -404,6 +404,26 @@ class FightSimulator:
             for multiplier in stick_multipliers:
                 damage *= multiplier
 
+        # Handle knives separately (no dual-wield penalty)
+        knife_count = 0
+        knife_multipliers = []
+
+        # Count knives and prepare multipliers
+        for i, item in enumerate(attacker.hand_equipment):
+            if item and item.item_type == "knife":
+                knife_count += 1
+
+                # Level-based scaling: knife is a level 2 item
+                level_penalty = 1.0 - (attacker.level - 2) * 0.10  # 10% reduction per level above 2
+                level_penalty = max(0.4, level_penalty)  # Minimum 40% effectiveness
+
+                scaled_multiplier = 1.0 + (item.effect_multiplier - 1.0) * level_penalty
+                knife_multipliers.append(scaled_multiplier)
+
+        # Apply knife multipliers (NO dual-wield penalty - this is the knife advantage)
+        for multiplier in knife_multipliers:
+            damage *= multiplier
+
         # Update effect type based on stick usage
         if stick_count > 0:
             if "stone_with_slingshot" in effect_type or "big_stone_with_slingshot" in effect_type:
@@ -418,6 +438,21 @@ class FightSimulator:
                 effect_type = "dual_sticks_used"
             else:
                 effect_type = "stick_used"
+
+        # Update effect type based on knife usage
+        if knife_count > 0:
+            if stick_count > 0:
+                # Mixed weapons (sticks and knives)
+                if knife_count == 2:
+                    effect_type = f"{effect_type}_and_dual_knives"
+                elif knife_count == 1:
+                    effect_type = f"{effect_type}_and_knife"
+            else:
+                # Only knives
+                if knife_count == 2:
+                    effect_type = "dual_knives_used"
+                else:
+                    effect_type = "knife_used"
 
         # Check if attack is blocked (defended) and blocks are available
         is_blocked = attack_part in defend_parts and defender_blocks_available
@@ -584,6 +619,26 @@ class FightSimulator:
             for multiplier in stick_multipliers:
                 damage *= multiplier
 
+        # Handle knives separately (no dual-wield penalty)
+        knife_count = 0
+        knife_multipliers = []
+
+        # Count knives and prepare multipliers
+        for i, item in enumerate(attacker.hand_equipment):
+            if item and item.item_type == "knife":
+                knife_count += 1
+
+                # Level-based scaling: knife is a level 2 item
+                level_penalty = 1.0 - (attacker.level - 2) * 0.10  # 10% reduction per level above 2
+                level_penalty = max(0.4, level_penalty)  # Minimum 40% effectiveness
+
+                scaled_multiplier = 1.0 + (item.effect_multiplier - 1.0) * level_penalty
+                knife_multipliers.append(scaled_multiplier)
+
+        # Apply knife multipliers (NO dual-wield penalty - this is the knife advantage)
+        for multiplier in knife_multipliers:
+            damage *= multiplier
+
         # Update effect type based on stick usage
         if stick_count > 0:
             if "stone_with_slingshot" in effect_type or "big_stone_with_slingshot" in effect_type:
@@ -598,6 +653,21 @@ class FightSimulator:
                 effect_type = "dual_sticks_used"
             else:
                 effect_type = "stick_used"
+
+        # Update effect type based on knife usage
+        if knife_count > 0:
+            if stick_count > 0:
+                # Mixed weapons (sticks and knives)
+                if knife_count == 2:
+                    effect_type = f"{effect_type}_and_dual_knives"
+                elif knife_count == 1:
+                    effect_type = f"{effect_type}_and_knife"
+            else:
+                # Only knives
+                if knife_count == 2:
+                    effect_type = "dual_knives_used"
+                else:
+                    effect_type = "knife_used"
 
         # Check if attack is blocked (defended) and blocks are available
         is_blocked = attack_part in defend_parts and defender_blocks_available
@@ -755,6 +825,15 @@ def create_big_wooden_stick() -> Equipment:
         item_type="big_wooden_stick",
         uses_remaining=999,  # Effectively unlimited uses
         effect_multiplier=1.06  # Fixed +1.06 damage multiplier, same as wooden stick
+    )
+
+def create_knife() -> Equipment:
+    """Create a knife equipment item (level 2 item, dual-wield friendly)"""
+    return Equipment(
+        name="Knife",
+        item_type="knife",
+        uses_remaining=999,  # Effectively unlimited uses
+        effect_multiplier=1.04  # Slightly less than big stick (1.06), but dual-wield bonus
     )
 
 def create_slingshot() -> Equipment:
@@ -950,6 +1029,8 @@ def create_player(name: str, race: str, custom_stats: Dict = None, equipment: Li
                     player.hand_equipment[i] = create_wooden_stick()
                 elif item_type == "big_wooden_stick":
                     player.hand_equipment[i] = create_big_wooden_stick()
+                elif item_type == "knife":
+                    player.hand_equipment[i] = create_knife()
                 elif item_type == "slingshot" and slingshot_count <= 1:
                     player.hand_equipment[i] = create_slingshot()
                 # Ignore stones in hand slots

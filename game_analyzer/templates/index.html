@@ -508,6 +508,7 @@
                                 <option value="">Empty</option>
                                 <option value="wooden_stick">Wooden Stick (+1.06 damage, permanent)</option>
                                 <option value="big_wooden_stick" id="p1-big-stick-hand-1" style="display: none;">Big Wooden Stick (+1.06 damage, permanent, level 2)</option>
+                                <option value="knife" id="p1-knife-hand-1" style="display: none;">🔪 Knife (+1.04 damage, no dual-wield penalty, level 2)</option>
                                 <option value="slingshot" id="p1-slingshot-hand-1">🎯 Slingshot (enhances stone damage +30%, requires both hands)</option>
                             </select>
                         </div>
@@ -517,6 +518,7 @@
                                 <option value="">Empty</option>
                                 <option value="wooden_stick">Wooden Stick (+1.06 damage, permanent)</option>
                                 <option value="big_wooden_stick" id="p1-big-stick-hand-2" style="display: none;">Big Wooden Stick (+1.06 damage, permanent, level 2)</option>
+                                <option value="knife" id="p1-knife-hand-2" style="display: none;">🔪 Knife (+1.04 damage, no dual-wield penalty, level 2)</option>
                                 <option value="slingshot" id="p1-slingshot-hand-2">🎯 Slingshot (enhances stone damage +30%, requires both hands)</option>
                             </select>
                         </div>
@@ -603,6 +605,7 @@
                                 <option value="">Empty</option>
                                 <option value="wooden_stick">Wooden Stick (+1.06 damage, permanent)</option>
                                 <option value="big_wooden_stick" id="p2-big-stick-hand-1" style="display: none;">Big Wooden Stick (+1.06 damage, permanent, level 2)</option>
+                                <option value="knife" id="p2-knife-hand-1" style="display: none;">🔪 Knife (+1.04 damage, no dual-wield penalty, level 2)</option>
                                 <option value="slingshot" id="p2-slingshot-hand-1">🎯 Slingshot (enhances stone damage +30%, requires both hands)</option>
                             </select>
                         </div>
@@ -612,6 +615,7 @@
                                 <option value="">Empty</option>
                                 <option value="wooden_stick">Wooden Stick (+1.06 damage, permanent)</option>
                                 <option value="big_wooden_stick" id="p2-big-stick-hand-2" style="display: none;">Big Wooden Stick (+1.06 damage, permanent, level 2)</option>
+                                <option value="knife" id="p2-knife-hand-2" style="display: none;">🔪 Knife (+1.04 damage, no dual-wield penalty, level 2)</option>
                                 <option value="slingshot" id="p2-slingshot-hand-2">🎯 Slingshot (enhances stone damage +30%, requires both hands)</option>
                             </select>
                         </div>
@@ -1187,6 +1191,23 @@
             });
         }
 
+        function updateKnifeVisibility(player, level) {
+            // Show/hide knife options based on level >= 2
+            const knifeOptions = document.querySelectorAll(`#p${player}-knife-hand-1, #p${player}-knife-hand-2`);
+
+            knifeOptions.forEach(option => {
+                if (level >= 2) {
+                    option.style.display = 'block';
+                } else {
+                    option.style.display = 'none';
+                    // If knife was selected but level is now < 2, reset to empty
+                    if (option.parentElement.value === 'knife') {
+                        option.parentElement.value = '';
+                    }
+                }
+            });
+        }
+
         function updateRaceDefaults(player) {
             const raceSelect = document.getElementById(`p${player}-race`);
             const defaultsDiv = document.getElementById(`p${player}-defaults`);
@@ -1217,6 +1238,7 @@
             // Update level 2+ equipment visibility
             updateBigStoneVisibility(player, currentLevel);
             updateBigStickVisibility(player, currentLevel);
+            updateKnifeVisibility(player, currentLevel);
         }
 
         async function runSimulation() {
