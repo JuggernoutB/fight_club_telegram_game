@@ -104,6 +104,7 @@ function showFightScreen(profile) {
                             <div class="body-part" data-part="head">🧠 Head</div>
                             <div class="body-part" data-part="chest">👕 Chest</div>
                             <div class="body-part" data-part="stomach">🥋 Stomach</div>
+                            <div class="body-part" data-part="belt">🔗 Belt</div>
                             <div class="body-part" data-part="legs">🦵 Legs</div>
                         </div>
                     </div>
@@ -114,6 +115,7 @@ function showFightScreen(profile) {
                             <div class="body-part" data-part="head">🧠 Head</div>
                             <div class="body-part" data-part="chest">👕 Chest</div>
                             <div class="body-part" data-part="stomach">🥋 Stomach</div>
+                            <div class="body-part" data-part="belt">🔗 Belt</div>
                             <div class="body-part" data-part="legs">🦵 Legs</div>
                         </div>
                     </div>

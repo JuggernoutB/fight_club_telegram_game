@@ -150,7 +150,7 @@ app.post("/fight", (req, res) => {
   }
 
   // Bot randomly picks hit and defend parts
-  const parts = ["head", "chest", "stomach", "legs"];
+  const parts = ["head", "chest", "stomach", "belt", "legs"];
   const botHit = parts[Math.floor(Math.random() * parts.length)];
   const botDefend = parts[Math.floor(Math.random() * parts.length)];
 
