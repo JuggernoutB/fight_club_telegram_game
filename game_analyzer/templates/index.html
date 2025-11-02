@@ -478,6 +478,7 @@
                                 <option value="">Empty</option>
                                 <option value="stone">Stone (agility-based damage, 1 use)</option>
                                 <option value="big_stone" id="p1-big-stone-option-1" style="display: none;">Big Stone (agility-based damage, 1 use, level 2)</option>
+                                <option value="metal_ball" id="p1-metal-ball-option-1" style="display: none;">⚙️ Metal Ball (agility-based damage, 1 use, level 3, slingshot compatible)</option>
                                 <option value="fear_spell" id="p1-fear-option-1" style="display: none;">🔮 Fear Spell (enemy -3 power/defense, 3 mana)</option>
                                 <option value="scream_spell" id="p1-scream-option-1" style="display: none;">😱 Scream Spell (35% chance +1 damage, 4 mana)</option>
                             </select>
@@ -488,6 +489,7 @@
                                 <option value="">Empty</option>
                                 <option value="stone">Stone (agility-based damage, 1 use)</option>
                                 <option value="big_stone" id="p1-big-stone-option-2" style="display: none;">Big Stone (agility-based damage, 1 use, level 2)</option>
+                                <option value="metal_ball" id="p1-metal-ball-option-2" style="display: none;">⚙️ Metal Ball (agility-based damage, 1 use, level 3, slingshot compatible)</option>
                                 <option value="fear_spell" id="p1-fear-option-2" style="display: none;">🔮 Fear Spell (enemy -3 power/defense, 3 mana)</option>
                                 <option value="scream_spell" id="p1-scream-option-2" style="display: none;">😱 Scream Spell (35% chance +1 damage, 4 mana)</option>
                             </select>
@@ -575,6 +577,7 @@
                                 <option value="">Empty</option>
                                 <option value="stone">Stone (agility-based damage, 1 use)</option>
                                 <option value="big_stone" id="p2-big-stone-option-1" style="display: none;">Big Stone (agility-based damage, 1 use, level 2)</option>
+                                <option value="metal_ball" id="p2-metal-ball-option-1" style="display: none;">⚙️ Metal Ball (agility-based damage, 1 use, level 3, slingshot compatible)</option>
                                 <option value="fear_spell" id="p2-fear-option-1" style="display: none;">🔮 Fear Spell (enemy -3 power/defense, 3 mana)</option>
                                 <option value="scream_spell" id="p2-scream-option-1" style="display: none;">😱 Scream Spell (35% chance +1 damage, 4 mana)</option>
                             </select>
@@ -585,6 +588,7 @@
                                 <option value="">Empty</option>
                                 <option value="stone">Stone (agility-based damage, 1 use)</option>
                                 <option value="big_stone" id="p2-big-stone-option-2" style="display: none;">Big Stone (agility-based damage, 1 use, level 2)</option>
+                                <option value="metal_ball" id="p2-metal-ball-option-2" style="display: none;">⚙️ Metal Ball (agility-based damage, 1 use, level 3, slingshot compatible)</option>
                                 <option value="fear_spell" id="p2-fear-option-2" style="display: none;">🔮 Fear Spell (enemy -3 power/defense, 3 mana)</option>
                                 <option value="scream_spell" id="p2-scream-option-2" style="display: none;">😱 Scream Spell (35% chance +1 damage, 4 mana)</option>
                             </select>
@@ -1057,6 +1061,7 @@
                         <option value="">Empty</option>
                         <option value="stone">Stone (agility-based damage, 1 use)</option>
                         <option value="big_stone" id="p${player}-big-stone-option-${i}" style="display: none;">Big Stone (agility-based damage, 1 use, level 2)</option>
+                        <option value="metal_ball" id="p${player}-metal-ball-option-${i}" style="display: none;">⚙️ Metal Ball (agility-based damage, 1 use, level 3, slingshot compatible)</option>
                         <option value="fear_spell" id="p${player}-fear-option-${i}" style="display: none;">🔮 Fear Spell (enemy -3 power/defense, 3 mana)</option>
                         <option value="scream_spell" id="p${player}-scream-option-${i}" style="display: none;">😱 Scream Spell (35% chance +1 damage, 4 mana)</option>
                     `;
@@ -1208,6 +1213,23 @@
             });
         }
 
+        function updateMetalBallVisibility(player, level) {
+            // Show/hide metal ball options based on level >= 3
+            const metalBallOptions = document.querySelectorAll(`#p${player}-metal-ball-option-1, #p${player}-metal-ball-option-2, #p${player}-metal-ball-option-3`);
+
+            metalBallOptions.forEach(option => {
+                if (level >= 3) {
+                    option.style.display = 'block';
+                } else {
+                    option.style.display = 'none';
+                    // If metal ball was selected but level is now < 3, reset to empty
+                    if (option.parentElement.value === 'metal_ball') {
+                        option.parentElement.value = '';
+                    }
+                }
+            });
+        }
+
         function updateRaceDefaults(player) {
             const raceSelect = document.getElementById(`p${player}-race`);
             const defaultsDiv = document.getElementById(`p${player}-defaults`);
@@ -1239,6 +1261,8 @@
             updateBigStoneVisibility(player, currentLevel);
             updateBigStickVisibility(player, currentLevel);
             updateKnifeVisibility(player, currentLevel);
+            // Update level 3+ equipment visibility
+            updateMetalBallVisibility(player, currentLevel);
         }
 
         async function runSimulation() {

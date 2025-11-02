@@ -175,6 +175,12 @@ class FightSimulator:
         if p2_effect == "stone_used":
             self.player2_stones_used += 1
 
+        # Track metal ball usage (count as stones for tracking purposes)
+        if "metal_ball" in p1_effect:
+            self.player1_stones_used += 1
+        if "metal_ball" in p2_effect:
+            self.player2_stones_used += 1
+
         # Track block usage
         if p1_block_used:
             self.player1_blocks_used += 1
@@ -371,6 +377,42 @@ class FightSimulator:
                         effect_type = "big_stone_with_slingshot" if has_slingshot else "big_stone_used"
                     break
 
+        # Check for equipment usage (metal ball) - only in basic equipment slots
+        for i, item in enumerate(attacker.equipment):
+            if item and item.item_type == "metal_ball" and item.uses_remaining > 0:
+                # Calculate metal ball success chance: same as stone/big stone
+                stone_success_chance = min(100, max(0, 25 + agility_diff * 1))
+                if random.random() * 100 < stone_success_chance:
+                    # Calculate dynamic multiplier: same effect as big stone at level 2
+                    stone_multiplier = 1.1 + agility_diff * 0.1
+
+                    # Level-based scaling: metal ball is a level 3 item, optimal at level 3, decreased at level 4+
+                    if attacker.level >= 4:
+                        # At level 4+, effectiveness decreases by 15% per level above 3
+                        level_penalty = 1.0 - (attacker.level - 3) * 0.15
+                        level_penalty = max(0.3, level_penalty)  # Minimum 30% effectiveness
+                    else:
+                        # At level 3, full effectiveness
+                        level_penalty = 1.0
+
+                    stone_multiplier = 1.0 + (stone_multiplier - 1.0) * level_penalty
+
+                    # Check for slingshot enhancement (in hand equipment)
+                    has_slingshot = any(equip and equip.item_type == "slingshot" for equip in attacker.hand_equipment)
+                    if has_slingshot:
+                        slingshot_bonus = 0.3  # 30% additional multiplier when using slingshot
+                        stone_multiplier += slingshot_bonus
+
+                    damage *= stone_multiplier
+                    item.uses_remaining -= 1
+                    equipment_used = True
+                    if "stone_with_slingshot" in effect_type or effect_type == "stone_used" or "big_stone" in effect_type:
+                        # Multiple projectiles used
+                        effect_type = "multiple_projectiles_with_slingshot" if has_slingshot else "multiple_projectiles_used"
+                    else:
+                        effect_type = "metal_ball_with_slingshot" if has_slingshot else "metal_ball_used"
+                    break
+
         # Check for wooden sticks and big wooden sticks (works every round) - only in hand equipment slots
         stick_count = 0
         stick_multipliers = []
@@ -426,13 +468,13 @@ class FightSimulator:
 
         # Update effect type based on stick usage
         if stick_count > 0:
-            if "stone_with_slingshot" in effect_type or "big_stone_with_slingshot" in effect_type:
+            if "stone_with_slingshot" in effect_type or "big_stone_with_slingshot" in effect_type or "metal_ball_with_slingshot" in effect_type:
                 effect_type = "stone_slingshot_and_stick"
-            elif "stones_with_slingshot" in effect_type:
+            elif "stones_with_slingshot" in effect_type or "multiple_projectiles_with_slingshot" in effect_type:
                 effect_type = "stones_slingshot_and_stick"
-            elif effect_type == "stone_used" or effect_type == "big_stone_used":
+            elif effect_type == "stone_used" or effect_type == "big_stone_used" or effect_type == "metal_ball_used":
                 effect_type = "stone_and_stick"
-            elif effect_type == "stones_used":
+            elif effect_type == "stones_used" or effect_type == "multiple_projectiles_used":
                 effect_type = "stones_and_stick"
             elif stick_count == 2:
                 effect_type = "dual_sticks_used"
@@ -586,6 +628,42 @@ class FightSimulator:
                         effect_type = "big_stone_with_slingshot" if has_slingshot else "big_stone_used"
                     break
 
+        # Check for equipment usage (metal ball) - only in basic equipment slots
+        for i, item in enumerate(attacker.equipment):
+            if item and item.item_type == "metal_ball" and item.uses_remaining > 0:
+                # Calculate metal ball success chance: same as stone/big stone
+                stone_success_chance = min(100, max(0, 25 + agility_diff * 1))
+                if random.random() * 100 < stone_success_chance:
+                    # Calculate dynamic multiplier: same effect as big stone at level 2
+                    stone_multiplier = 1.1 + agility_diff * 0.1
+
+                    # Level-based scaling: metal ball is a level 3 item, optimal at level 3, decreased at level 4+
+                    if attacker.level >= 4:
+                        # At level 4+, effectiveness decreases by 15% per level above 3
+                        level_penalty = 1.0 - (attacker.level - 3) * 0.15
+                        level_penalty = max(0.3, level_penalty)  # Minimum 30% effectiveness
+                    else:
+                        # At level 3, full effectiveness
+                        level_penalty = 1.0
+
+                    stone_multiplier = 1.0 + (stone_multiplier - 1.0) * level_penalty
+
+                    # Check for slingshot enhancement (in hand equipment)
+                    has_slingshot = any(equip and equip.item_type == "slingshot" for equip in attacker.hand_equipment)
+                    if has_slingshot:
+                        slingshot_bonus = 0.3  # 30% additional multiplier when using slingshot
+                        stone_multiplier += slingshot_bonus
+
+                    damage *= stone_multiplier
+                    item.uses_remaining -= 1
+                    equipment_used = True
+                    if "stone_with_slingshot" in effect_type or effect_type == "stone_used" or "big_stone" in effect_type:
+                        # Multiple projectiles used
+                        effect_type = "multiple_projectiles_with_slingshot" if has_slingshot else "multiple_projectiles_used"
+                    else:
+                        effect_type = "metal_ball_with_slingshot" if has_slingshot else "metal_ball_used"
+                    break
+
         # Check for wooden sticks and big wooden sticks (works every round) - only in hand equipment slots
         stick_count = 0
         stick_multipliers = []
@@ -641,13 +719,13 @@ class FightSimulator:
 
         # Update effect type based on stick usage
         if stick_count > 0:
-            if "stone_with_slingshot" in effect_type or "big_stone_with_slingshot" in effect_type:
+            if "stone_with_slingshot" in effect_type or "big_stone_with_slingshot" in effect_type or "metal_ball_with_slingshot" in effect_type:
                 effect_type = "stone_slingshot_and_stick"
-            elif "stones_with_slingshot" in effect_type:
+            elif "stones_with_slingshot" in effect_type or "multiple_projectiles_with_slingshot" in effect_type:
                 effect_type = "stones_slingshot_and_stick"
-            elif effect_type == "stone_used" or effect_type == "big_stone_used":
+            elif effect_type == "stone_used" or effect_type == "big_stone_used" or effect_type == "metal_ball_used":
                 effect_type = "stone_and_stick"
-            elif effect_type == "stones_used":
+            elif effect_type == "stones_used" or effect_type == "multiple_projectiles_used":
                 effect_type = "stones_and_stick"
             elif stick_count == 2:
                 effect_type = "dual_sticks_used"
@@ -836,6 +914,15 @@ def create_knife() -> Equipment:
         effect_multiplier=1.04  # Slightly less than big stick (1.06), but dual-wield bonus
     )
 
+def create_metal_ball() -> Equipment:
+    """Create a metal ball equipment item (level 3 item, slingshot compatible)"""
+    return Equipment(
+        name="Metal Ball",
+        item_type="metal_ball",
+        uses_remaining=1,  # Single use like stones
+        effect_multiplier=1.0  # Will be calculated dynamically based on agility, same as big stone at level 2
+    )
+
 def create_slingshot() -> Equipment:
     """Create a slingshot equipment item (enhances stone effectiveness)"""
     return Equipment(
@@ -1012,6 +1099,8 @@ def create_player(name: str, race: str, custom_stats: Dict = None, equipment: Li
                     player.equipment[i] = create_stone()
                 elif item_type == "big_stone":
                     player.equipment[i] = create_big_stone()
+                elif item_type == "metal_ball":
+                    player.equipment[i] = create_metal_ball()
                 elif item_type == "fear_spell" and knowledge >= 1:
                     player.equipment[i] = create_fear_spell()
                 elif item_type == "scream_spell" and knowledge >= 2:
