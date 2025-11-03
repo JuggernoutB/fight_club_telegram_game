@@ -181,14 +181,7 @@ function showAllocatePoints(profile) {
 
 function showGame(profile) {
     console.log("Profile data:", profile);
-    // Restore HP to full if not fighting
-    // Note: profile.hp represents the max HP value, so we don't need to restore it
-    // Current HP during fights is handled separately in fight data structures
-
-    // Generate stars based on level
-    const levelStars = "⭐".repeat(Math.min(profile.level, 5));
-    const canAllocatePoints = profile.level % 3 === 0;
-    const raceAvatar = getRaceAvatar(profile.race);
+    window.currentProfile = profile; // Store profile globally for tab switching
 
     document.body.innerHTML = `
         <div class="game-container">
@@ -197,76 +190,159 @@ function showGame(profile) {
                 <div class="subtitle">Ready for battle, warrior?</div>
             </div>
 
-            <div class="player-info">
-                <div class="player-header">
-                    <div class="player-avatar" id="playerAvatar">
-                        ${raceAvatar}
-                    </div>
-                    <div class="player-details">
-                        <h2>Welcome, ${profile.nickname}!</h2>
-                        <div class="player-level">
-                            <span class="level-badge ${canAllocatePoints ? 'level-up-glow' : ''}">Level ${profile.level}</span>
-                            <span class="stars">${levelStars}</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-label">⚔️ Power</div>
-                        <div class="stat-value">${profile.power}</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">🛡️ Defense</div>
-                        <div class="stat-value">${profile.defense}</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">💨 Agility</div>
-                        <div class="stat-value">${profile.agility}</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">🧠 Knowledge</div>
-                        <div class="stat-value">${profile.knowledge}</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">🏆 Race</div>
-                        <div class="stat-value">${capitalizeFirst(profile.race)}</div>
-                    </div>
-                </div>
-
-                <div class="progress-container">
-                    <div class="progress-item">
-                        <div class="progress-label">
-                            <span>❤️ Health Points</span>
-                            <span class="progress-text">${profile.hp}/${profile.hp}</span>
-                        </div>
-                        ${renderHPBar(profile.hp, profile.hp)}
-                    </div>
-                    <div class="progress-item">
-                        <div class="progress-label">
-                            <span>⭐ Experience</span>
-                            <span class="progress-text">${profile.experience}/${xpToNextLevel(profile.level)}</span>
-                        </div>
-                        ${renderXPBar(profile.experience, xpToNextLevel(profile.level))}
-                    </div>
-                </div>
+            <div class="tab-navigation">
+                <button class="tab-button active" id="lobbyTab" onclick="switchTab('lobby')">
+                    🏠 Lobby
+                </button>
+                <button class="tab-button" id="equipmentTab" onclick="switchTab('equipment')">
+                    ⚔️ Equipment
+                </button>
+                <button class="tab-button" id="settingsTab" onclick="switchTab('settings')">
+                    ⚙️ Settings
+                </button>
             </div>
 
-            <div class="actions-container">
-                <button id="fightButton" class="btn-action btn-fight-bot">
-                    🤖 Fight vs Bot
-                </button>
-                <button id="playersListButton" class="btn-action btn-fight-player">
-                    👥 Fight vs Player
-                </button>
-                ${canAllocatePoints ? `
-                    <button id="allocatePointsButton" class="btn-action btn-allocate">
-                        📈 Allocate Points (${profile.extra_points || 3})
-                    </button>
-                ` : ""}
+            <div class="tab-content" id="tabContent">
+                <!-- Tab content will be loaded here -->
             </div>
         </div>
     `;
+
+    // Load default tab (lobby)
+    window.switchTab('lobby');
+}
+
+// Make switchTab globally available
+window.switchTab = function(tabName) {
+    console.log("switchTab called with:", tabName);
+
+    // Update tab buttons
+    document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+    const tabButton = document.getElementById(tabName + 'Tab');
+    if (tabButton) {
+        tabButton.classList.add('active');
+    } else {
+        console.error("Tab button not found:", tabName + 'Tab');
+    }
+
+    // Load tab content
+    const tabContent = document.getElementById('tabContent');
+    if (!tabContent) {
+        console.error("Tab content container not found");
+        return;
+    }
+
+    console.log("Switching to tab:", tabName);
+    switch(tabName) {
+        case 'lobby':
+            showLobbyTab();
+            break;
+        case 'equipment':
+            showEquipmentTab();
+            break;
+        case 'settings':
+            showSettingsTab();
+            break;
+        default:
+            console.error("Unknown tab:", tabName);
+    }
+}
+
+function showLobbyTab() {
+    console.log("showLobbyTab called");
+    const profile = window.currentProfile;
+    console.log("Profile:", profile);
+
+    if (!profile) {
+        document.getElementById('tabContent').innerHTML = '<div class="error">Profile not loaded</div>';
+        return;
+    }
+
+    const levelStars = "⭐".repeat(Math.min(profile.level, 5));
+    const canAllocatePoints = profile.level % 3 === 0;
+    const raceAvatar = getRaceAvatar(profile.race);
+
+    console.log("About to render lobby content");
+
+    document.getElementById('tabContent').innerHTML = `
+        <div class="player-info">
+            <div class="player-header">
+                <div class="player-avatar" id="playerAvatar">
+                    ${raceAvatar}
+                </div>
+                <div class="player-details">
+                    <h2>Welcome, ${profile.nickname}!</h2>
+                    <div class="player-level">
+                        <span class="level-badge ${canAllocatePoints ? 'level-up-glow' : ''}">Level ${profile.level}</span>
+                        <span class="stars">${levelStars}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">⚔️ Power</div>
+                    <div class="stat-value">${profile.power}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">🛡️ Defense</div>
+                    <div class="stat-value">${profile.defense}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">💨 Agility</div>
+                    <div class="stat-value">${profile.agility}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">🧠 Knowledge</div>
+                    <div class="stat-value">${profile.knowledge}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">🏆 Race</div>
+                    <div class="stat-value">${capitalizeFirst(profile.race)}</div>
+                </div>
+            </div>
+
+            <div class="progress-container">
+                <div class="progress-item">
+                    <div class="progress-label">
+                        <span>❤️ Health Points</span>
+                        <span class="progress-text">${profile.hp}/${profile.hp}</span>
+                    </div>
+                    ${renderHPBar(profile.hp, profile.hp)}
+                </div>
+                <div class="progress-item">
+                    <div class="progress-label">
+                        <span>⭐ Experience</span>
+                        <span class="progress-text">${profile.experience}/${xpToNextLevel(profile.level)}</span>
+                    </div>
+                    ${renderXPBar(profile.experience, xpToNextLevel(profile.level))}
+                </div>
+                <div class="progress-item">
+                    <div class="progress-label">
+                        <span>🔮 Mana Points</span>
+                        <span class="progress-text">${profile.mana || 0}/${profile.maxMana || 0}</span>
+                    </div>
+                    ${renderManaBar(profile.mana || 0, profile.maxMana || 0)}
+                </div>
+            </div>
+        </div>
+
+        <div class="actions-container">
+            <button id="fightButton" class="btn-action btn-fight-bot">
+                🤖 Fight vs Bot
+            </button>
+            <button id="playersListButton" class="btn-action btn-fight-player">
+                👥 Fight vs Player
+            </button>
+            ${canAllocatePoints ? `
+                <button id="allocatePointsButton" class="btn-action btn-allocate">
+                    📈 Allocate Points (${profile.extra_points || 3})
+                </button>
+            ` : ""}
+        </div>
+    `;
+
+    console.log("Lobby content rendered");
 
     // Load player's race avatar
     loadPlayerAvatar(profile.race);
@@ -281,6 +357,183 @@ function showGame(profile) {
     document.getElementById("playersListButton").onclick = () => {
         window.location.href = `/players.html?telegram_id=${telegram_id}`;
     };
+}
+
+function showEquipmentTab() {
+    console.log("showEquipmentTab called");
+    document.getElementById('tabContent').innerHTML = `
+        <div class="equipment-container">
+            <h2>🎒 Equipment Tab</h2>
+            <p>This is the equipment tab content.</p>
+            <p>Inventory and equipment will be loaded here.</p>
+        </div>
+    `;
+    console.log("Equipment tab content rendered");
+}
+
+function showSettingsTab() {
+    console.log("showSettingsTab called");
+    document.getElementById('tabContent').innerHTML = `
+        <div class="settings-container">
+            <h2>⚙️ Settings Tab</h2>
+            <p>This is the settings tab content.</p>
+            <p>Language and other settings will be here.</p>
+        </div>
+    `;
+    console.log("Settings tab content rendered");
+}
+
+async function loadInventoryData() {
+    try {
+        const response = await fetch(`/inventory/${telegram_id}`);
+        const data = await response.json();
+
+        if (response.ok) {
+            displayInventory(data.inventory, data.items);
+            displayEquipment(data.equipment, data.items);
+        } else {
+            document.getElementById('inventoryTable').innerHTML = '<div class="error">Failed to load inventory</div>';
+            document.getElementById('equipmentSlots').innerHTML = '<div class="error">Failed to load equipment</div>';
+        }
+    } catch (error) {
+        console.error('Error loading inventory:', error);
+        document.getElementById('inventoryTable').innerHTML = '<div class="error">Connection error</div>';
+        document.getElementById('equipmentSlots').innerHTML = '<div class="error">Connection error</div>';
+    }
+}
+
+function displayInventory(inventory, itemDefinitions) {
+    const inventoryTable = document.getElementById('inventoryTable');
+
+    if (!inventory || Object.keys(inventory).length === 0) {
+        inventoryTable.innerHTML = '<div class="empty-inventory">Your inventory is empty</div>';
+        return;
+    }
+
+    let html = '<div class="inventory-grid">';
+
+    for (const [itemType, quantity] of Object.entries(inventory)) {
+        const item = itemDefinitions[itemType];
+        if (!item) continue;
+
+        html += `
+            <div class="inventory-item">
+                <div class="item-icon">
+                    <img src="./images/items/${itemType}.png" alt="${item.name}"
+                         onerror="this.innerHTML='${getItemEmoji(itemType)}'; this.style.display='flex'; this.style.alignItems='center'; this.style.justifyContent='center'; this.style.fontSize='24px';" />
+                </div>
+                <div class="item-details">
+                    <div class="item-name">${item.name}</div>
+                    <div class="item-quantity">×${quantity}</div>
+                </div>
+            </div>
+        `;
+    }
+
+    html += '</div>';
+    inventoryTable.innerHTML = html;
+}
+
+function displayEquipment(equipment, itemDefinitions) {
+    const equipmentSlots = document.getElementById('equipmentSlots');
+
+    let html = '<div class="equipment-slots-grid">';
+
+    // Basic slots
+    html += '<div class="slot-section"><h4>🔮 Basic Slots</h4>';
+    equipment.basic_slots.forEach((item, index) => {
+        html += createSlotHTML('basic', index, item, itemDefinitions);
+    });
+    html += '</div>';
+
+    // Hand slots
+    html += '<div class="slot-section"><h4>👊 Hand Slots</h4>';
+    equipment.hand_slots.forEach((item, index) => {
+        html += createSlotHTML('hand', index, item, itemDefinitions);
+    });
+    html += '</div>';
+
+    html += '</div>';
+    equipmentSlots.innerHTML = html;
+}
+
+function createSlotHTML(slotType, index, item, itemDefinitions) {
+    if (item) {
+        const itemDef = itemDefinitions[item.type];
+        return `
+            <div class="equipment-slot filled" onclick="unequipItem('${slotType}', ${index})">
+                <div class="slot-icon">
+                    <img src="./images/items/${item.type}.png" alt="${itemDef.name}"
+                         onerror="this.innerHTML='${getItemEmoji(item.type)}'; this.style.display='flex'; this.style.alignItems='center'; this.style.justifyContent='center'; this.style.fontSize='20px';" />
+                </div>
+                <div class="slot-name">${itemDef.name}</div>
+                <div class="slot-uses">${item.uses}/${item.maxUses}</div>
+            </div>
+        `;
+    } else {
+        return `
+            <div class="equipment-slot empty">
+                <div class="slot-icon">➕</div>
+                <div class="slot-name">Empty</div>
+            </div>
+        `;
+    }
+}
+
+function getItemEmoji(itemType) {
+    const itemEmojis = {
+        'stone': '🪨',
+        'big_stone': '🗿',
+        'metal_ball': '⚽',
+        'wooden_stick': '🏏',
+        'big_wooden_stick': '🏒',
+        'knife': '🔪',
+        'small_club': '🔨',
+        'blade': '⚔️',
+        'slingshot': '🏹',
+        'fear_spell': '😱',
+        'scream_spell': '😱'
+    };
+    return itemEmojis[itemType] || '📦';
+}
+
+// Make unequipItem globally available
+window.unequipItem = async function(slotType, slotIndex) {
+    try {
+        const response = await fetch('/unequip-item', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                player_id: telegram_id,
+                slot_type: slotType,
+                slot_index: slotIndex
+            })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            // Reload inventory display
+            loadInventoryData();
+        } else {
+            alert('Failed to unequip item: ' + data.error);
+        }
+    } catch (error) {
+        console.error('Error unequipping item:', error);
+        alert('Connection error');
+    }
+}
+
+// Make saveSettings globally available
+window.saveSettings = function() {
+    const language = document.getElementById('languageSelect').value;
+
+    // For now, just show a message since we only have English
+    if (language === 'en') {
+        alert('Settings saved! Language set to English.');
+    } else {
+        alert('This language is not yet available. Coming soon!');
+    }
 }
 
 function getRaceAvatar(race) {

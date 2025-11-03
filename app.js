@@ -10,6 +10,39 @@ let playerProfiles = {};
 let challenges = {}; // Store pending challenges: { challenger_id: { target_id, challenger_nickname, timestamp } }
 let pvpFights = {}; // Store active PvP fights: { fight_id: { player1_id, player2_id, player1_action, player2_action, round, status, etc. } }
 
+// Item definitions from game analyzer
+const ITEMS = {
+  // Level 1 items
+  stone: { name: "Stone", level: 1, slot: "basic", uses: 1, damage_multiplier: 1.1, type: "projectile" },
+  wooden_stick: { name: "Wooden Stick", level: 1, slot: "hand", uses: 999, damage_multiplier: 1.06, type: "melee" },
+
+  // Level 2 items
+  big_stone: { name: "Big Stone", level: 2, slot: "basic", uses: 1, damage_multiplier: 1.1, type: "projectile" },
+  big_wooden_stick: { name: "Big Wooden Stick", level: 2, slot: "hand", uses: 999, damage_multiplier: 1.06, type: "melee" },
+  knife: { name: "Knife", level: 2, slot: "hand", uses: 999, damage_multiplier: 1.04, type: "melee", no_dual_penalty: true },
+
+  // Level 3 items
+  metal_ball: { name: "Metal Ball", level: 3, slot: "basic", uses: 1, damage_multiplier: 1.1, type: "projectile" },
+  small_club: { name: "Small Club", level: 3, slot: "hand", uses: 999, damage_multiplier: 1.06, type: "melee", dual_penalty: 0.25 },
+  blade: { name: "Blade", level: 3, slot: "hand", uses: 999, damage_multiplier: 1.04, type: "melee", no_dual_penalty: true },
+
+  // Special items
+  slingshot: { name: "Slingshot", level: 1, slot: "hand", uses: 999, stone_bonus: 0.3, type: "enhancement", max_per_player: 1 },
+
+  // Spells
+  fear_spell: { name: "Fear Spell", level: 1, slot: "basic", mana_cost: 3, knowledge_req: 1, type: "spell" },
+  scream_spell: { name: "Scream Spell", level: 2, slot: "basic", mana_cost: 4, knowledge_req: 2, type: "spell" }
+};
+
+// Race equipment slot configuration
+const RACE_EQUIPMENT_SLOTS = {
+  human: { basic_slots: 2, hand_slots: 2 },
+  elf: { basic_slots: 2, hand_slots: 2 },
+  orc: { basic_slots: 1, hand_slots: 2 },
+  dwarf: { basic_slots: 1, hand_slots: 2 },
+  skeleton: { basic_slots: 1, hand_slots: 2 }
+};
+
 try {
   if (fs.existsSync(DATA_FILE)) {
     const data = fs.readFileSync(DATA_FILE, "utf8");
@@ -53,6 +86,65 @@ function migratePlayerProfiles() {
       profile.mana = correctMaxMana; // Start with full mana
       needsSave = true;
       console.log(`Updated mana for ${profile.nickname}: ${correctMaxMana} max mana`);
+    }
+
+    // Add equipment slots if missing
+    if (!profile.equipment) {
+      const slots = RACE_EQUIPMENT_SLOTS[profile.race] || RACE_EQUIPMENT_SLOTS.human;
+      profile.equipment = {
+        basic_slots: Array(slots.basic_slots).fill(null),
+        hand_slots: Array(slots.hand_slots).fill(null)
+      };
+      needsSave = true;
+      console.log(`Added equipment slots for ${profile.nickname}: ${slots.basic_slots} basic, ${slots.hand_slots} hand`);
+    }
+
+    // Add inventory if missing
+    if (!profile.inventory) {
+      profile.inventory = {};
+      needsSave = true;
+      console.log(`Added inventory for ${profile.nickname}`);
+    }
+
+    // Give starter items based on player level
+    let gaveStarterItems = false;
+    const playerLevel = profile.level || 1;
+
+    // Level 1 starter items
+    if (playerLevel >= 1) {
+      if (!profile.inventory.stone) {
+        profile.inventory.stone = 3; // 3 stones
+        gaveStarterItems = true;
+      }
+      if (!profile.inventory.wooden_stick) {
+        profile.inventory.wooden_stick = 1; // 1 wooden stick
+        gaveStarterItems = true;
+      }
+    }
+
+    // Level 2 additional items
+    if (playerLevel >= 2) {
+      if (!profile.inventory.big_stone) {
+        profile.inventory.big_stone = 2; // 2 big stones
+        gaveStarterItems = true;
+      }
+      if (!profile.inventory.knife && profile.race !== 'orc') { // Orcs get different items
+        profile.inventory.knife = 1; // 1 knife
+        gaveStarterItems = true;
+      }
+    }
+
+    // Level 3 additional items
+    if (playerLevel >= 3) {
+      if (!profile.inventory.small_club) {
+        profile.inventory.small_club = 1; // 1 small club
+        gaveStarterItems = true;
+      }
+    }
+
+    if (gaveStarterItems) {
+      needsSave = true;
+      console.log(`Gave starter items to ${profile.nickname} (level ${playerLevel})`);
     }
   });
 
@@ -158,6 +250,160 @@ function getXpRequiredForLevel(level) {
   return totalXp;
 }
 
+function calculateDamage(attacker, defender, attackPart, defendPart, attackerItems = null) {
+  // Constants from game analyzer (rebalanced for better stat equality)
+  const BASE_DAMAGE = 3.1;
+  const POWER_FACTOR = 0.27;
+  const BLOCK_MULTIPLIER = 0.26;
+
+  // Agility effect constants
+  const SUPER_ATTACK_MULTIPLIER = 3.5;
+  const MAX_DODGE_CHANCE = 8;
+  const MAX_SUPER_ATTACK_CHANCE = 6;
+  const MIN_DODGE_CHANCE = 2;
+  const MIN_SUPER_ATTACK_CHANCE = 2;
+  const AGILITY_DODGE_FACTOR = 1.05;
+  const AGILITY_SUPER_FACTOR = 1.05;
+
+  // Calculate agility difference
+  const agilityDiff = attacker.agility - defender.agility;
+  let effectType = "normal";
+  let itemEffects = [];
+
+  // Check for super attack (attacker has higher agility)
+  if (agilityDiff > 0) {
+    const superAttackChance = Math.min(MAX_SUPER_ATTACK_CHANCE, Math.max(MIN_SUPER_ATTACK_CHANCE, agilityDiff * AGILITY_SUPER_FACTOR));
+    if (Math.random() * 100 < superAttackChance) {
+      effectType = "super_attack";
+    }
+  }
+
+  // Check for dodge (defender has higher agility and no super attack)
+  else if (agilityDiff < 0) {
+    const dodgeChance = Math.min(MAX_DODGE_CHANCE, Math.max(MIN_DODGE_CHANCE, Math.abs(agilityDiff) * AGILITY_DODGE_FACTOR));
+    if (Math.random() * 100 < dodgeChance) {
+      return { damage: 0, effect: "dodged", itemEffects: [] };
+    }
+  }
+
+  // Calculate power to defense ratio
+  const ratio = defender.defense > 0 ? attacker.power / defender.defense : attacker.power;
+  let damage = BASE_DAMAGE * Math.pow(ratio, POWER_FACTOR);
+
+  // Apply item effects if provided
+  let totalMultiplier = 1.0;
+  if (attackerItems && attackerItems.equipment) {
+    const { multiplier, effects } = calculateItemEffects(attacker, attackerItems.equipment);
+    totalMultiplier = multiplier;
+    itemEffects = effects;
+  }
+
+  damage *= totalMultiplier;
+
+  // Apply super attack multiplier if triggered
+  if (effectType === "super_attack") {
+    damage *= SUPER_ATTACK_MULTIPLIER;
+    effectType = "super_attack";
+  }
+
+  // Check if attack is blocked (defended)
+  const isBlocked = attackPart === defendPart;
+  if (isBlocked) {
+    damage *= BLOCK_MULTIPLIER;
+  }
+
+  // Probability-based integer conversion
+  const baseDamage = Math.floor(damage);
+  const fractionalPart = damage - baseDamage;
+
+  let finalDamage;
+  if (Math.random() < fractionalPart) {
+    finalDamage = baseDamage + 1;
+  } else {
+    finalDamage = baseDamage;
+  }
+
+  return {
+    damage: Math.max(1, finalDamage),
+    effect: effectType,
+    blocked: isBlocked,
+    itemEffects: itemEffects
+  };
+}
+
+function calculateItemEffects(player, equipment) {
+  let totalMultiplier = 1.0;
+  let effects = [];
+  const playerLevel = player.level || 1;
+
+  // Check hand slots for melee weapons
+  const handItems = equipment.hand_slots || [];
+  const meleeWeapons = handItems.filter(item => item && ITEMS[item.type] && ITEMS[item.type].type === "melee");
+  const hasSlingshot = handItems.some(item => item && item.type === "slingshot");
+
+  // Apply melee weapon effects
+  if (meleeWeapons.length > 0) {
+    let weaponMultiplier = 1.0;
+
+    for (const weapon of meleeWeapons) {
+      const itemTemplate = ITEMS[weapon.type];
+      const scaling = getItemLevelScaling(weapon, playerLevel);
+      let weaponBonus = (itemTemplate.damage_multiplier - 1.0) * scaling;
+
+      // Apply dual-wield penalty if multiple weapons
+      if (meleeWeapons.length > 1 && !itemTemplate.no_dual_penalty) {
+        const penalty = itemTemplate.dual_penalty || 0.35; // Default 35% penalty
+        weaponBonus *= (1.0 - penalty);
+        effects.push(`${weapon.name} (dual-wield penalty)`);
+      } else {
+        effects.push(`${weapon.name}`);
+      }
+
+      weaponMultiplier += weaponBonus;
+    }
+
+    totalMultiplier *= weaponMultiplier;
+  }
+
+  // Check basic slots for projectiles and their slingshot bonus
+  const basicItems = equipment.basic_slots || [];
+  const projectiles = basicItems.filter(item => item && ITEMS[item.type] && ITEMS[item.type].type === "projectile");
+
+  for (const projectile of projectiles) {
+    const itemTemplate = ITEMS[projectile.type];
+
+    // Check if projectile hits (stones have success chance based on agility)
+    const successChance = Math.min(100, Math.max(0, 25 + (player.agility - 5) * 1)); // Assume base agility diff
+
+    if (Math.random() * 100 < successChance) {
+      const scaling = getItemLevelScaling(projectile, playerLevel);
+      let projectileMultiplier = itemTemplate.damage_multiplier;
+
+      // Apply agility-based damage bonus for stones
+      const agilityBonus = 0.1 + ((player.agility - 5) * 0.1); // Simplified agility bonus
+      projectileMultiplier += agilityBonus;
+
+      // Apply slingshot bonus if equipped
+      if (hasSlingshot && itemTemplate.stone_bonus !== undefined) {
+        projectileMultiplier += itemTemplate.stone_bonus;
+        effects.push(`${projectile.name} + Slingshot`);
+      } else {
+        effects.push(`${projectile.name}`);
+      }
+
+      projectileMultiplier = 1.0 + (projectileMultiplier - 1.0) * scaling;
+      totalMultiplier *= projectileMultiplier;
+
+      // Consume projectile use
+      projectile.uses--;
+    } else {
+      effects.push(`${projectile.name} (missed)`);
+    }
+  }
+
+  return { multiplier: totalMultiplier, effects: effects };
+}
+
 function calculateKnowledgeForLevel(race, level) {
   // Calculate knowledge stat based on race and level (from analyzer)
   let baseKnowledge = 0; // Most races start with 0 knowledge (0 mana)
@@ -176,6 +422,121 @@ function calculateKnowledgeForLevel(race, level) {
 
   // All other races: no knowledge bonuses per level (0 knowledge = 0 mana)
   return baseKnowledge;
+}
+
+// Item management functions
+function createItem(itemType) {
+  const itemTemplate = ITEMS[itemType];
+  if (!itemTemplate) return null;
+
+  return {
+    type: itemType,
+    name: itemTemplate.name,
+    uses: itemTemplate.uses,
+    maxUses: itemTemplate.uses
+  };
+}
+
+function getItemLevelScaling(item, playerLevel) {
+  const itemTemplate = ITEMS[item.type];
+  if (!itemTemplate) return 1.0;
+
+  const levelDiff = playerLevel - itemTemplate.level;
+  if (levelDiff <= 0) return 1.0; // Item is appropriate level or higher
+
+  // Apply level scaling penalty
+  let penaltyRate = 0.15; // 15% penalty per level for projectiles
+  let minEffectiveness = 0.3; // 30% minimum effectiveness
+
+  if (itemTemplate.type === "melee" || itemTemplate.type === "enhancement") {
+    penaltyRate = 0.10; // 10% penalty per level for melee/enhancement
+    minEffectiveness = 0.4; // 40% minimum effectiveness
+  }
+
+  const levelPenalty = 1.0 - (levelDiff * penaltyRate);
+  return Math.max(minEffectiveness, levelPenalty);
+}
+
+function canEquipItem(profile, itemType, slotIndex, slotType) {
+  const itemTemplate = ITEMS[itemType];
+  if (!itemTemplate) return { canEquip: false, reason: "Item does not exist" };
+
+  // Check if item goes in correct slot type
+  if (itemTemplate.slot !== slotType) {
+    return { canEquip: false, reason: `Item belongs in ${itemTemplate.slot} slot, not ${slotType}` };
+  }
+
+  // Check slot availability
+  const slots = profile.equipment[slotType + "_slots"];
+  if (!slots || slotIndex >= slots.length) {
+    return { canEquip: false, reason: "Slot does not exist" };
+  }
+
+  // Check slingshot limit
+  if (itemType === "slingshot") {
+    const currentSlingshots = profile.equipment.hand_slots.filter(item => item && item.type === "slingshot").length;
+    if (currentSlingshots >= 1) {
+      return { canEquip: false, reason: "Only one slingshot allowed per player" };
+    }
+  }
+
+  // Check spell requirements
+  if (itemTemplate.type === "spell") {
+    if (profile.knowledge < itemTemplate.knowledge_req) {
+      return { canEquip: false, reason: `Requires ${itemTemplate.knowledge_req} knowledge` };
+    }
+  }
+
+  return { canEquip: true };
+}
+
+function equipItem(profile, itemType, slotIndex, slotType) {
+  const canEquip = canEquipItem(profile, itemType, slotIndex, slotType);
+  if (!canEquip.canEquip) return { success: false, reason: canEquip.reason };
+
+  // Check if player has item in inventory
+  if (!profile.inventory[itemType] || profile.inventory[itemType] <= 0) {
+    return { success: false, reason: "Item not in inventory" };
+  }
+
+  // Remove item from inventory
+  profile.inventory[itemType]--;
+  if (profile.inventory[itemType] === 0) {
+    delete profile.inventory[itemType];
+  }
+
+  // If slot already has an item, return it to inventory
+  const currentItem = profile.equipment[slotType + "_slots"][slotIndex];
+  if (currentItem) {
+    profile.inventory[currentItem.type] = (profile.inventory[currentItem.type] || 0) + 1;
+  }
+
+  // Equip new item
+  profile.equipment[slotType + "_slots"][slotIndex] = createItem(itemType);
+
+  return { success: true };
+}
+
+function unequipItem(profile, slotIndex, slotType) {
+  const slots = profile.equipment[slotType + "_slots"];
+  if (!slots || slotIndex >= slots.length || !slots[slotIndex]) {
+    return { success: false, reason: "No item in slot" };
+  }
+
+  const item = slots[slotIndex];
+  slots[slotIndex] = null;
+
+  // Return item to inventory
+  profile.inventory[item.type] = (profile.inventory[item.type] || 0) + 1;
+
+  return { success: true, item: item };
+}
+
+function giveItemToPlayer(profile, itemType, quantity = 1) {
+  if (!ITEMS[itemType]) return false;
+
+  profile.inventory[itemType] = (profile.inventory[itemType] || 0) + quantity;
+  return true;
 }
 
 function checkLevelUp(profile) {
@@ -324,62 +685,50 @@ app.post("/fight", (req, res) => {
   let botDamage = 0;
   let log = [];
 
-  // Player attacks bot
-  if (botDefend !== hit) {
-    // Bot agility chance to avoid
-    const avoidChance = Math.min((bot.agility - player.agility) * 5, 75);
-    const avoidRoll = Math.random() * 100;
-    if (avoidRoll >= avoidChance) {
-      playerDamage = player.power;
-      bot.hp = Math.max(bot.hp - playerDamage, 0);
-      log.push(`You hit the bot's ${hit},bot HP ${bot.hp}, dealing ${playerDamage} damage.`);
+  // Player attacks bot - using game analyzer damage calculation
+  const playerAttackResult = calculateDamage(player, bot, hit, botDefend);
+  playerDamage = playerAttackResult.damage;
+
+  if (playerAttackResult.effect === "dodged") {
+    log.push(`Bot dodged your attack to the ${hit}.`);
+  } else if (playerDamage > 0) {
+    bot.hp = Math.max(bot.hp - playerDamage, 0);
+
+    let attackMsg = "";
+    if (playerAttackResult.effect === "super_attack") {
+      attackMsg = `You performed a super attack on the bot's ${hit}`;
+    } else if (playerAttackResult.blocked) {
+      attackMsg = `You hit the bot's protected ${hit}`;
     } else {
-      log.push(`Bot dodged your attack to the ${hit}.`);
+      attackMsg = `You hit the bot's ${hit}`;
     }
+
+    log.push(`${attackMsg}, bot HP ${bot.hp}, dealing ${playerDamage} damage.`);
   } else {
-    // Bot defends
-    const diff = player.power - bot.defense;
-    if (diff <= 0) {
-      log.push(`Bot blocked your attack to the ${hit}.`);
-    } else {
-      const chance = diff === 1 ? 50 : 100;
-      const roll = Math.random() * 100;
-      if (roll < chance) {
-        playerDamage = diff;
-        bot.hp = Math.max(bot.hp - playerDamage, 0);
-        log.push(`You hit the bot's protected ${hit}, dealing ${playerDamage} damage.`);
-      } else {
-        log.push(`Bot blocked your attack to the ${hit}.`);
-      }
-    }
+    log.push(`Bot blocked your attack to the ${hit}.`);
   }
 
-  // Bot attacks player
-  if (defend !== botHit) {
-    const avoidChance = Math.min((player.agility - bot.agility) * 5, 75);
-    const avoidRoll = Math.random() * 100;
-    if (avoidRoll >= avoidChance) {
-      botDamage = bot.power;
-      player.currentHP = Math.max(player.currentHP - botDamage, 0);
-      log.push(`Bot hit your ${botHit}, your HP is ${player.currentHP}, dealing ${botDamage} damage.`);
+  // Bot attacks player - using game analyzer damage calculation
+  const botAttackResult = calculateDamage(bot, player, botHit, defend);
+  botDamage = botAttackResult.damage;
+
+  if (botAttackResult.effect === "dodged") {
+    log.push(`You dodged the bot's attack to your ${botHit}.`);
+  } else if (botDamage > 0) {
+    player.currentHP = Math.max(player.currentHP - botDamage, 0);
+
+    let attackMsg = "";
+    if (botAttackResult.effect === "super_attack") {
+      attackMsg = `Bot performed a super attack on your ${botHit}`;
+    } else if (botAttackResult.blocked) {
+      attackMsg = `Bot hit your protected ${botHit}`;
     } else {
-      log.push(`You dodged the bot's attack to your ${botHit}.`);
+      attackMsg = `Bot hit your ${botHit}`;
     }
+
+    log.push(`${attackMsg}, your HP is ${player.currentHP}, dealing ${botDamage} damage.`);
   } else {
-    const diff = bot.power - player.defense;
-    if (diff <= 0) {
-      log.push(`You blocked the bot's attack to your ${botHit}.`);
-    } else {
-      const chance = diff === 1 ? 50 : 100;
-      const roll = Math.random() * 100;
-      if (roll < chance) {
-        botDamage = diff;
-        player.currentHP = Math.max(player.currentHP - botDamage, 0);
-        log.push(`Bot hit your protected ${botHit}, dealing ${botDamage} damage.`);
-      } else {
-        log.push(`You blocked the bot's attack to your ${botHit}.`);
-      }
-    }
+    log.push(`You blocked the bot's attack to your ${botHit}.`);
   }
 
   // Check win/loss
@@ -1020,64 +1369,53 @@ function processRound(fight_id) {
   let p1Damage = 0;
   let p2Damage = 0;
 
-  // Player 1 attacks Player 2
-  if (p1Action.hit !== p2Action.defend) {
-    // Calculate damage - same logic as bot fights
-    const avoidChance = Math.min((player2.agility - player1.agility) * 5, 75);
-    const avoidRoll = Math.random() * 100;
-    if (avoidRoll >= avoidChance) {
-      p1Damage = player1.power;
-      player2.hp = Math.max(player2.hp - p1Damage, 0);
-      roundLog.push(`${playerProfiles[fight.player1_id].nickname} hit ${playerProfiles[fight.player2_id].nickname}'s ${p1Action.hit}, dealing ${p1Damage} damage.`);
+  // Player 1 attacks Player 2 - using game analyzer damage calculation
+  const p1AttackResult = calculateDamage(player1, player2, p1Action.hit, p2Action.defend);
+  p1Damage = p1AttackResult.damage;
+
+  const p1Name = playerProfiles[fight.player1_id].nickname;
+  const p2Name = playerProfiles[fight.player2_id].nickname;
+
+  if (p1AttackResult.effect === "dodged") {
+    roundLog.push(`${p2Name} dodged ${p1Name}'s attack to the ${p1Action.hit}.`);
+  } else if (p1Damage > 0) {
+    player2.hp = Math.max(player2.hp - p1Damage, 0);
+
+    let attackMsg = "";
+    if (p1AttackResult.effect === "super_attack") {
+      attackMsg = `${p1Name} performed a super attack on ${p2Name}'s ${p1Action.hit}`;
+    } else if (p1AttackResult.blocked) {
+      attackMsg = `${p1Name} hit ${p2Name}'s protected ${p1Action.hit}`;
     } else {
-      roundLog.push(`${playerProfiles[fight.player2_id].nickname} dodged ${playerProfiles[fight.player1_id].nickname}'s attack to the ${p1Action.hit}.`);
+      attackMsg = `${p1Name} hit ${p2Name}'s ${p1Action.hit}`;
     }
+
+    roundLog.push(`${attackMsg}, dealing ${p1Damage} damage.`);
   } else {
-    // Player 2 defends against Player 1's attack
-    const diff = player1.power - player2.defense;
-    if (diff <= 0) {
-      roundLog.push(`${playerProfiles[fight.player2_id].nickname} blocked ${playerProfiles[fight.player1_id].nickname}'s attack to the ${p1Action.hit}.`);
-    } else {
-      const chance = diff === 1 ? 50 : 100;
-      const roll = Math.random() * 100;
-      if (roll < chance) {
-        p1Damage = diff;
-        player2.hp = Math.max(player2.hp - p1Damage, 0);
-        roundLog.push(`${playerProfiles[fight.player1_id].nickname} hit ${playerProfiles[fight.player2_id].nickname}'s protected ${p1Action.hit}, dealing ${p1Damage} damage.`);
-      } else {
-        roundLog.push(`${playerProfiles[fight.player2_id].nickname} blocked ${playerProfiles[fight.player1_id].nickname}'s attack to the ${p1Action.hit}.`);
-      }
-    }
+    roundLog.push(`${p2Name} blocked ${p1Name}'s attack to the ${p1Action.hit}.`);
   }
 
-  // Player 2 attacks Player 1
-  if (p2Action.hit !== p1Action.defend) {
-    // Calculate damage
-    const avoidChance = Math.min((player1.agility - player2.agility) * 5, 75);
-    const avoidRoll = Math.random() * 100;
-    if (avoidRoll >= avoidChance) {
-      p2Damage = player2.power;
-      player1.hp = Math.max(player1.hp - p2Damage, 0);
-      roundLog.push(`${playerProfiles[fight.player2_id].nickname} hit ${playerProfiles[fight.player1_id].nickname}'s ${p2Action.hit}, dealing ${p2Damage} damage.`);
+  // Player 2 attacks Player 1 - using game analyzer damage calculation
+  const p2AttackResult = calculateDamage(player2, player1, p2Action.hit, p1Action.defend);
+  p2Damage = p2AttackResult.damage;
+
+  if (p2AttackResult.effect === "dodged") {
+    roundLog.push(`${p1Name} dodged ${p2Name}'s attack to the ${p2Action.hit}.`);
+  } else if (p2Damage > 0) {
+    player1.hp = Math.max(player1.hp - p2Damage, 0);
+
+    let attackMsg = "";
+    if (p2AttackResult.effect === "super_attack") {
+      attackMsg = `${p2Name} performed a super attack on ${p1Name}'s ${p2Action.hit}`;
+    } else if (p2AttackResult.blocked) {
+      attackMsg = `${p2Name} hit ${p1Name}'s protected ${p2Action.hit}`;
     } else {
-      roundLog.push(`${playerProfiles[fight.player1_id].nickname} dodged ${playerProfiles[fight.player2_id].nickname}'s attack to the ${p2Action.hit}.`);
+      attackMsg = `${p2Name} hit ${p1Name}'s ${p2Action.hit}`;
     }
+
+    roundLog.push(`${attackMsg}, dealing ${p2Damage} damage.`);
   } else {
-    // Player 1 defends against Player 2's attack
-    const diff = player2.power - player1.defense;
-    if (diff <= 0) {
-      roundLog.push(`${playerProfiles[fight.player1_id].nickname} blocked ${playerProfiles[fight.player2_id].nickname}'s attack to the ${p2Action.hit}.`);
-    } else {
-      const chance = diff === 1 ? 50 : 100;
-      const roll = Math.random() * 100;
-      if (roll < chance) {
-        p2Damage = diff;
-        player1.hp = Math.max(player1.hp - p2Damage, 0);
-        roundLog.push(`${playerProfiles[fight.player2_id].nickname} hit ${playerProfiles[fight.player1_id].nickname}'s protected ${p2Action.hit}, dealing ${p2Damage} damage.`);
-      } else {
-        roundLog.push(`${playerProfiles[fight.player1_id].nickname} blocked ${playerProfiles[fight.player2_id].nickname}'s attack to the ${p2Action.hit}.`);
-      }
-    }
+    roundLog.push(`${p1Name} blocked ${p2Name}'s attack to the ${p2Action.hit}.`);
   }
 
   // Add to full log
@@ -1252,6 +1590,73 @@ function handleRoundTimeout(fight_id) {
     delete pvpFights[fight_id];
   }, 60000);
 }
+
+// Inventory and Equipment API endpoints
+app.get("/inventory/:player_id", (req, res) => {
+  const { player_id } = req.params;
+  const profile = playerProfiles[player_id];
+
+  if (!profile) {
+    return res.status(404).json({ error: "Player not found" });
+  }
+
+  res.json({
+    inventory: profile.inventory || {},
+    equipment: profile.equipment || { basic_slots: [], hand_slots: [] },
+    items: ITEMS // Send item definitions for frontend
+  });
+});
+
+app.post("/equip-item", (req, res) => {
+  const { player_id, item_type, slot_index, slot_type } = req.body;
+  const profile = playerProfiles[player_id];
+
+  if (!profile) {
+    return res.status(404).json({ error: "Player not found" });
+  }
+
+  const result = equipItem(profile, item_type, slot_index, slot_type);
+  if (result.success) {
+    saveProfiles();
+    res.json({ success: true, equipment: profile.equipment });
+  } else {
+    res.status(400).json({ error: result.reason });
+  }
+});
+
+app.post("/unequip-item", (req, res) => {
+  const { player_id, slot_index, slot_type } = req.body;
+  const profile = playerProfiles[player_id];
+
+  if (!profile) {
+    return res.status(404).json({ error: "Player not found" });
+  }
+
+  const result = unequipItem(profile, slot_index, slot_type);
+  if (result.success) {
+    saveProfiles();
+    res.json({ success: true, equipment: profile.equipment, inventory: profile.inventory });
+  } else {
+    res.status(400).json({ error: result.reason });
+  }
+});
+
+app.post("/give-item", (req, res) => {
+  const { player_id, item_type, quantity = 1 } = req.body;
+  const profile = playerProfiles[player_id];
+
+  if (!profile) {
+    return res.status(404).json({ error: "Player not found" });
+  }
+
+  const success = giveItemToPlayer(profile, item_type, quantity);
+  if (success) {
+    saveProfiles();
+    res.json({ success: true, inventory: profile.inventory });
+  } else {
+    res.status(400).json({ error: "Invalid item type" });
+  }
+});
 
 // Clean up old challenges and fights (optional - run periodically)
 setInterval(() => {
