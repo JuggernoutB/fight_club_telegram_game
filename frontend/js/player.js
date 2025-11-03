@@ -186,19 +186,19 @@ function showGame(profile) {
     document.body.innerHTML = `
         <div class="game-container">
             <div class="game-header">
-                <h1>⚔️ FIGHT CLUB</h1>
-                <div class="subtitle">Ready for battle, warrior?</div>
+                <h1>⚔️ ${t('gameTitle')}</h1>
+                <div class="subtitle">${t('gameSubtitle')}</div>
             </div>
 
             <div class="tab-navigation">
                 <button class="tab-button active" id="lobbyTab" onclick="switchTab('lobby')">
-                    🏠 Lobby
+                    🏠 ${t('lobbyTab')}
                 </button>
                 <button class="tab-button" id="equipmentTab" onclick="switchTab('equipment')">
-                    ⚔️ Equipment
+                    ⚔️ ${t('equipmentTab')}
                 </button>
                 <button class="tab-button" id="settingsTab" onclick="switchTab('settings')">
-                    ⚙️ Settings
+                    ⚙️ ${t('settingsTab')}
                 </button>
             </div>
 
@@ -271,9 +271,9 @@ function showLobbyTab() {
                     ${raceAvatar}
                 </div>
                 <div class="player-details">
-                    <h2>Welcome, ${profile.nickname}!</h2>
+                    <h2>${t('welcome')}, ${profile.nickname}!</h2>
                     <div class="player-level">
-                        <span class="level-badge ${canAllocatePoints ? 'level-up-glow' : ''}">Level ${profile.level}</span>
+                        <span class="level-badge ${canAllocatePoints ? 'level-up-glow' : ''}">${t('level')} ${profile.level}</span>
                         <span class="stars">${levelStars}</span>
                     </div>
                 </div>
@@ -281,45 +281,45 @@ function showLobbyTab() {
 
             <div class="stats-grid">
                 <div class="stat-card">
-                    <div class="stat-label">⚔️ Power</div>
+                    <div class="stat-label">⚔️ ${t('power')}</div>
                     <div class="stat-value">${profile.power}</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-label">🛡️ Defense</div>
+                    <div class="stat-label">🛡️ ${t('defense')}</div>
                     <div class="stat-value">${profile.defense}</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-label">💨 Agility</div>
+                    <div class="stat-label">💨 ${t('agility')}</div>
                     <div class="stat-value">${profile.agility}</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-label">🧠 Knowledge</div>
+                    <div class="stat-label">🧠 ${t('knowledge')}</div>
                     <div class="stat-value">${profile.knowledge}</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-label">🏆 Race</div>
-                    <div class="stat-value">${capitalizeFirst(profile.race)}</div>
+                    <div class="stat-label">🏆 ${t('race')}</div>
+                    <div class="stat-value">${t(`races.${profile.race}`)}</div>
                 </div>
             </div>
 
             <div class="progress-container">
                 <div class="progress-item">
                     <div class="progress-label">
-                        <span>❤️ Health Points</span>
+                        <span>❤️ ${t('healthPoints')}</span>
                         <span class="progress-text">${profile.hp}/${profile.hp}</span>
                     </div>
                     ${renderHPBar(profile.hp, profile.hp)}
                 </div>
                 <div class="progress-item">
                     <div class="progress-label">
-                        <span>⭐ Experience</span>
+                        <span>⭐ ${t('experience')}</span>
                         <span class="progress-text">${profile.experience}/${xpToNextLevel(profile.level)}</span>
                     </div>
                     ${renderXPBar(profile.experience, xpToNextLevel(profile.level))}
                 </div>
                 <div class="progress-item">
                     <div class="progress-label">
-                        <span>🔮 Mana Points</span>
+                        <span>🔮 ${t('manaPoints')}</span>
                         <span class="progress-text">${profile.mana || 0}/${profile.maxMana || 0}</span>
                     </div>
                     ${renderManaBar(profile.mana || 0, profile.maxMana || 0)}
@@ -329,14 +329,14 @@ function showLobbyTab() {
 
         <div class="actions-container">
             <button id="fightButton" class="btn-action btn-fight-bot">
-                🤖 Fight vs Bot
+                🤖 ${t('fightVsBot')}
             </button>
             <button id="playersListButton" class="btn-action btn-fight-player">
-                👥 Fight vs Player
+                👥 ${t('fightVsPlayer')}
             </button>
             ${canAllocatePoints ? `
                 <button id="allocatePointsButton" class="btn-action btn-allocate">
-                    📈 Allocate Points (${profile.extra_points || 3})
+                    📈 ${t('allocatePoints')} (${profile.extra_points || 3})
                 </button>
             ` : ""}
         </div>
@@ -363,9 +363,8 @@ function showEquipmentTab() {
     console.log("showEquipmentTab called");
     document.getElementById('tabContent').innerHTML = `
         <div class="equipment-container">
-            <h2>🎒 Equipment Tab</h2>
-            <p>This is the equipment tab content.</p>
-            <p>Inventory and equipment will be loaded here.</p>
+            <h2>🎒 ${t('inventoryEquipment')}</h2>
+            <p>${t('manageItems')}</p>
         </div>
     `;
     console.log("Equipment tab content rendered");
@@ -380,36 +379,36 @@ function showSettingsTab() {
     document.getElementById('tabContent').innerHTML = `
         <div class="settings-container">
             <div class="settings-header">
-                <h2>⚙️ Settings</h2>
-                <p>Customize your game experience</p>
+                <h2>⚙️ ${t('settings')}</h2>
+                <p>${t('customizeExperience')}</p>
             </div>
 
             <div class="settings-section">
                 <div class="setting-item">
                     <div class="setting-label">
-                        <strong>🌐 Language</strong>
-                        <p>Choose your preferred language</p>
+                        <strong>🌐 ${t('language')}</strong>
+                        <p>${t('chooseLanguage')}</p>
                     </div>
                     <div class="setting-control">
                         <select id="languageSelect" class="form-select">
                             <option value="en" ${currentLanguage === 'en' ? 'selected' : ''}>🇺🇸 English</option>
+                            <option value="ru" ${currentLanguage === 'ru' ? 'selected' : ''}>🇷🇺 Russian</option>
                             <option value="es" disabled>🇪🇸 Spanish (Coming Soon)</option>
                             <option value="fr" disabled>🇫🇷 French (Coming Soon)</option>
                             <option value="de" disabled>🇩🇪 German (Coming Soon)</option>
-                            <option value="ru" disabled>🇷🇺 Russian (Coming Soon)</option>
                         </select>
                     </div>
                 </div>
 
                 <div class="setting-item">
                     <button class="btn-secondary" onclick="saveSettings()">
-                        💾 Save Settings
+                        💾 ${t('saveSettings')}
                     </button>
                 </div>
 
                 <div class="setting-item">
                     <div class="setting-info">
-                        <small>Current Language: <strong>${getLanguageName(currentLanguage)}</strong></small>
+                        <small>${t('currentLanguage')}: <strong>${getLanguageName(currentLanguage)}</strong></small>
                     </div>
                 </div>
             </div>
@@ -580,10 +579,10 @@ window.saveSettings = function() {
 
     const selectedLanguage = languageSelect.value;
 
-    // Only allow English for now
-    if (selectedLanguage !== 'en') {
-        alert('This language is not yet available. Coming soon!');
-        languageSelect.value = 'en'; // Reset to English
+    // Allow English and Russian
+    if (selectedLanguage !== 'en' && selectedLanguage !== 'ru') {
+        alert(t('languageNotAvailable'));
+        languageSelect.value = getCurrentLanguage(); // Reset to current language
         return;
     }
 
@@ -598,7 +597,10 @@ window.saveSettings = function() {
     }
 
     // Show success message
-    alert(`Settings saved! Language set to ${languageName}.`);
+    // Trigger language update
+    setLanguage(selectedLanguage);
+
+    alert(`${t('settingsSaved')} ${languageName}.`);
 
     console.log('Language setting saved:', selectedLanguage);
 }
