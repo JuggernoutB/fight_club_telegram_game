@@ -1547,3 +1547,65 @@ body {
 .setting-info strong {
   color: var(--secondary-gold);
 }
+
+/* Map Screen Styles */
+.map-container {
+  padding: 20px;
+}
+
+.map-locations {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: center;
+}
+
+.btn-location {
+  width: 100%;
+  max-width: 300px;
+  min-height: 60px;
+  font-size: 18px;
+  font-weight: bold;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--primary-brown) 0%, var(--secondary-gold) 100%);
+  border: 2px solid var(--border-gold);
+  color: var(--text-white);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: var(--shadow-button);
+}
+
+.btn-location:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(135deg, #a0571b 0%, #e6b82a 100%);
+}
+
+.btn-location:active {
+  transform: translateY(0);
+  box-shadow: var(--shadow-inset);
+}
+
+.btn-back {
+  background: linear-gradient(135deg, #666 0%, #888 100%);
+  border-color: #666;
+}
+
+.btn-back:hover {
+  background: linear-gradient(135deg, #777 0%, #999 100%);
+  border-color: #777;
+}
+
+.btn-map {
+  background: linear-gradient(135deg, #2E8B57 0%, #3CB371 100%);
+  border-color: #2E8B57;
+}
+
+.btn-map:hover {
+  background: linear-gradient(135deg, #32a065 0%, #45c380 100%);
+  border-color: #32a065;
+}

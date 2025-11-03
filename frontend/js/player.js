@@ -334,6 +334,9 @@ function showLobbyTab() {
             <button id="playersListButton" class="btn-action btn-fight-player">
                 👥 ${t('fightVsPlayer')}
             </button>
+            <button id="mapButton" class="btn-action btn-map">
+                🗺️ ${t('map')}
+            </button>
             ${canAllocatePoints ? `
                 <button id="allocatePointsButton" class="btn-action btn-allocate">
                     📈 ${t('allocatePoints')} (${profile.extra_points || 3})
@@ -349,6 +352,7 @@ function showLobbyTab() {
 
     // Bind event handlers
     document.getElementById("fightButton").onclick = () => showFightScreen(profile);
+    document.getElementById("mapButton").onclick = () => showMapScreen(profile);
 
     if (canAllocatePoints) {
         document.getElementById("allocatePointsButton").onclick = () => showAllocatePoints(profile);
@@ -415,6 +419,55 @@ function showSettingsTab() {
         </div>
     `;
     console.log("Settings tab content rendered");
+}
+
+function showMapScreen(profile) {
+    console.log("showMapScreen called");
+
+    document.body.innerHTML = `
+        <div class="game-container">
+            <div class="game-header">
+                <h1>🗺️ ${t('gameMap')}</h1>
+                <div class="subtitle">${t('exploreWorld')}</div>
+            </div>
+
+            <div class="map-container">
+                <div class="map-locations">
+                    <button id="arenaButton" class="btn-action btn-location">
+                        🏟️ ${t('arena')}
+                    </button>
+                    <button id="shopButton" class="btn-action btn-location">
+                        🏪 ${t('shop')}
+                    </button>
+                    <button id="rewardHubButton" class="btn-action btn-location">
+                        🏆 ${t('rewardHub')}
+                    </button>
+                    <button id="backToLobbyButton" class="btn-action btn-back">
+                        🏠 ${t('backToLobby')}
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Bind event handlers
+    document.getElementById("arenaButton").onclick = () => {
+        console.log("Arena clicked - not implemented yet");
+    };
+
+    document.getElementById("shopButton").onclick = () => {
+        console.log("Shop clicked - not implemented yet");
+    };
+
+    document.getElementById("rewardHubButton").onclick = () => {
+        console.log("Reward Hub clicked - not implemented yet");
+    };
+
+    document.getElementById("backToLobbyButton").onclick = () => {
+        showGame(profile);
+    };
+
+    console.log("Map screen rendered");
 }
 
 async function loadInventoryData() {
