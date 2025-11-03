@@ -650,7 +650,17 @@ app.post("/create-profile", (req, res) => {
     experience: 0,
     level: 1,
     extra_points: 0,
-    last_seen: Date.now()
+    coins: 20,
+    tickets: 2,
+    last_seen: Date.now(),
+    equipment: {
+      basic_slots: [null, null],
+      hand_slots: [null, null]
+    },
+    inventory: {
+      stone: 3,
+      wooden_stick: 1
+    }
   };
 
   saveProfiles();
@@ -916,7 +926,9 @@ app.get("/profile/:telegram_id", (req, res) => {
         maxMana: profile.maxMana,
         experience: profile.experience,
         level: profile.level,
-        extra_points: profile.extra_points
+        extra_points: profile.extra_points,
+        coins: profile.coins || 0,
+        tickets: profile.tickets || 0
       }
     });
   } else {

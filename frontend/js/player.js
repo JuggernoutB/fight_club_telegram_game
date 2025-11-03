@@ -303,6 +303,14 @@ function showLobbyTab() {
                     <div class="stat-label">🏆 ${t('race')}</div>
                     <div class="stat-value">${t(`races.${profile.race}`)}</div>
                 </div>
+                <div class="stat-card">
+                    <div class="stat-label">🪙 ${t('coins')}</div>
+                    <div class="stat-value">${profile.coins || 0}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">🎫 ${t('tickets')}</div>
+                    <div class="stat-value">${profile.tickets || 0}</div>
+                </div>
             </div>
 
             <div class="progress-container">
