@@ -373,11 +373,46 @@ function showEquipmentTab() {
 
 function showSettingsTab() {
     console.log("showSettingsTab called");
+
+    // Get current language setting (default to English)
+    const currentLanguage = localStorage.getItem('gameLanguage') || 'en';
+
     document.getElementById('tabContent').innerHTML = `
         <div class="settings-container">
-            <h2>⚙️ Settings Tab</h2>
-            <p>This is the settings tab content.</p>
-            <p>Language and other settings will be here.</p>
+            <div class="settings-header">
+                <h2>⚙️ Settings</h2>
+                <p>Customize your game experience</p>
+            </div>
+
+            <div class="settings-section">
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <strong>🌐 Language</strong>
+                        <p>Choose your preferred language</p>
+                    </div>
+                    <div class="setting-control">
+                        <select id="languageSelect" class="form-select">
+                            <option value="en" ${currentLanguage === 'en' ? 'selected' : ''}>🇺🇸 English</option>
+                            <option value="es" disabled>🇪🇸 Spanish (Coming Soon)</option>
+                            <option value="fr" disabled>🇫🇷 French (Coming Soon)</option>
+                            <option value="de" disabled>🇩🇪 German (Coming Soon)</option>
+                            <option value="ru" disabled>🇷🇺 Russian (Coming Soon)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="setting-item">
+                    <button class="btn-secondary" onclick="saveSettings()">
+                        💾 Save Settings
+                    </button>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <small>Current Language: <strong>${getLanguageName(currentLanguage)}</strong></small>
+                    </div>
+                </div>
+            </div>
         </div>
     `;
     console.log("Settings tab content rendered");
@@ -524,16 +559,48 @@ window.unequipItem = async function(slotType, slotIndex) {
     }
 }
 
+function getLanguageName(languageCode) {
+    const languages = {
+        'en': 'English',
+        'es': 'Spanish',
+        'fr': 'French',
+        'de': 'German',
+        'ru': 'Russian'
+    };
+    return languages[languageCode] || 'English';
+}
+
 // Make saveSettings globally available
 window.saveSettings = function() {
-    const language = document.getElementById('languageSelect').value;
-
-    // For now, just show a message since we only have English
-    if (language === 'en') {
-        alert('Settings saved! Language set to English.');
-    } else {
-        alert('This language is not yet available. Coming soon!');
+    const languageSelect = document.getElementById('languageSelect');
+    if (!languageSelect) {
+        alert('Language selection not found');
+        return;
     }
+
+    const selectedLanguage = languageSelect.value;
+
+    // Only allow English for now
+    if (selectedLanguage !== 'en') {
+        alert('This language is not yet available. Coming soon!');
+        languageSelect.value = 'en'; // Reset to English
+        return;
+    }
+
+    // Save language to localStorage
+    localStorage.setItem('gameLanguage', selectedLanguage);
+
+    // Update the current language display
+    const languageName = getLanguageName(selectedLanguage);
+    const settingInfo = document.querySelector('.setting-info strong');
+    if (settingInfo) {
+        settingInfo.textContent = languageName;
+    }
+
+    // Show success message
+    alert(`Settings saved! Language set to ${languageName}.`);
+
+    console.log('Language setting saved:', selectedLanguage);
 }
 
 function getRaceAvatar(race) {
