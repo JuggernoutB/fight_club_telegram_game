@@ -1609,3 +1609,73 @@ body {
   background: linear-gradient(135deg, #32a065 0%, #45c380 100%);
   border-color: #32a065;
 }
+
+/* Arena Screen Styles */
+.arena-container {
+  padding: 20px;
+}
+
+.arena-options {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: center;
+}
+
+.btn-arena {
+  background: linear-gradient(135deg, #8B0000 0%, #DC143C 100%);
+  border-color: #8B0000;
+}
+
+.btn-arena:hover {
+  background: linear-gradient(135deg, #A00000 0%, #F01447 100%);
+  border-color: #A00000;
+}
+
+/* Shop Screen Styles */
+.shop-container {
+  padding: 20px;
+}
+
+.shop-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  align-items: center;
+  text-align: center;
+}
+
+.btn-shop {
+  background: linear-gradient(135deg, #4169E1 0%, #6495ED 100%);
+  border-color: #4169E1;
+}
+
+.btn-shop:hover {
+  background: linear-gradient(135deg, #4876FF 0%, #7BB3FF 100%);
+  border-color: #4876FF;
+}
+
+/* Reward Hub Screen Styles */
+.reward-hub-container {
+  padding: 20px;
+}
+
+.reward-hub-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  align-items: center;
+  text-align: center;
+}
+
+.btn-reward {
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+  border-color: #FFD700;
+  color: #333;
+}
+
+.btn-reward:hover {
+  background: linear-gradient(135deg, #FFED4E 0%, #FFB84D 100%);
+  border-color: #FFED4E;
+  color: #333;
+}

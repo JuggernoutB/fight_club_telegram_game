@@ -1,3 +1,6 @@
+// Global variable to track last visited screen for dynamic lobby button
+window.lastVisitedScreen = 'arena';
+
 function checkProfile() {
     fetchProfile(telegram_id)
         .then(data => {
@@ -179,8 +182,8 @@ function showAllocatePoints(profile) {
     renderForm();
 }
 
-function showGame(profile) {
-    console.log("Profile data:", profile);
+function showGame(profile, lastScreen = 'arena') {
+    console.log("Profile data:", profile, "lastScreen:", lastScreen);
     window.currentProfile = profile; // Store profile globally for tab switching
 
     document.body.innerHTML = `
@@ -328,12 +331,23 @@ function showLobbyTab() {
         </div>
 
         <div class="actions-container">
-            <button id="fightButton" class="btn-action btn-fight-bot">
-                🤖 ${t('fightVsBot')}
-            </button>
-            <button id="playersListButton" class="btn-action btn-fight-player">
-                👥 ${t('fightVsPlayer')}
-            </button>
+            ${window.lastVisitedScreen === 'arena' ? `
+                <button id="arenaButton" class="btn-action btn-arena">
+                    🏟️ ${t('enterArena')}
+                </button>
+            ` : window.lastVisitedScreen === 'shop' ? `
+                <button id="shopButton" class="btn-action btn-shop">
+                    🏪 ${t('enterShop')}
+                </button>
+            ` : window.lastVisitedScreen === 'rewardHub' ? `
+                <button id="rewardHubButton" class="btn-action btn-reward">
+                    🏆 ${t('enterRewardHub')}
+                </button>
+            ` : `
+                <button id="arenaButton" class="btn-action btn-arena">
+                    🏟️ ${t('enterArena')}
+                </button>
+            `}
             <button id="mapButton" class="btn-action btn-map">
                 🗺️ ${t('map')}
             </button>
@@ -351,16 +365,23 @@ function showLobbyTab() {
     loadPlayerAvatar(profile.race);
 
     // Bind event handlers
-    document.getElementById("fightButton").onclick = () => showFightScreen(profile);
+    // Bind dynamic button based on lastVisitedScreen
+    if (window.lastVisitedScreen === 'arena') {
+        document.getElementById("arenaButton").onclick = () => showArenaScreen(profile);
+    } else if (window.lastVisitedScreen === 'shop') {
+        document.getElementById("shopButton").onclick = () => showShopScreen(profile);
+    } else if (window.lastVisitedScreen === 'rewardHub') {
+        document.getElementById("rewardHubButton").onclick = () => showRewardHubScreen(profile);
+    } else {
+        // Default fallback to arena
+        document.getElementById("arenaButton").onclick = () => showArenaScreen(profile);
+    }
+
     document.getElementById("mapButton").onclick = () => showMapScreen(profile);
 
     if (canAllocatePoints) {
         document.getElementById("allocatePointsButton").onclick = () => showAllocatePoints(profile);
     }
-
-    document.getElementById("playersListButton").onclick = () => {
-        window.location.href = `/players.html?telegram_id=${telegram_id}`;
-    };
 }
 
 function showEquipmentTab() {
@@ -452,15 +473,15 @@ function showMapScreen(profile) {
 
     // Bind event handlers
     document.getElementById("arenaButton").onclick = () => {
-        console.log("Arena clicked - not implemented yet");
+        showArenaScreen(window.currentProfile);
     };
 
     document.getElementById("shopButton").onclick = () => {
-        console.log("Shop clicked - not implemented yet");
+        showShopScreen(window.currentProfile);
     };
 
     document.getElementById("rewardHubButton").onclick = () => {
-        console.log("Reward Hub clicked - not implemented yet");
+        showRewardHubScreen(window.currentProfile);
     };
 
     document.getElementById("backToLobbyButton").onclick = () => {
@@ -468,6 +489,109 @@ function showMapScreen(profile) {
     };
 
     console.log("Map screen rendered");
+}
+
+function showArenaScreen(profile) {
+    console.log("showArenaScreen called");
+    window.lastVisitedScreen = 'arena';
+
+    document.body.innerHTML = `
+        <div class="game-container">
+            <div class="game-header">
+                <h1>🏟️ ${t('arenaTitle')}</h1>
+                <div class="subtitle">${t('arenaSubtitle')}</div>
+            </div>
+
+            <div class="arena-container">
+                <div class="arena-options">
+                    <button id="fightBotButton" class="btn-action btn-fight-bot">
+                        🤖 ${t('fightVsBot')}
+                    </button>
+                    <button id="fightPlayerButton" class="btn-action btn-fight-player">
+                        👥 ${t('fightVsPlayer')}
+                    </button>
+                    <button id="backToLobbyFromArenaButton" class="btn-action btn-back">
+                        🏠 ${t('backToLobby')}
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Bind event handlers
+    document.getElementById("fightBotButton").onclick = () => {
+        showFightScreen(profile);
+    };
+
+    document.getElementById("fightPlayerButton").onclick = () => {
+        window.location.href = `/players.html?telegram_id=${telegram_id}`;
+    };
+
+    document.getElementById("backToLobbyFromArenaButton").onclick = () => {
+        showGame(profile);
+    };
+
+    console.log("Arena screen rendered");
+}
+
+function showShopScreen(profile) {
+    console.log("showShopScreen called");
+    window.lastVisitedScreen = 'shop';
+
+    document.body.innerHTML = `
+        <div class="game-container">
+            <div class="game-header">
+                <h1>🏪 ${t('shopTitle')}</h1>
+                <div class="subtitle">${t('shopSubtitle')}</div>
+            </div>
+
+            <div class="shop-container">
+                <div class="shop-content">
+                    <p>Shop functionality coming soon!</p>
+                    <button id="backToLobbyFromShopButton" class="btn-action btn-back">
+                        🏠 ${t('backToLobby')}
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Bind event handlers
+    document.getElementById("backToLobbyFromShopButton").onclick = () => {
+        showGame(profile, 'shop');
+    };
+
+    console.log("Shop screen rendered");
+}
+
+function showRewardHubScreen(profile) {
+    console.log("showRewardHubScreen called");
+    window.lastVisitedScreen = 'rewardHub';
+
+    document.body.innerHTML = `
+        <div class="game-container">
+            <div class="game-header">
+                <h1>🏆 ${t('rewardHubTitle')}</h1>
+                <div class="subtitle">${t('rewardHubSubtitle')}</div>
+            </div>
+
+            <div class="reward-hub-container">
+                <div class="reward-hub-content">
+                    <p>Reward Hub functionality coming soon!</p>
+                    <button id="backToLobbyFromRewardHubButton" class="btn-action btn-back">
+                        🏠 ${t('backToLobby')}
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Bind event handlers
+    document.getElementById("backToLobbyFromRewardHubButton").onclick = () => {
+        showGame(profile, 'rewardHub');
+    };
+
+    console.log("Reward Hub screen rendered");
 }
 
 async function loadInventoryData() {
