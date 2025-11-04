@@ -1735,6 +1735,119 @@ app.post("/give-item", (req, res) => {
   }
 });
 
+// New Equip/Unequip item endpoints for Equipment Tab
+app.post("/equip-item-v2", (req, res) => {
+  const { telegram_id, item_name, slot_type, slot_index } = req.body;
+
+  console.log("Equip item v2 request received:");
+  console.log("- telegram_id:", telegram_id);
+  console.log("- item_name:", item_name);
+  console.log("- slot_type:", slot_type);
+  console.log("- slot_index:", slot_index);
+
+  const profile = playerProfiles[telegram_id];
+  if (!profile) {
+    return res.status(404).json({ message: "Profile not found" });
+  }
+
+  // Validate item exists in inventory
+  if (!profile.inventory || !profile.inventory[item_name] || profile.inventory[item_name] <= 0) {
+    return res.status(400).json({ message: "Item not available in inventory" });
+  }
+
+  // Validate slot type and index
+  if (!profile.equipment) {
+    profile.equipment = { basic_slots: [null, null], hand_slots: [null, null] };
+  }
+
+  if (slot_type !== "basic_slots" && slot_type !== "hand_slots") {
+    return res.status(400).json({ message: "Invalid slot type" });
+  }
+
+  if (slot_index < 0 || slot_index >= profile.equipment[slot_type].length) {
+    return res.status(400).json({ message: "Invalid slot index" });
+  }
+
+  // Validate item can be equipped in this slot type
+  const item = ITEMS[item_name];
+  if (!item) {
+    return res.status(400).json({ message: "Unknown item" });
+  }
+
+  const expectedSlotType = item.slot === "basic" ? "basic_slots" : "hand_slots";
+  if (slot_type !== expectedSlotType) {
+    return res.status(400).json({ message: `Item ${item_name} cannot be equipped in ${slot_type}` });
+  }
+
+  // If slot is occupied, return item to inventory
+  const currentItem = profile.equipment[slot_type][slot_index];
+  if (currentItem) {
+    profile.inventory[currentItem] = (profile.inventory[currentItem] || 0) + 1;
+  }
+
+  // Equip new item
+  profile.equipment[slot_type][slot_index] = item_name;
+  profile.inventory[item_name]--;
+
+  // Remove item from inventory if quantity reaches 0
+  if (profile.inventory[item_name] <= 0) {
+    delete profile.inventory[item_name];
+  }
+
+  saveProfiles();
+
+  res.json({
+    message: "Item equipped successfully",
+    equipment: profile.equipment,
+    inventory: profile.inventory
+  });
+});
+
+app.post("/unequip-item-v2", (req, res) => {
+  const { telegram_id, slot_type, slot_index } = req.body;
+
+  console.log("Unequip item v2 request received:");
+  console.log("- telegram_id:", telegram_id);
+  console.log("- slot_type:", slot_type);
+  console.log("- slot_index:", slot_index);
+
+  const profile = playerProfiles[telegram_id];
+  if (!profile) {
+    return res.status(404).json({ message: "Profile not found" });
+  }
+
+  if (!profile.equipment) {
+    return res.status(400).json({ message: "No equipment found" });
+  }
+
+  if (slot_type !== "basic_slots" && slot_type !== "hand_slots") {
+    return res.status(400).json({ message: "Invalid slot type" });
+  }
+
+  if (slot_index < 0 || slot_index >= profile.equipment[slot_type].length) {
+    return res.status(400).json({ message: "Invalid slot index" });
+  }
+
+  const item_name = profile.equipment[slot_type][slot_index];
+  if (!item_name) {
+    return res.status(400).json({ message: "Slot is already empty" });
+  }
+
+  // Return item to inventory
+  profile.inventory[item_name] = (profile.inventory[item_name] || 0) + 1;
+
+  // Clear equipment slot
+  profile.equipment[slot_type][slot_index] = null;
+
+  saveProfiles();
+
+  res.json({
+    message: "Item unequipped successfully",
+    equipment: profile.equipment,
+    inventory: profile.inventory
+  });
+});
+
 // Clean up old challenges and fights (optional - run periodically)
 setInterval(() => {
   const now = Date.now();

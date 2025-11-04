@@ -14,20 +14,20 @@
     "extra_points": 0,
     "coins": 5,
     "tickets": 2,
-    "last_seen": 1762244349014,
+    "last_seen": 1762245425718,
     "equipment": {
       "basic_slots": [
-        null,
-        null
+        "stone",
+        "stone"
       ],
       "hand_slots": [
-        null,
+        "wooden_stick",
         null
       ]
     },
     "inventory": {
-      "stone": 5,
-      "wooden_stick": 2
+      "stone": 3,
+      "wooden_stick": 1
     }
   },
   "test_user": {

@@ -427,7 +427,7 @@ async function showEquipmentTab() {
             for (const [itemName, quantity] of Object.entries(profile.inventory)) {
                 if (quantity > 0) {
                     inventoryHTML += `
-                        <div class="inventory-item">
+                        <div class="inventory-item clickable" onclick="equipItem('${itemName}')">
                             <span class="item-name">${t('items.' + itemName)}</span>
                             <span class="item-quantity">x${quantity}</span>
                         </div>
@@ -444,8 +444,12 @@ async function showEquipmentTab() {
         let basicSlotsHTML = '';
         for (let i = 0; i < equipment.basic_slots.length; i++) {
             const item = equipment.basic_slots[i];
+            const isEmpty = !item;
+            const clickHandler = isEmpty ? `onclick="selectEquipmentSlot('basic_slots', ${i})"` : `onclick="unequipItem('basic_slots', ${i})"`;
+            const classes = isEmpty ? 'equipment-slot empty clickable' : 'equipment-slot filled clickable';
+
             basicSlotsHTML += `
-                <div class="equipment-slot">
+                <div class="${classes}" ${clickHandler}>
                     ${item ? t('items.' + item) : t('empty')}
                 </div>
             `;
@@ -454,8 +458,12 @@ async function showEquipmentTab() {
         let handSlotsHTML = '';
         for (let i = 0; i < equipment.hand_slots.length; i++) {
             const item = equipment.hand_slots[i];
+            const isEmpty = !item;
+            const clickHandler = isEmpty ? `onclick="selectEquipmentSlot('hand_slots', ${i})"` : `onclick="unequipItem('hand_slots', ${i})"`;
+            const classes = isEmpty ? 'equipment-slot empty clickable' : 'equipment-slot filled clickable';
+
             handSlotsHTML += `
-                <div class="equipment-slot">
+                <div class="${classes}" ${clickHandler}>
                     ${item ? t('items.' + item) : t('empty')}
                 </div>
             `;
@@ -505,6 +513,101 @@ async function showEquipmentTab() {
                 <p>${t('failedToLoad')} ${t('inventoryEquipment')}</p>
             </div>
         `;
+    }
+}
+
+// Global variables for equipment interaction
+let selectedSlotType = null;
+let selectedSlotIndex = null;
+
+// Function to equip an item from inventory
+async function equipItem(itemName) {
+    console.log("equipItem called with:", itemName);
+
+    // Check if we need to ask user which slot to equip to
+    if (!selectedSlotType || selectedSlotIndex === null) {
+        alert(`Click on an empty slot to equip ${t('items.' + itemName)}`);
+        // Store the item to equip
+        window.pendingEquipItem = itemName;
+        return;
+    }
+
+    try {
+        const response = await fetch("/equip-item-v2", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                telegram_id: telegram_id,
+                item_name: itemName,
+                slot_type: selectedSlotType,
+                slot_index: selectedSlotIndex
+            })
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            console.log("Item equipped successfully:", result);
+
+            // Clear selection
+            selectedSlotType = null;
+            selectedSlotIndex = null;
+            window.pendingEquipItem = null;
+
+            // Refresh equipment tab
+            await showEquipmentTab();
+        } else {
+            const error = await response.json();
+            alert(error.message || "Failed to equip item");
+        }
+    } catch (error) {
+        console.error("Error equipping item:", error);
+        alert("Connection error while equipping item");
+    }
+}
+
+// Function to unequip an item from equipment slot
+async function unequipItem(slotType, slotIndex) {
+    console.log("unequipItem called with:", slotType, slotIndex);
+
+    try {
+        const response = await fetch("/unequip-item-v2", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                telegram_id: telegram_id,
+                slot_type: slotType,
+                slot_index: slotIndex
+            })
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            console.log("Item unequipped successfully:", result);
+
+            // Refresh equipment tab
+            await showEquipmentTab();
+        } else {
+            const error = await response.json();
+            alert(error.message || "Failed to unequip item");
+        }
+    } catch (error) {
+        console.error("Error unequipping item:", error);
+        alert("Connection error while unequipping item");
+    }
+}
+
+// Function to select an equipment slot for equipping
+function selectEquipmentSlot(slotType, slotIndex) {
+    console.log("selectEquipmentSlot called with:", slotType, slotIndex);
+
+    selectedSlotType = slotType;
+    selectedSlotIndex = slotIndex;
+
+    // If there's a pending item to equip, equip it now
+    if (window.pendingEquipItem) {
+        equipItem(window.pendingEquipItem);
+    } else {
+        alert(`Selected slot: ${slotType} ${slotIndex + 1}. Now click on an inventory item to equip it here.`);
     }
 }
 
