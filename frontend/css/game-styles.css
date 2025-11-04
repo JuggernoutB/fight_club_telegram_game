@@ -1852,3 +1852,156 @@ body {
   background: rgba(255, 107, 53, 0.2);
   box-shadow: 0 0 10px rgba(255, 107, 53, 0.5);
 }
+
+/* Reward Hub Styles */
+.reward-hub-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.reward-hub-tabs {
+  display: flex;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 12px;
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.reward-tab-button {
+  flex: 1;
+  padding: 15px 20px;
+  background: none;
+  border: none;
+  color: var(--text-cream);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 16px;
+  font-weight: 500;
+  position: relative;
+}
+
+.reward-tab-button:hover {
+  background: rgba(218, 165, 32, 0.2);
+  color: var(--secondary-gold);
+}
+
+.reward-tab-button.active {
+  background: linear-gradient(135deg, var(--secondary-gold) 0%, #FFD700 100%);
+  color: #333;
+  font-weight: 600;
+}
+
+.reward-hub-content {
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 12px;
+  padding: 30px;
+  min-height: 400px;
+}
+
+/* Daily Rewards Styles */
+.daily-rewards-content h3,
+.tasks-content h3,
+.lottery-content h3 {
+  color: var(--secondary-gold);
+  margin-bottom: 20px;
+  font-size: 24px;
+  text-align: center;
+}
+
+.daily-reward-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(139, 69, 19, 0.3);
+  border: 2px solid rgba(184, 134, 11, 0.4);
+  border-radius: 8px;
+  padding: 15px 20px;
+  margin-bottom: 15px;
+  transition: all 0.3s ease;
+}
+
+.daily-reward-item:hover {
+  border-color: var(--secondary-gold);
+  background: rgba(139, 69, 19, 0.5);
+}
+
+.reward-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.reward-icon {
+  font-size: 24px;
+}
+
+.reward-text {
+  color: var(--text-cream);
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.btn-claim {
+  background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.btn-claim:hover {
+  background: linear-gradient(135deg, #45a049 0%, #4CAF50 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Tasks Content */
+.tasks-list {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-cream);
+  opacity: 0.7;
+  font-style: italic;
+}
+
+/* Lottery Content */
+.lottery-info {
+  text-align: center;
+  padding: 20px;
+}
+
+.lottery-info p {
+  color: var(--text-cream);
+  font-size: 18px;
+  margin-bottom: 20px;
+}
+
+.lottery-timer {
+  font-size: 16px;
+  color: var(--secondary-gold);
+  font-weight: 600;
+  margin-top: 20px;
+}
+
+/* Reward claimed message */
+.reward-claimed-message {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.success-message {
+  color: #4CAF50;
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 15px;
+}
+
+.reward-claimed-message p:last-child {
+  color: var(--text-cream);
+  opacity: 0.8;
+  font-style: italic;
+}

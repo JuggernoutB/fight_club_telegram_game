@@ -160,7 +160,22 @@ const translations = {
         // Reward Hub screen
         rewardHubTitle: "REWARD HUB",
         rewardHubSubtitle: "Claim your rewards",
-        enterRewardHub: "Enter Reward Hub"
+        enterRewardHub: "Enter Reward Hub",
+
+        // Reward Hub tabs
+        dailyRewards: "Daily",
+        tasks: "Tasks",
+        lottery: "Lottery",
+        dailyRewardsTab: "Daily Rewards",
+        tasksTab: "Tasks",
+        lotteryTab: "Lottery",
+        claimReward: "Claim Reward",
+        rewardClaimed: "Reward Claimed!",
+        comeBackTomorrow: "Come back tomorrow for more rewards!",
+        noTasksAvailable: "No tasks available right now",
+        buyLotteryTicket: "Buy Lottery Ticket",
+        lotteryDrawTime: "Next draw in:",
+        yourTickets: "Your tickets:"
     },
 
     ru: {
@@ -323,7 +338,22 @@ const translations = {
         // Reward Hub screen
         rewardHubTitle: "ЦЕНТР НАГРАД",
         rewardHubSubtitle: "Получить награды",
-        enterRewardHub: "Войти в центр наград"
+        enterRewardHub: "Войти в центр наград",
+
+        // Reward Hub tabs
+        dailyRewards: "Ежедневные",
+        tasks: "Задания",
+        lottery: "Лотерея",
+        dailyRewardsTab: "Ежедневные награды",
+        tasksTab: "Задания",
+        lotteryTab: "Лотерея",
+        claimReward: "Получить награду",
+        rewardClaimed: "Награда получена!",
+        comeBackTomorrow: "Возвращайтесь завтра за новыми наградами!",
+        noTasksAvailable: "Заданий пока нет",
+        buyLotteryTicket: "Купить лотерейный билет",
+        lotteryDrawTime: "Следующий розыгрыш через:",
+        yourTickets: "Ваши билеты:"
     }
 };
 

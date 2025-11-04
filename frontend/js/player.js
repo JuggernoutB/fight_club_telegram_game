@@ -932,22 +932,124 @@ function showRewardHubScreen(profile) {
             </div>
 
             <div class="reward-hub-container">
-                <div class="reward-hub-content">
-                    <p>Reward Hub functionality coming soon!</p>
-                    <button id="backToLobbyFromRewardHubButton" class="btn-action btn-back">
-                        🏠 ${t('backToLobby')}
+                <div class="reward-hub-tabs">
+                    <button class="reward-tab-button active" id="dailyTab" onclick="showRewardHubTab('daily')">
+                        ${t('dailyRewards')}
                     </button>
+                    <button class="reward-tab-button" id="tasksTab" onclick="showRewardHubTab('tasks')">
+                        ${t('tasks')}
+                    </button>
+                    <button class="reward-tab-button" id="lotteryTab" onclick="showRewardHubTab('lottery')">
+                        ${t('lottery')}
+                    </button>
+                </div>
+
+                <div class="reward-hub-content">
+                    <div id="rewardTabContent">
+                        <!-- Content will be loaded here -->
+                    </div>
                 </div>
             </div>
         </div>
     `;
 
-    // Bind event handlers
-    document.getElementById("backToLobbyFromRewardHubButton").onclick = () => {
-        showGame(profile, 'rewardHub');
-    };
+    // Show default tab
+    showRewardHubTab('daily', profile);
 
     console.log("Reward Hub screen rendered");
+}
+
+function showRewardHubTab(tabName, profile) {
+    // Update active tab
+    document.querySelectorAll('.reward-tab-button').forEach(btn => btn.classList.remove('active'));
+    document.getElementById(tabName + 'Tab').classList.add('active');
+
+    let content = '';
+
+    switch(tabName) {
+        case 'daily':
+            content = `
+                <div class="daily-rewards-content">
+                    <h3>${t('dailyRewardsTab')}</h3>
+                    <div class="daily-reward-item">
+                        <div class="reward-info">
+                            <span class="reward-icon">🪙</span>
+                            <span class="reward-text">5 ${t('coins')}</span>
+                        </div>
+                        <button class="btn-action btn-claim" onclick="claimDailyReward()">
+                            ${t('claimReward')}
+                        </button>
+                    </div>
+                    <div class="daily-reward-item">
+                        <div class="reward-info">
+                            <span class="reward-icon">🎫</span>
+                            <span class="reward-text">1 ${t('tickets')}</span>
+                        </div>
+                        <button class="btn-action btn-claim" onclick="claimDailyReward()">
+                            ${t('claimReward')}
+                        </button>
+                    </div>
+                    <button class="btn-action btn-back" onclick="showGame(window.currentProfile, 'rewardHub')">
+                        🏠 ${t('backToLobby')}
+                    </button>
+                </div>
+            `;
+            break;
+        case 'tasks':
+            content = `
+                <div class="tasks-content">
+                    <h3>${t('tasksTab')}</h3>
+                    <div class="tasks-list">
+                        <p>${t('noTasksAvailable')}</p>
+                    </div>
+                    <button class="btn-action btn-back" onclick="showGame(window.currentProfile, 'rewardHub')">
+                        🏠 ${t('backToLobby')}
+                    </button>
+                </div>
+            `;
+            break;
+        case 'lottery':
+            content = `
+                <div class="lottery-content">
+                    <h3>${t('lotteryTab')}</h3>
+                    <div class="lottery-info">
+                        <p>${t('yourTickets')} ${profile ? profile.tickets || 0 : 0}</p>
+                        <button class="btn-action btn-buy" onclick="buyLotteryTicket()">
+                            ${t('buyLotteryTicket')} (10 ${t('coins')})
+                        </button>
+                        <p class="lottery-timer">${t('lotteryDrawTime')} 24:00:00</p>
+                    </div>
+                    <button class="btn-action btn-back" onclick="showGame(window.currentProfile, 'rewardHub')">
+                        🏠 ${t('backToLobby')}
+                    </button>
+                </div>
+            `;
+            break;
+    }
+
+    document.getElementById('rewardTabContent').innerHTML = content;
+}
+
+function claimDailyReward() {
+    // Show success message
+    const content = document.getElementById('rewardTabContent');
+    content.innerHTML = `
+        <div class="daily-rewards-content">
+            <h3>${t('dailyRewardsTab')}</h3>
+            <div class="reward-claimed-message">
+                <p class="success-message">${t('rewardClaimed')}</p>
+                <p>${t('comeBackTomorrow')}</p>
+            </div>
+            <button class="btn-action btn-back" onclick="showGame(window.currentProfile, 'rewardHub')">
+                🏠 ${t('backToLobby')}
+            </button>
+        </div>
+    `;
+}
+
+function buyLotteryTicket() {
+    // Simple implementation - could be enhanced with server integration
+    alert(`${t('buyLotteryTicket')} - Feature coming soon!`);
 }
 
 async function loadInventoryData() {
