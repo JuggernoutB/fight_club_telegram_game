@@ -1959,6 +1959,23 @@ body {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
+.btn-claim-disabled {
+  background: rgba(100, 100, 100, 0.5);
+  color: rgba(255, 255, 255, 0.6);
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: not-allowed;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.btn-claim-disabled:hover {
+  background: rgba(100, 100, 100, 0.5);
+  transform: none;
+  box-shadow: none;
+}
+
 /* Tasks Content */
 .tasks-list {
   text-align: center;

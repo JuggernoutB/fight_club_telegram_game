@@ -175,7 +175,9 @@ const translations = {
         noTasksAvailable: "No tasks available right now",
         buyLotteryTicket: "Buy Lottery Ticket",
         lotteryDrawTime: "Next draw in:",
-        yourTickets: "Your tickets:"
+        yourTickets: "Your tickets:",
+        nextRewardIn: "Next reward in:",
+        rewardAvailable: "Available!"
     },
 
     ru: {
@@ -353,7 +355,9 @@ const translations = {
         noTasksAvailable: "Заданий пока нет",
         buyLotteryTicket: "Купить лотерейный билет",
         lotteryDrawTime: "Следующий розыгрыш через:",
-        yourTickets: "Ваши билеты:"
+        yourTickets: "Ваши билеты:",
+        nextRewardIn: "Следующая награда через:",
+        rewardAvailable: "Доступно!"
     }
 };
 

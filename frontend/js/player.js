@@ -968,32 +968,7 @@ function showRewardHubTab(tabName, profile) {
 
     switch(tabName) {
         case 'daily':
-            content = `
-                <div class="daily-rewards-content">
-                    <h3>${t('dailyRewardsTab')}</h3>
-                    <div class="daily-reward-item">
-                        <div class="reward-info">
-                            <span class="reward-icon">🪙</span>
-                            <span class="reward-text">5 ${t('coins')}</span>
-                        </div>
-                        <button class="btn-action btn-claim" onclick="claimDailyReward()">
-                            ${t('claimReward')}
-                        </button>
-                    </div>
-                    <div class="daily-reward-item">
-                        <div class="reward-info">
-                            <span class="reward-icon">🎫</span>
-                            <span class="reward-text">1 ${t('tickets')}</span>
-                        </div>
-                        <button class="btn-action btn-claim" onclick="claimDailyReward()">
-                            ${t('claimReward')}
-                        </button>
-                    </div>
-                    <button class="btn-action btn-back" onclick="showGame(window.currentProfile, 'rewardHub')">
-                        🏠 ${t('backToLobby')}
-                    </button>
-                </div>
-            `;
+            content = generateDailyRewardsContent(profile);
             break;
         case 'tasks':
             content = `
@@ -1030,21 +1005,127 @@ function showRewardHubTab(tabName, profile) {
     document.getElementById('rewardTabContent').innerHTML = content;
 }
 
-function claimDailyReward() {
-    // Show success message
-    const content = document.getElementById('rewardTabContent');
-    content.innerHTML = `
+// Daily rewards helper functions
+function getNextMidnightUTC() {
+    const now = new Date();
+    const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    tomorrow.setUTCHours(0, 0, 0, 0);
+    return tomorrow;
+}
+
+function formatTimeUntilMidnight() {
+    const now = new Date();
+    const midnight = getNextMidnightUTC();
+    const diff = midnight.getTime() - now.getTime();
+
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+}
+
+function canClaimDailyReward(rewardType) {
+    const lastClaimKey = `lastDailyClaim_${rewardType}_${telegram_id}`;
+    const lastClaim = localStorage.getItem(lastClaimKey);
+
+    if (!lastClaim) return true;
+
+    const lastClaimDate = new Date(parseInt(lastClaim));
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+
+    return lastClaimDate < today;
+}
+
+function markRewardClaimed(rewardType) {
+    const lastClaimKey = `lastDailyClaim_${rewardType}_${telegram_id}`;
+    localStorage.setItem(lastClaimKey, Date.now().toString());
+}
+
+function generateDailyRewardsContent(profile) {
+    const canClaimCoins = canClaimDailyReward('coins');
+    const canClaimTickets = canClaimDailyReward('tickets');
+    const timeUntilReset = formatTimeUntilMidnight();
+
+    return `
         <div class="daily-rewards-content">
             <h3>${t('dailyRewardsTab')}</h3>
-            <div class="reward-claimed-message">
-                <p class="success-message">${t('rewardClaimed')}</p>
-                <p>${t('comeBackTomorrow')}</p>
+            <div class="daily-reward-item">
+                <div class="reward-info">
+                    <span class="reward-icon">🪙</span>
+                    <span class="reward-text">5 ${t('coins')}</span>
+                </div>
+                <button class="btn-action ${canClaimCoins ? 'btn-claim' : 'btn-claim-disabled'}"
+                        ${canClaimCoins ? 'onclick="claimDailyReward(\'coins\')"' : 'disabled'}>
+                    ${canClaimCoins ? t('claimReward') : `${t('nextRewardIn')} ${timeUntilReset}`}
+                </button>
+            </div>
+            <div class="daily-reward-item">
+                <div class="reward-info">
+                    <span class="reward-icon">🎫</span>
+                    <span class="reward-text">1 ${t('tickets')}</span>
+                </div>
+                <button class="btn-action ${canClaimTickets ? 'btn-claim' : 'btn-claim-disabled'}"
+                        ${canClaimTickets ? 'onclick="claimDailyReward(\'tickets\')"' : 'disabled'}>
+                    ${canClaimTickets ? t('claimReward') : `${t('nextRewardIn')} ${timeUntilReset}`}
+                </button>
             </div>
             <button class="btn-action btn-back" onclick="showGame(window.currentProfile, 'rewardHub')">
                 🏠 ${t('backToLobby')}
             </button>
         </div>
     `;
+}
+
+async function claimDailyReward(rewardType) {
+    if (!canClaimDailyReward(rewardType)) {
+        return;
+    }
+
+    try {
+        const response = await fetch("/claim-daily-reward", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                telegram_id: telegram_id,
+                reward_type: rewardType
+            })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            markRewardClaimed(rewardType);
+
+            // Show success message
+            const content = document.getElementById('rewardTabContent');
+            content.innerHTML = `
+                <div class="daily-rewards-content">
+                    <h3>${t('dailyRewardsTab')}</h3>
+                    <div class="reward-claimed-message">
+                        <p class="success-message">${t('rewardClaimed')}</p>
+                        <p>${data.message || t('comeBackTomorrow')}</p>
+                    </div>
+                    <button class="btn-action btn-back" onclick="showGame(window.currentProfile, 'rewardHub')">
+                        🏠 ${t('backToLobby')}
+                    </button>
+                </div>
+            `;
+
+            // Start timer to refresh the view
+            setTimeout(() => {
+                if (document.getElementById('rewardTabContent')) {
+                    showRewardHubTab('daily', window.currentProfile);
+                }
+            }, 3000);
+        } else {
+            alert(data.message || "Failed to claim reward");
+        }
+    } catch (error) {
+        console.error('Error claiming daily reward:', error);
+        alert("Connection error");
+    }
 }
 
 function buyLotteryTicket() {

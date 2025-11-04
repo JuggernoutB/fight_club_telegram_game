@@ -12,9 +12,9 @@
     "experience": 0,
     "level": 1,
     "extra_points": 0,
-    "coins": 5,
-    "tickets": 2,
-    "last_seen": 1762282807273,
+    "coins": 10,
+    "tickets": 3,
+    "last_seen": 1762283425867,
     "equipment": {
       "basic_slots": [
         "stone",
@@ -28,6 +28,10 @@
     "inventory": {
       "stone": 3,
       "wooden_stick": 1
+    },
+    "daily_claims": {
+      "coins_2025-11-04": 1762283411290,
+      "tickets_2025-11-04": 1762283417359
     }
   },
   "test_user": {

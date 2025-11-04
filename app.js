@@ -1003,6 +1003,69 @@ app.post("/buy-item", (req, res) => {
   });
 });
 
+// Claim daily reward endpoint
+app.post("/claim-daily-reward", (req, res) => {
+  const { telegram_id, reward_type } = req.body;
+
+  console.log("Daily reward claim request received:");
+  console.log("- telegram_id:", telegram_id);
+  console.log("- reward_type:", reward_type);
+
+  if (!telegram_id || !reward_type) {
+    return res.status(400).json({ message: "Missing required fields" });
+  }
+
+  const profile = playerProfiles[telegram_id];
+  if (!profile) {
+    console.log("Profile not found for telegram_id:", telegram_id);
+    return res.status(400).json({ message: "Profile not found" });
+  }
+
+  // Validate reward type
+  if (!['coins', 'tickets'].includes(reward_type)) {
+    return res.status(400).json({ message: "Invalid reward type" });
+  }
+
+  // Check if reward can be claimed (server-side validation for security)
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+  const todayKey = today.toISOString().split('T')[0]; // YYYY-MM-DD format
+
+  // Initialize daily claims if not exists
+  if (!profile.daily_claims) {
+    profile.daily_claims = {};
+  }
+
+  const rewardKey = `${reward_type}_${todayKey}`;
+  if (profile.daily_claims[rewardKey]) {
+    return res.status(400).json({ message: "Reward already claimed today" });
+  }
+
+  // Grant reward
+  if (reward_type === 'coins') {
+    profile.coins = (profile.coins || 0) + 5;
+  } else if (reward_type === 'tickets') {
+    profile.tickets = (profile.tickets || 0) + 1;
+  }
+
+  // Mark as claimed
+  profile.daily_claims[rewardKey] = Date.now();
+
+  // Update last seen and save
+  profile.last_seen = Date.now();
+  saveProfiles();
+
+  console.log(`Daily ${reward_type} reward claimed successfully for ${telegram_id}`);
+
+  res.json({
+    message: `Daily ${reward_type} reward claimed successfully!`,
+    profile: {
+      coins: profile.coins,
+      tickets: profile.tickets
+    }
+  });
+});
+
 // Serve index.html at root "/"
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "frontend", "index.html"));
