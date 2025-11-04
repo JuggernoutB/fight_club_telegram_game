@@ -7,14 +7,23 @@ if (!window.location.pathname.includes('players.html')) {
         const urlParams = new URLSearchParams(window.location.search);
         const isDevMode = urlParams.get("dev") === "1";
 
+        console.log("=== TELEGRAM ID DETECTION DEBUG ===");
+        console.log("window.Telegram exists:", !!window.Telegram);
+        console.log("window.Telegram.WebApp exists:", !!window.Telegram?.WebApp);
+        console.log("initDataUnsafe exists:", !!window.Telegram?.WebApp?.initDataUnsafe);
+        console.log("user exists:", !!window.Telegram?.WebApp?.initDataUnsafe?.user);
+        console.log("Full initDataUnsafe:", window.Telegram?.WebApp?.initDataUnsafe);
+        console.log("isDevMode:", isDevMode);
+
         if (window.Telegram && window.Telegram.WebApp?.initDataUnsafe?.user) {
             telegram_id = window.Telegram.WebApp.initDataUnsafe.user.id;
-            console.log("Telegram ID:", telegram_id);
+            console.log("✅ SUCCESS: Telegram ID detected:", telegram_id);
         } else if (isDevMode) {
             telegram_id = "test_user";
-            console.warn("Dev mode active — using test_user");
+            console.warn("⚠️ DEV MODE: Using test_user");
         } else {
-            console.error("Telegram user data not found.");
+            console.error("❌ FAILED: Telegram user data not found - using fallback");
+            telegram_id = "test_user"; // Add fallback
             alert("Please open this via your Telegram bot button.");
         }
 

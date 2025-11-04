@@ -216,7 +216,7 @@ function showGame(profile, lastScreen = 'arena') {
 }
 
 // Make switchTab globally available
-window.switchTab = function(tabName) {
+window.switchTab = async function(tabName) {
     console.log("switchTab called with:", tabName);
 
     // Update tab buttons
@@ -238,10 +238,10 @@ window.switchTab = function(tabName) {
     console.log("Switching to tab:", tabName);
     switch(tabName) {
         case 'lobby':
-            showLobbyTab();
+            await showLobbyTab();
             break;
         case 'equipment':
-            showEquipmentTab();
+            await showEquipmentTab();
             break;
         case 'settings':
             showSettingsTab();
@@ -251,8 +251,19 @@ window.switchTab = function(tabName) {
     }
 }
 
-function showLobbyTab() {
+async function showLobbyTab() {
     console.log("showLobbyTab called");
+
+    // Refresh profile data from server to get latest coin/inventory values
+    try {
+        const profileData = await fetchProfile(telegram_id);
+        if (profileData.exists) {
+            window.currentProfile = profileData.profile;
+        }
+    } catch (error) {
+        console.error("Failed to refresh profile:", error);
+    }
+
     const profile = window.currentProfile;
     console.log("Profile:", profile);
 
@@ -305,7 +316,7 @@ function showLobbyTab() {
                 </div>
                 <div class="stat-card">
                     <div class="stat-label">🪙 ${t('coins')}</div>
-                    <div class="stat-value">${profile.coins || 0}</div>
+                    <div class="stat-value" id="coins-display">${profile.coins || 0}</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-label">🎫 ${t('tickets')}</div>
@@ -392,15 +403,109 @@ function showLobbyTab() {
     }
 }
 
-function showEquipmentTab() {
+async function showEquipmentTab() {
     console.log("showEquipmentTab called");
-    document.getElementById('tabContent').innerHTML = `
-        <div class="equipment-container">
-            <h2>🎒 ${t('inventoryEquipment')}</h2>
-            <p>${t('manageItems')}</p>
-        </div>
-    `;
-    console.log("Equipment tab content rendered");
+
+    try {
+        // Fetch fresh profile data to get current inventory and equipment
+        const profileData = await fetchProfile(telegram_id);
+        if (!profileData.exists) {
+            document.getElementById('tabContent').innerHTML = `
+                <div class="equipment-container">
+                    <h2>🎒 ${t('inventoryEquipment')}</h2>
+                    <p>${t('profileNotLoaded')}</p>
+                </div>
+            `;
+            return;
+        }
+
+        const profile = profileData.profile;
+
+        // Generate inventory items HTML
+        let inventoryHTML = '';
+        if (profile.inventory && Object.keys(profile.inventory).length > 0) {
+            for (const [itemName, quantity] of Object.entries(profile.inventory)) {
+                if (quantity > 0) {
+                    inventoryHTML += `
+                        <div class="inventory-item">
+                            <span class="item-name">${t('items.' + itemName)}</span>
+                            <span class="item-quantity">x${quantity}</span>
+                        </div>
+                    `;
+                }
+            }
+        } else {
+            inventoryHTML = `<p class="empty-text">${t('emptyInventory')}</p>`;
+        }
+
+        // Generate equipment slots HTML
+        const equipment = profile.equipment || { basic_slots: [null, null], hand_slots: [null, null] };
+
+        let basicSlotsHTML = '';
+        for (let i = 0; i < equipment.basic_slots.length; i++) {
+            const item = equipment.basic_slots[i];
+            basicSlotsHTML += `
+                <div class="equipment-slot">
+                    ${item ? t('items.' + item) : t('empty')}
+                </div>
+            `;
+        }
+
+        let handSlotsHTML = '';
+        for (let i = 0; i < equipment.hand_slots.length; i++) {
+            const item = equipment.hand_slots[i];
+            handSlotsHTML += `
+                <div class="equipment-slot">
+                    ${item ? t('items.' + item) : t('empty')}
+                </div>
+            `;
+        }
+
+        document.getElementById('tabContent').innerHTML = `
+            <div class="equipment-container">
+                <h2>🎒 ${t('inventoryEquipment')}</h2>
+                <p>${t('manageItems')}</p>
+
+                <div class="equipment-section">
+                    <h3>📦 ${t('inventory')}</h3>
+                    <div class="inventory-grid">
+                        ${inventoryHTML}
+                    </div>
+                </div>
+
+                <div class="equipment-section">
+                    <h3>⚔️ ${t('equippedItems')}</h3>
+
+                    <div class="slots-section">
+                        <h4>🛡️ ${t('basicSlots')}</h4>
+                        <div class="equipment-slots">
+                            ${basicSlotsHTML}
+                        </div>
+                    </div>
+
+                    <div class="slots-section">
+                        <h4>🤲 ${t('handSlots')}</h4>
+                        <div class="equipment-slots">
+                            ${handSlotsHTML}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="return-section">
+                    <button class="btn-secondary" onclick="showLobbyTab()">← ${t('backToLobby')}</button>
+                </div>
+            </div>
+        `;
+        console.log("Equipment tab content rendered with data");
+    } catch (error) {
+        console.error("Failed to load equipment data:", error);
+        document.getElementById('tabContent').innerHTML = `
+            <div class="equipment-container">
+                <h2>🎒 ${t('inventoryEquipment')}</h2>
+                <p>${t('failedToLoad')} ${t('inventoryEquipment')}</p>
+            </div>
+        `;
+    }
 }
 
 function showSettingsTab() {
@@ -554,22 +659,162 @@ function showShopScreen(profile) {
             </div>
 
             <div class="shop-container">
-                <div class="shop-content">
-                    <p>Shop functionality coming soon!</p>
-                    <button id="backToLobbyFromShopButton" class="btn-action btn-back">
-                        🏠 ${t('backToLobby')}
+                <div class="shop-tabs">
+                    <button id="basicSlotTab" class="shop-tab-button active">
+                        📦 ${t('basicSlotItems')}
                     </button>
+                    <button id="handSlotTab" class="shop-tab-button">
+                        🗡️ ${t('handSlotItems')}
+                    </button>
+                </div>
+
+                <div id="shopTabContent" class="shop-tab-content">
+                    <!-- Tab content will be loaded here -->
                 </div>
             </div>
         </div>
     `;
 
-    // Bind event handlers
-    document.getElementById("backToLobbyFromShopButton").onclick = () => {
-        showGame(profile, 'shop');
+    // Initialize with basic slot tab
+    showShopTab('basicSlot', profile);
+
+    // Bind tab event handlers
+    document.getElementById("basicSlotTab").onclick = () => {
+        showShopTab('basicSlot', profile);
+    };
+    document.getElementById("handSlotTab").onclick = () => {
+        showShopTab('handSlot', profile);
     };
 
     console.log("Shop screen rendered");
+}
+
+function showShopTab(tabName, profile) {
+    // Update tab buttons
+    document.querySelectorAll('.shop-tab-button').forEach(btn => btn.classList.remove('active'));
+    document.getElementById(tabName + 'Tab').classList.add('active');
+
+    let tabContent = '';
+
+    if (tabName === 'basicSlot') {
+        const basicItems = ['stone', 'big_stone', 'metal_ball', 'fear_spell', 'scream_spell'];
+        const itemsList = basicItems.map(item => `
+            <div class="shop-item">
+                <div class="shop-item-info">
+                    <span class="shop-item-name">${t(`items.${item}`)}</span>
+                </div>
+                <div class="shop-item-price">
+                    <button id="buy-${item}" class="btn-buy" onclick="buyItem('${item}', 5)">
+                        🪙 5 ${t('coins')}
+                    </button>
+                </div>
+            </div>
+        `).join('');
+
+        tabContent = `
+            <div class="shop-section">
+                <h3>📦 ${t('basicSlotItems')}</h3>
+                <div class="shop-items-list">
+                    ${itemsList}
+                </div>
+                <button id="backToLobbyFromBasicShopButton" class="btn-action btn-back">
+                    🏠 ${t('backToLobby')}
+                </button>
+            </div>
+        `;
+    } else if (tabName === 'handSlot') {
+        const handItems = ['wooden_stick', 'big_wooden_stick', 'knife', 'small_club', 'blade', 'slingshot'];
+        const itemsList = handItems.map(item => `
+            <div class="shop-item">
+                <div class="shop-item-info">
+                    <span class="shop-item-name">${t(`items.${item}`)}</span>
+                </div>
+                <div class="shop-item-price">
+                    <button id="buy-${item}" class="btn-buy" onclick="buyItem('${item}', 5)">
+                        🪙 5 ${t('coins')}
+                    </button>
+                </div>
+            </div>
+        `).join('');
+
+        tabContent = `
+            <div class="shop-section">
+                <h3>🗡️ ${t('handSlotItems')}</h3>
+                <div class="shop-items-list">
+                    ${itemsList}
+                </div>
+                <button id="backToLobbyFromHandShopButton" class="btn-action btn-back">
+                    🏠 ${t('backToLobby')}
+                </button>
+            </div>
+        `;
+    }
+
+    document.getElementById('shopTabContent').innerHTML = tabContent;
+
+    // Bind back to lobby buttons
+    const basicButton = document.getElementById("backToLobbyFromBasicShopButton");
+    const handButton = document.getElementById("backToLobbyFromHandShopButton");
+
+    if (basicButton) {
+        basicButton.onclick = () => showGame(profile, 'shop');
+    }
+    if (handButton) {
+        handButton.onclick = () => showGame(profile, 'shop');
+    }
+}
+
+// Buy item function
+async function buyItem(itemName, price) {
+    console.log(`Attempting to buy ${itemName} for ${price} coins`);
+
+    const profile = window.currentProfile;
+    if (!profile) {
+        alert("Profile not loaded");
+        return;
+    }
+
+    // Check if player has enough coins
+    if (profile.coins < price) {
+        alert("Not enough coins");
+        return;
+    }
+
+    try {
+        const response = await fetch("/buy-item", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                telegram_id: telegram_id,
+                item_name: itemName,
+                price: price
+            })
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            // Update local profile data
+            profile.coins = result.profile.coins;
+            profile.inventory = result.profile.inventory;
+
+            // Update the displayed coins count if we're in lobby
+            const coinsElement = document.getElementById('coins-display');
+            if (coinsElement) {
+                coinsElement.textContent = profile.coins;
+            }
+
+            alert(`Successfully bought ${t(`items.${itemName}`)}!`);
+            console.log(`Purchase successful. New coins: ${profile.coins}`);
+        } else {
+            alert(result.message || "Purchase failed");
+        }
+    } catch (error) {
+        console.error("Purchase error:", error);
+        alert("Connection error");
+    }
 }
 
 function showRewardHubScreen(profile) {

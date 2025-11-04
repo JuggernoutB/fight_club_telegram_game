@@ -928,7 +928,9 @@ app.get("/profile/:telegram_id", (req, res) => {
         level: profile.level,
         extra_points: profile.extra_points,
         coins: profile.coins || 0,
-        tickets: profile.tickets || 0
+        tickets: profile.tickets || 0,
+        inventory: profile.inventory || {},
+        equipment: profile.equipment || { basic_slots: [null, null], hand_slots: [null, null] }
       }
     });
   } else {
@@ -936,6 +938,69 @@ app.get("/profile/:telegram_id", (req, res) => {
       exists: false
     });
   }
+});
+
+// Buy item endpoint
+app.post("/buy-item", (req, res) => {
+  const { telegram_id, item_name, price } = req.body;
+
+  // Debug logging
+  console.log("Buy item request received:");
+  console.log("- telegram_id:", telegram_id);
+  console.log("- item_name:", item_name);
+  console.log("- price:", price);
+  console.log("- Available profiles:", Object.keys(playerProfiles));
+
+  if (!telegram_id || !item_name || !price) {
+    return res.status(400).json({ message: "Missing required fields" });
+  }
+
+  const profile = playerProfiles[telegram_id];
+  if (!profile) {
+    console.log("Profile not found for telegram_id:", telegram_id);
+    return res.status(400).json({ message: "Profile not found" });
+  }
+
+  // Check if player has enough coins
+  if (profile.coins < price) {
+    return res.status(400).json({ message: "Not enough coins" });
+  }
+
+  // Validate item name (security check)
+  const validItems = [
+    'stone', 'big_stone', 'metal_ball', 'fear_spell', 'scream_spell',
+    'wooden_stick', 'big_wooden_stick', 'knife', 'small_club', 'blade', 'slingshot'
+  ];
+
+  if (!validItems.includes(item_name)) {
+    return res.status(400).json({ message: "Invalid item" });
+  }
+
+  // Deduct coins
+  profile.coins -= price;
+
+  // Add item to inventory
+  if (!profile.inventory) {
+    profile.inventory = {};
+  }
+
+  if (profile.inventory[item_name]) {
+    profile.inventory[item_name] += 1;
+  } else {
+    profile.inventory[item_name] = 1;
+  }
+
+  // Update last seen and save
+  profile.last_seen = Date.now();
+  saveProfiles();
+
+  res.json({
+    message: "Item purchased successfully",
+    profile: {
+      coins: profile.coins,
+      inventory: profile.inventory
+    }
+  });
 });
 
 // Serve index.html at root "/"
@@ -1692,5 +1757,11 @@ setInterval(() => {
   });
   
 }, 10000); // Check every 10 seconds
+
+// Start the server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server listening on port ${PORT}`);
+});
 
 module.exports = { app, resetProfiles };
