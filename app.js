@@ -1066,6 +1066,80 @@ app.post("/claim-daily-reward", (req, res) => {
   });
 });
 
+// Lottery spin endpoint
+app.post("/spin-lottery", (req, res) => {
+  const { telegram_id } = req.body;
+
+  console.log("Lottery spin request received:");
+  console.log("- telegram_id:", telegram_id);
+
+  if (!telegram_id) {
+    return res.status(400).json({ message: "Missing telegram_id" });
+  }
+
+  const profile = playerProfiles[telegram_id];
+  if (!profile) {
+    console.log("Profile not found for telegram_id:", telegram_id);
+    return res.status(400).json({ message: "Profile not found" });
+  }
+
+  // Check if player has tickets
+  if (!profile.tickets || profile.tickets <= 0) {
+    return res.status(400).json({ message: "No tickets available" });
+  }
+
+  // Deduct one ticket
+  profile.tickets -= 1;
+
+  // Determine prize based on probabilities
+  const random = Math.random() * 100;
+  let prize;
+
+  if (random < 40) {
+    // 40% chance - 1 coin
+    prize = { type: "coins", amount: 1 };
+    profile.coins = (profile.coins || 0) + 1;
+  } else if (random < 65) {
+    // 25% chance - 2 coins
+    prize = { type: "coins", amount: 2 };
+    profile.coins = (profile.coins || 0) + 2;
+  } else if (random < 80) {
+    // 15% chance - 3 coins
+    prize = { type: "coins", amount: 3 };
+    profile.coins = (profile.coins || 0) + 3;
+  } else if (random < 90) {
+    // 10% chance - 5 coins
+    prize = { type: "coins", amount: 5 };
+    profile.coins = (profile.coins || 0) + 5;
+  } else if (random < 95) {
+    // 5% chance - 1 stone
+    prize = { type: "stone", amount: 1 };
+    if (!profile.inventory) profile.inventory = {};
+    profile.inventory.stone = (profile.inventory.stone || 0) + 1;
+  } else {
+    // 5% chance - 1 wooden stick
+    prize = { type: "wooden_stick", amount: 1 };
+    if (!profile.inventory) profile.inventory = {};
+    profile.inventory.wooden_stick = (profile.inventory.wooden_stick || 0) + 1;
+  }
+
+  // Update last seen and save
+  profile.last_seen = Date.now();
+  saveProfiles();
+
+  console.log(`Lottery spin completed for ${telegram_id}:`, prize);
+
+  res.json({
+    message: "Lottery spin successful!",
+    prize: prize,
+    profile: {
+      coins: profile.coins,
+      tickets: profile.tickets,
+      inventory: profile.inventory
+    }
+  });
+});
+
 // Serve index.html at root "/"
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "frontend", "index.html"));

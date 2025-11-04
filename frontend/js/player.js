@@ -933,13 +933,13 @@ function showRewardHubScreen(profile) {
 
             <div class="reward-hub-container">
                 <div class="reward-hub-tabs">
-                    <button class="reward-tab-button active" id="dailyTab" onclick="showRewardHubTab('daily')">
+                    <button class="reward-tab-button active" id="dailyTab" onclick="showRewardHubTab('daily', window.currentProfile)">
                         ${t('dailyRewards')}
                     </button>
-                    <button class="reward-tab-button" id="tasksTab" onclick="showRewardHubTab('tasks')">
+                    <button class="reward-tab-button" id="tasksTab" onclick="showRewardHubTab('tasks', window.currentProfile)">
                         ${t('tasks')}
                     </button>
-                    <button class="reward-tab-button" id="lotteryTab" onclick="showRewardHubTab('lottery')">
+                    <button class="reward-tab-button" id="lotteryTab" onclick="showRewardHubTab('lottery', window.currentProfile)">
                         ${t('lottery')}
                     </button>
                 </div>
@@ -959,7 +959,7 @@ function showRewardHubScreen(profile) {
     console.log("Reward Hub screen rendered");
 }
 
-function showRewardHubTab(tabName, profile) {
+async function showRewardHubTab(tabName, profile) {
     // Update active tab
     document.querySelectorAll('.reward-tab-button').forEach(btn => btn.classList.remove('active'));
     document.getElementById(tabName + 'Tab').classList.add('active');
@@ -984,21 +984,15 @@ function showRewardHubTab(tabName, profile) {
             `;
             break;
         case 'lottery':
-            content = `
-                <div class="lottery-content">
-                    <h3>${t('lotteryTab')}</h3>
-                    <div class="lottery-info">
-                        <p>${t('yourTickets')} ${profile ? profile.tickets || 0 : 0}</p>
-                        <button class="btn-action btn-buy" onclick="buyLotteryTicket()">
-                            ${t('buyLotteryTicket')} (10 ${t('coins')})
-                        </button>
-                        <p class="lottery-timer">${t('lotteryDrawTime')} 24:00:00</p>
-                    </div>
-                    <button class="btn-action btn-back" onclick="showGame(window.currentProfile, 'rewardHub')">
-                        🏠 ${t('backToLobby')}
-                    </button>
-                </div>
-            `;
+            // Fetch fresh profile data for lottery
+            try {
+                const profileData = await fetchProfile(telegram_id);
+                const currentProfile = profileData.profile || profile || window.currentProfile;
+                content = generateLotteryContent(currentProfile);
+            } catch (error) {
+                console.error('Error fetching profile for lottery:', error);
+                content = generateLotteryContent(profile || window.currentProfile);
+            }
             break;
     }
 
@@ -1126,6 +1120,153 @@ async function claimDailyReward(rewardType) {
         console.error('Error claiming daily reward:', error);
         alert("Connection error");
     }
+}
+
+// Lottery system
+function generateLotteryContent(profile) {
+    const tickets = profile ? profile.tickets || 0 : 0;
+
+    return `
+        <div class="lottery-content">
+            <h3>${t('lotteryTab')}</h3>
+            <div class="lottery-info">
+                <p>${t('yourTickets')} <span class="ticket-count">${tickets}</span></p>
+            </div>
+
+            <div class="lottery-drum-container">
+                <div class="lottery-drum" id="lotteryDrum">
+                    <div class="drum-sector" data-prize="1coin">🪙</div>
+                    <div class="drum-sector" data-prize="1coin">🪙</div>
+                    <div class="drum-sector" data-prize="1coin">🪙</div>
+                    <div class="drum-sector" data-prize="1coin">🪙</div>
+                    <div class="drum-sector" data-prize="2coins">🪙🪙</div>
+                    <div class="drum-sector" data-prize="2coins">🪙🪙</div>
+                    <div class="drum-sector" data-prize="3coins">💰</div>
+                    <div class="drum-sector" data-prize="5coins">💎</div>
+                    <div class="drum-sector" data-prize="stone">🪨</div>
+                    <div class="drum-sector" data-prize="stick">🪵</div>
+                </div>
+                <div class="drum-pointer">▼</div>
+            </div>
+
+            <div class="lottery-controls">
+                <button class="btn-action btn-spin ${tickets > 0 ? '' : 'btn-disabled'}"
+                        ${tickets > 0 ? 'onclick="spinLotteryDrum()"' : 'disabled'}
+                        id="spinButton">
+                    ${tickets > 0 ? t('spinDrum') : t('noTickets')}
+                </button>
+            </div>
+
+            <button class="btn-action btn-back" onclick="showGame(window.currentProfile, 'rewardHub')">
+                🏠 ${t('backToLobby')}
+            </button>
+        </div>
+    `;
+}
+
+async function spinLotteryDrum() {
+    const spinButton = document.getElementById('spinButton');
+    const drum = document.getElementById('lotteryDrum');
+
+    // Disable button and show spinning state
+    spinButton.disabled = true;
+    spinButton.textContent = t('spinning');
+    spinButton.classList.add('btn-disabled');
+
+    // Add spinning animation
+    drum.classList.add('spinning');
+
+    try {
+        const response = await fetch("/spin-lottery", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                telegram_id: telegram_id
+            })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            // Stop spinning after 3 seconds
+            setTimeout(() => {
+                drum.classList.remove('spinning');
+
+                // Show result
+                const prize = data.prize;
+                showLotteryResult(prize);
+
+                // Update profile
+                window.currentProfile = data.profile;
+
+                // Update ticket count display
+                const ticketCount = document.querySelector('.ticket-count');
+                if (ticketCount) {
+                    ticketCount.textContent = data.profile.tickets || 0;
+                }
+
+                // Re-enable button if tickets available
+                setTimeout(() => {
+                    spinButton.disabled = data.profile.tickets <= 0;
+                    spinButton.textContent = data.profile.tickets > 0 ? t('spinDrum') : t('noTickets');
+                    spinButton.classList.toggle('btn-disabled', data.profile.tickets <= 0);
+                }, 1000);
+            }, 3000);
+        } else {
+            drum.classList.remove('spinning');
+            spinButton.disabled = false;
+            spinButton.textContent = t('spinDrum');
+            spinButton.classList.remove('btn-disabled');
+            alert(data.message || "Failed to spin lottery");
+        }
+    } catch (error) {
+        console.error('Error spinning lottery:', error);
+        drum.classList.remove('spinning');
+        spinButton.disabled = false;
+        spinButton.textContent = t('spinDrum');
+        spinButton.classList.remove('btn-disabled');
+        alert("Connection error");
+    }
+}
+
+function showLotteryResult(prize) {
+    const content = document.getElementById('rewardTabContent');
+    let prizeText = '';
+    let prizeIcon = '';
+
+    switch(prize.type) {
+        case 'coins':
+            prizeText = `${prize.amount} ${t('coins')}`;
+            prizeIcon = '🪙';
+            break;
+        case 'stone':
+            prizeText = `1 ${t('items.stone')}`;
+            prizeIcon = '🪨';
+            break;
+        case 'wooden_stick':
+            prizeText = `1 ${t('items.wooden_stick')}`;
+            prizeIcon = '🪵';
+            break;
+    }
+
+    content.innerHTML = `
+        <div class="lottery-content">
+            <h3>${t('lotteryResult')}</h3>
+            <div class="lottery-result">
+                <div class="result-icon">${prizeIcon}</div>
+                <div class="result-text">
+                    <h4>${t('youWon')}</h4>
+                    <p class="prize-text">${prizeText}</p>
+                </div>
+            </div>
+            <button class="btn-action btn-primary" onclick="showRewardHubTab('lottery', window.currentProfile)">
+                ${t('spinDrum')} ${t('againButton') || 'Again'}
+            </button>
+            <button class="btn-action btn-back" onclick="showGame(window.currentProfile, 'rewardHub')">
+                🏠 ${t('backToLobby')}
+            </button>
+        </div>
+    `;
 }
 
 function buyLotteryTicket() {

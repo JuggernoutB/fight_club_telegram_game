@@ -177,7 +177,12 @@ const translations = {
         lotteryDrawTime: "Next draw in:",
         yourTickets: "Your tickets:",
         nextRewardIn: "Next reward in:",
-        rewardAvailable: "Available!"
+        rewardAvailable: "Available!",
+        spinDrum: "Spin the Drum!",
+        spinning: "Spinning...",
+        youWon: "You won:",
+        noTickets: "No tickets available",
+        lotteryResult: "Lottery Result"
     },
 
     ru: {
@@ -357,7 +362,12 @@ const translations = {
         lotteryDrawTime: "Следующий розыгрыш через:",
         yourTickets: "Ваши билеты:",
         nextRewardIn: "Следующая награда через:",
-        rewardAvailable: "Доступно!"
+        rewardAvailable: "Доступно!",
+        spinDrum: "Крутить барабан!",
+        spinning: "Крутится...",
+        youWon: "Вы выиграли:",
+        noTickets: "Нет билетов",
+        lotteryResult: "Результат лотереи"
     }
 };
 

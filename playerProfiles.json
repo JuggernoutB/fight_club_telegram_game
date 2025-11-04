@@ -13,8 +13,8 @@
     "level": 1,
     "extra_points": 0,
     "coins": 10,
-    "tickets": 3,
-    "last_seen": 1762283425867,
+    "tickets": 0,
+    "last_seen": 1762285001558,
     "equipment": {
       "basic_slots": [
         "stone",
@@ -26,7 +26,7 @@
       ]
     },
     "inventory": {
-      "stone": 3,
+      "stone": 4,
       "wooden_stick": 1
     },
     "daily_claims": {
