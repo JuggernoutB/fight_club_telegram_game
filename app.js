@@ -4,6 +4,7 @@ const express = require("express");
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const combatEngine = require("./combat_engine.js");
+const xpCalculator = require("./xp_calculator.js");
 
 const DATA_FILE = path.join(__dirname, "playerProfiles.json");
 
@@ -168,82 +169,7 @@ function saveProfiles() {
   }
 }
 
-// XP system matching game analyzer
-function calculateXpForFight(result, playerLevel, opponentLevel) {
-  // Base XP values from analyzer
-  const BASE_XP_WIN = 6;      // Win against player
-  const BASE_XP_DRAW = 3;     // Draw against player
-  const BASE_XP_LOSS = 2;     // Beat bot (reward for trying)
-
-  // Get base XP based on result
-  let baseXp;
-  if (result === 'win') {
-    baseXp = BASE_XP_WIN;
-  } else if (result === 'draw') {
-    baseXp = BASE_XP_DRAW;
-  } else { // loss
-    baseXp = BASE_XP_LOSS;  // Beat bot gives some XP
-  }
-
-  // Apply level modifier
-  const levelDiff = opponentLevel - playerLevel;
-
-  let multiplier;
-  if (levelDiff === -1) {  // Fighting lower level
-    if (result === 'draw') {
-      return 0;  // No XP for draw against lower level
-    }
-    multiplier = 0.7;
-  } else if (levelDiff === 0) {  // Same level
-    multiplier = 1.0;
-  } else if (levelDiff === 1) {  // Fighting higher level
-    if (result === 'draw') {
-      return BASE_XP_WIN;  // Draw against higher = win XP against same
-    }
-    multiplier = 1.5;
-  } else {
-    // For other level differences, use gradual scaling
-    if (levelDiff < -1) {
-      multiplier = Math.max(0.5, 0.7 + (levelDiff + 1) * 0.1);
-    } else { // levelDiff > 1
-      multiplier = Math.min(2.0, 1.5 + (levelDiff - 1) * 0.2);
-    }
-  }
-
-  return Math.floor(baseXp * multiplier);
-}
-
-function getXpForSingleLevel(level) {
-  // XP required to advance from (level-1) to level
-  if (level <= 1) {
-    return 0;
-  } else if (level === 2) {
-    return 82;  // Keep base requirement same
-  } else if (level === 3) {
-    return 218;  // 300 total - 82 = 218 for level 3
-  } else if (level === 4) {
-    return 780;  // 1080 total - 300 = 780 for level 4
-  } else {
-    // For levels 5+, use escalating multiplier starting at 3.6x
-    const prevLevelXp = getXpForSingleLevel(level - 1);
-    // Increase multiplier slightly each level: 3.6, 3.7, 3.8, etc.
-    const multiplier = 3.5 + (level - 4) * 0.1;
-    return Math.floor(prevLevelXp * multiplier);
-  }
-}
-
-function getXpRequiredForLevel(level) {
-  // Get total XP required to reach a specific level
-  if (level <= 1) {
-    return 0;
-  }
-
-  let totalXp = 0;
-  for (let lvl = 2; lvl <= level; lvl++) {
-    totalXp += getXpForSingleLevel(lvl);
-  }
-  return totalXp;
-}
+// XP system using shared calculator
 
 function calculateDamage(attacker, defender, attackPart, defendPart, attackerItems = null) {
   // Constants from game analyzer (rebalanced for better stat equality)
@@ -539,7 +465,7 @@ function checkLevelUp(profile) {
 
   while (true) {
     const nextLevel = profile.level + 1;
-    const xpNeeded = getXpRequiredForLevel(nextLevel);
+    const xpNeeded = xpCalculator.getXpRequiredForLevel(nextLevel);
 
     if (profile.experience >= xpNeeded) {
       profile.level = nextLevel;
@@ -749,7 +675,7 @@ app.post("/fight", (req, res) => {
     log.push("You won the fight!");
 
     // Calculate XP using new system (bot fights count as "loss" - reward for trying)
-    const xpGained = calculateXpForFight("loss", player.level, 1); // Bot is level 1
+    const xpGained = xpCalculator.calculateXpForFight("loss", player.level, 1); // Bot is level 1
     log.push(`You gained ${xpGained} experience points.`);
     player.experience += xpGained;
     checkLevelUp(player);
@@ -1656,11 +1582,11 @@ function processRound(fight_id) {
 
     if (winner !== "Draw") {
       // Winner gets win XP
-      winnerXp = calculateXpForFight("win", winnerProfile.level, loserProfile.level);
+      winnerXp = xpCalculator.calculateXpForFight("win", winnerProfile.level, loserProfile.level);
       winnerProfile.experience = (winnerProfile.experience || 0) + winnerXp;
 
       // Loser gets loss XP
-      loserXp = calculateXpForFight("loss", loserProfile.level, winnerProfile.level);
+      loserXp = xpCalculator.calculateXpForFight("loss", loserProfile.level, winnerProfile.level);
       loserProfile.experience = (loserProfile.experience || 0) + loserXp;
 
       checkLevelUp(winnerProfile);
@@ -1668,8 +1594,8 @@ function processRound(fight_id) {
       saveProfiles();
     } else {
       // Draw - both players get draw XP
-      const player1Xp = calculateXpForFight("draw", playerProfiles[fight.player1_id].level, playerProfiles[fight.player2_id].level);
-      const player2Xp = calculateXpForFight("draw", playerProfiles[fight.player2_id].level, playerProfiles[fight.player1_id].level);
+      const player1Xp = xpCalculator.calculateXpForFight("draw", playerProfiles[fight.player1_id].level, playerProfiles[fight.player2_id].level);
+      const player2Xp = xpCalculator.calculateXpForFight("draw", playerProfiles[fight.player2_id].level, playerProfiles[fight.player1_id].level);
 
       playerProfiles[fight.player1_id].experience = (playerProfiles[fight.player1_id].experience || 0) + player1Xp;
       playerProfiles[fight.player2_id].experience = (playerProfiles[fight.player2_id].experience || 0) + player2Xp;
@@ -1751,8 +1677,8 @@ function handleRoundTimeout(fight_id) {
     const winnerProfile = playerProfiles[fight.player2_id];
     const loserProfile = playerProfiles[fight.player1_id];
 
-    const winnerXp = calculateXpForFight("win", winnerProfile.level, loserProfile.level);
-    const loserXp = calculateXpForFight("loss", loserProfile.level, winnerProfile.level);
+    const winnerXp = xpCalculator.calculateXpForFight("win", winnerProfile.level, loserProfile.level);
+    const loserXp = xpCalculator.calculateXpForFight("loss", loserProfile.level, winnerProfile.level);
 
     winnerProfile.experience = (winnerProfile.experience || 0) + winnerXp;
     loserProfile.experience = (loserProfile.experience || 0) + loserXp;
@@ -1774,8 +1700,8 @@ function handleRoundTimeout(fight_id) {
     const winnerProfile = playerProfiles[fight.player1_id];
     const loserProfile = playerProfiles[fight.player2_id];
 
-    const winnerXp = calculateXpForFight("win", winnerProfile.level, loserProfile.level);
-    const loserXp = calculateXpForFight("loss", loserProfile.level, winnerProfile.level);
+    const winnerXp = xpCalculator.calculateXpForFight("win", winnerProfile.level, loserProfile.level);
+    const loserXp = xpCalculator.calculateXpForFight("loss", loserProfile.level, winnerProfile.level);
 
     winnerProfile.experience = (winnerProfile.experience || 0) + winnerXp;
     loserProfile.experience = (loserProfile.experience || 0) + loserXp;
