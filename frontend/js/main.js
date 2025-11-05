@@ -605,31 +605,14 @@ function loadPvPPlayerImage(race, nickname) {
         nameElement.textContent = nickname || 'You';
     }
 
-    console.log('Loading PvP player fighter image for race:', race);
+    console.log('Loading PvP player fighter image/animation for race:', race);
 
-    const imgPath = `./images/fighters/${race}.png`;
-    const img = document.createElement('img');
-    img.src = imgPath;
-    img.alt = `${race} fighter`;
-    img.className = 'fighter-image';
+    // Hide fallback initially
+    if (fallback) fallback.style.display = 'none';
 
-    img.onload = function() {
-        console.log('PvP player fighter image loaded successfully:', imgPath);
-        fallback.style.display = 'none';
-        container.appendChild(img);
-    };
-
-    img.onerror = function() {
-        console.log('PvP player fighter image failed to load:', imgPath, 'Using fallback');
-        const raceAvatars = {
-            "human": "🧑",
-            "elf": "🧝",
-            "dwarf": "🧔",
-            "orc": "👹"
-        };
-        fallback.innerHTML = raceAvatars[race] || "👤";
-        fallback.style.display = 'flex';
-    };
+    // Create animated sprite using sprite animator system
+    window.pvpSprites = window.pvpSprites || {};
+    window.pvpSprites.player = createAnimatedFighter(container, race, 'idle');
 }
 
 function loadPvPOpponentImage() {
@@ -640,26 +623,23 @@ function loadPvPOpponentImage() {
     const races = ['human', 'elf', 'dwarf', 'orc'];
     const randomRace = races[Math.floor(Math.random() * races.length)];
 
-    console.log('Loading PvP opponent image, chosen race:', randomRace);
+    console.log('Loading PvP opponent image/animation, chosen race:', randomRace);
 
-    const imgPath = `./images/fighters/${randomRace}.png`;
-    const img = document.createElement('img');
-    img.src = imgPath;
-    img.alt = `${randomRace} opponent`;
-    img.className = 'fighter-image';
-    img.style.filter = 'sepia(50%) hue-rotate(10deg) saturate(1.5) brightness(0.9)'; // Make it look different
+    // Hide any fallback
+    const fallback = container.querySelector('.fighter-fallback');
+    if (fallback) fallback.style.display = 'none';
 
-    img.onload = function() {
-        console.log('PvP opponent image loaded successfully:', imgPath);
-        const fallback = container.querySelector('.fighter-fallback');
-        if (fallback) fallback.style.display = 'none';
-        container.appendChild(img);
-    };
+    // Create animated sprite for opponent
+    window.pvpSprites = window.pvpSprites || {};
+    window.pvpSprites.opponent = createAnimatedFighter(container, randomRace, 'idle');
 
-    img.onerror = function() {
-        console.log('PvP opponent image failed to load:', imgPath, 'keeping fallback');
-        // Keep fallback visible
-    };
+    // Add opponent styling to the container after animation loads
+    setTimeout(() => {
+        const spriteImg = container.querySelector('.fighter-sprite');
+        if (spriteImg) {
+            spriteImg.style.filter = 'sepia(50%) hue-rotate(10deg) saturate(1.5) brightness(0.9)';
+        }
+    }, 100);
 }
 
 function updateFightStatus(data) {

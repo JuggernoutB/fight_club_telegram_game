@@ -217,33 +217,13 @@ function loadFighterAvatar(race) {
     const fallback = document.getElementById("playerFallback");
     if (!container || !race) return;
 
-    console.log('Loading fighter image for race:', race);
+    console.log('Loading fighter image/animation for race:', race);
 
-    const imgPath = `./images/fighters/${race}.png`;
-    const img = document.createElement('img');
-    img.src = imgPath;
-    img.alt = `${race} fighter`;
-    img.className = 'fighter-image';
+    // Hide fallback initially
+    if (fallback) fallback.style.display = 'none';
 
-    img.onload = function() {
-        console.log('Fighter image loaded successfully:', imgPath);
-        // Hide fallback and show image
-        fallback.style.display = 'none';
-        container.appendChild(img);
-    };
-
-    img.onerror = function() {
-        console.log('Fighter image failed to load:', imgPath, 'Using fallback');
-        // Keep emoji fallback visible
-        const raceAvatars = {
-            "human": "🧑",
-            "elf": "🧝",
-            "dwarf": "🧔",
-            "orc": "👹"
-        };
-        fallback.innerHTML = raceAvatars[race] || "👤";
-        fallback.style.display = 'flex';
-    };
+    // Create animated sprite
+    window.fighterSprites.player = createAnimatedFighter(container, race, 'idle');
 
     // Also load random bot enemy
     loadBotImage();
@@ -257,27 +237,22 @@ function loadBotImage() {
     const botRaces = ['human', 'elf', 'dwarf', 'orc'];
     const randomRace = botRaces[Math.floor(Math.random() * botRaces.length)];
 
-    console.log('Loading bot image, chosen race:', randomRace);
+    console.log('Loading bot image/animation, chosen race:', randomRace);
 
-    const imgPath = `./images/fighters/${randomRace}.png`;
-    const img = document.createElement('img');
-    img.src = imgPath;
-    img.alt = `${randomRace} enemy`;
-    img.className = 'fighter-image';
-    img.style.filter = 'sepia(100%) hue-rotate(0deg) saturate(2) brightness(0.8)'; // Make it look more enemy-like
+    // Hide any fallback
+    const fallback = container.querySelector('.fighter-fallback');
+    if (fallback) fallback.style.display = 'none';
 
-    img.onload = function() {
-        console.log('Bot image loaded successfully:', imgPath);
-        // Hide fallback and show image
-        const fallback = container.querySelector('.fighter-fallback');
-        if (fallback) fallback.style.display = 'none';
-        container.appendChild(img);
-    };
+    // Create animated sprite for enemy
+    window.fighterSprites.enemy = createAnimatedFighter(container, randomRace, 'idle');
 
-    img.onerror = function() {
-        console.log('Bot image failed to load:', imgPath, 'keeping robot emoji');
-        // Keep robot emoji as fallback
-    };
+    // Add enemy styling to the container after animation loads
+    setTimeout(() => {
+        const spriteImg = container.querySelector('.fighter-sprite');
+        if (spriteImg) {
+            spriteImg.style.filter = 'sepia(100%) hue-rotate(0deg) saturate(2) brightness(0.8)';
+        }
+    }, 100);
 }
 
 function updateBotStatsNew(bot) {

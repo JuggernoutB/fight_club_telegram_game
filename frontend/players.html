@@ -1055,29 +1055,99 @@
 
             console.log('Loading PvP player fighter image for race:', race);
 
-            const imgPath = `./images/fighters/${race}.png`;
-            const img = document.createElement('img');
-            img.src = imgPath;
-            img.alt = `${race} fighter`;
-            img.className = 'fighter-image';
+            // Use sprite animation for orc player
+            if (race === 'orc') {
+                console.log('Creating animated orc sprite for player');
+                const canvas = document.createElement('canvas');
+                canvas.width = 200;
+                canvas.height = 250;
+                canvas.className = 'fighter-image';
 
-            img.onload = function() {
-                console.log('PvP player fighter image loaded successfully:', imgPath);
-                fallback.style.display = 'none';
-                container.appendChild(img);
-            };
+                const ctx = canvas.getContext('2d');
 
-            img.onerror = function() {
-                console.log('PvP player fighter image failed to load:', imgPath, 'Using fallback');
-                const raceAvatars = {
-                    "human": "🧑",
-                    "elf": "🧝",
-                    "dwarf": "🧔",
-                    "orc": "👹"
+                let currentFrame = 0;
+                const totalFrames = 16; // 000 to 015
+                const animationSpeed = 8; // frames per second
+                let frameCounter = 0;
+                const frameImages = [];
+                let imagesLoaded = 0;
+
+                // Load all frame images
+                for (let i = 0; i < totalFrames; i++) {
+                    const frameImg = new Image();
+                    const frameNumber = i.toString().padStart(3, '0');
+                    frameImg.src = `./images/fighters/sprites/orc/idle/Front - Idle_${frameNumber}.png`;
+                    frameImages[i] = frameImg;
+
+                    frameImg.onload = function() {
+                        imagesLoaded++;
+                        if (imagesLoaded === 1) { // Show canvas after first frame loads
+                            console.log('PvP player orc sprite frames loading...');
+                            fallback.style.display = 'none';
+                            container.appendChild(canvas);
+                            animate();
+                        }
+                    };
+
+                    frameImg.onerror = function() {
+                        console.log(`PvP player orc sprite frame ${frameNumber} failed to load`);
+                        if (i === 0) { // If first frame fails, show fallback
+                            fallback.innerHTML = "👹";
+                            fallback.style.display = 'flex';
+                        }
+                    };
+                }
+
+                function animate() {
+                    // Clear canvas
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                    // Calculate frame timing
+                    frameCounter++;
+                    if (frameCounter >= 60 / animationSpeed) {
+                        currentFrame = (currentFrame + 1) % totalFrames;
+                        frameCounter = 0;
+                    }
+
+                    // Draw current frame if loaded
+                    if (frameImages[currentFrame] && frameImages[currentFrame].complete) {
+                        const img = frameImages[currentFrame];
+                        // Center and scale the image
+                        const scale = Math.min(canvas.width / img.width, canvas.height / img.height) * 0.8;
+                        const x = (canvas.width - img.width * scale) / 2;
+                        const y = (canvas.height - img.height * scale) / 2;
+
+                        ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+                    }
+
+                    requestAnimationFrame(animate);
+                }
+            } else {
+                // Use static image for non-orc races
+                const imgPath = `./images/fighters/${race}.png`;
+                const img = document.createElement('img');
+                img.src = imgPath;
+                img.alt = `${race} fighter`;
+                img.className = 'fighter-image';
+
+                img.onload = function() {
+                    console.log('PvP player fighter image loaded successfully:', imgPath);
+                    fallback.style.display = 'none';
+                    container.appendChild(img);
                 };
-                fallback.innerHTML = raceAvatars[race] || "👤";
-                fallback.style.display = 'flex';
-            };
+
+                img.onerror = function() {
+                    console.log('PvP player fighter image failed to load:', imgPath, 'Using fallback');
+                    const raceAvatars = {
+                        "human": "🧑",
+                        "elf": "🧝",
+                        "dwarf": "🧔",
+                        "orc": "👹"
+                    };
+                    fallback.innerHTML = raceAvatars[race] || "👤";
+                    fallback.style.display = 'flex';
+                };
+            }
         }
 
         function loadPvPOpponentImage(race, nickname) {
@@ -1091,34 +1161,109 @@
 
             console.log('Loading PvP opponent image for race:', race, 'nickname:', nickname);
 
-            const imgPath = `./images/fighters/${race}.png`;
-            const img = document.createElement('img');
-            img.src = imgPath;
-            img.alt = `${race} opponent`;
-            img.className = 'fighter-image';
-            img.style.filter = 'sepia(50%) hue-rotate(10deg) saturate(1.5) brightness(0.9)'; // Make it look different
+            // Use sprite animation for orc opponent
+            if (race === 'orc') {
+                console.log('Creating animated orc sprite for opponent');
+                const canvas = document.createElement('canvas');
+                canvas.width = 200;
+                canvas.height = 250;
+                canvas.className = 'fighter-image';
+                canvas.style.filter = 'sepia(50%) hue-rotate(10deg) saturate(1.5) brightness(0.9)';
 
-            img.onload = function() {
-                console.log('PvP opponent image loaded successfully:', imgPath);
-                const fallback = container.querySelector('.fighter-fallback');
-                if (fallback) fallback.style.display = 'none';
-                container.appendChild(img);
-            };
+                const ctx = canvas.getContext('2d');
 
-            img.onerror = function() {
-                console.log('PvP opponent image failed to load:', imgPath, 'using fallback');
-                const raceAvatars = {
-                    "human": "🧑",
-                    "elf": "🧝",
-                    "dwarf": "🧔",
-                    "orc": "👹"
-                };
-                const fallback = container.querySelector('.fighter-fallback');
-                if (fallback) {
-                    fallback.innerHTML = raceAvatars[race] || "👤";
-                    fallback.style.display = 'flex';
+                let currentFrame = 0;
+                const totalFrames = 16; // 000 to 015
+                const animationSpeed = 8; // frames per second
+                let frameCounter = 0;
+                const frameImages = [];
+                let imagesLoaded = 0;
+
+                // Load all frame images
+                for (let i = 0; i < totalFrames; i++) {
+                    const frameImg = new Image();
+                    const frameNumber = i.toString().padStart(3, '0');
+                    frameImg.src = `./images/fighters/sprites/orc/idle/Front - Idle_${frameNumber}.png`;
+                    frameImages[i] = frameImg;
+
+                    frameImg.onload = function() {
+                        imagesLoaded++;
+                        if (imagesLoaded === 1) { // Show canvas after first frame loads
+                            console.log('PvP opponent orc sprite frames loading...');
+                            const fallback = container.querySelector('.fighter-fallback');
+                            if (fallback) fallback.style.display = 'none';
+                            container.appendChild(canvas);
+                            animate();
+                        }
+                    };
+
+                    frameImg.onerror = function() {
+                        console.log(`PvP opponent orc sprite frame ${frameNumber} failed to load`);
+                        if (i === 0) { // If first frame fails, show fallback
+                            const fallback = container.querySelector('.fighter-fallback');
+                            if (fallback) {
+                                fallback.innerHTML = "👹";
+                                fallback.style.display = 'flex';
+                            }
+                        }
+                    };
                 }
-            };
+
+                function animate() {
+                    // Clear canvas
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                    // Calculate frame timing
+                    frameCounter++;
+                    if (frameCounter >= 60 / animationSpeed) {
+                        currentFrame = (currentFrame + 1) % totalFrames;
+                        frameCounter = 0;
+                    }
+
+                    // Draw current frame if loaded
+                    if (frameImages[currentFrame] && frameImages[currentFrame].complete) {
+                        const img = frameImages[currentFrame];
+                        // Center and scale the image
+                        const scale = Math.min(canvas.width / img.width, canvas.height / img.height) * 0.8;
+                        const x = (canvas.width - img.width * scale) / 2;
+                        const y = (canvas.height - img.height * scale) / 2;
+
+                        ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+                    }
+
+                    requestAnimationFrame(animate);
+                }
+            } else {
+                // Use static image for non-orc races
+                const imgPath = `./images/fighters/${race}.png`;
+                const img = document.createElement('img');
+                img.src = imgPath;
+                img.alt = `${race} opponent`;
+                img.className = 'fighter-image';
+                img.style.filter = 'sepia(50%) hue-rotate(10deg) saturate(1.5) brightness(0.9)';
+
+                img.onload = function() {
+                    console.log('PvP opponent image loaded successfully:', imgPath);
+                    const fallback = container.querySelector('.fighter-fallback');
+                    if (fallback) fallback.style.display = 'none';
+                    container.appendChild(img);
+                };
+
+                img.onerror = function() {
+                    console.log('PvP opponent image failed to load:', imgPath, 'using fallback');
+                    const raceAvatars = {
+                        "human": "🧑",
+                        "elf": "🧝",
+                        "dwarf": "🧔",
+                        "orc": "👹"
+                    };
+                    const fallback = container.querySelector('.fighter-fallback');
+                    if (fallback) {
+                        fallback.innerHTML = raceAvatars[race] || "👤";
+                        fallback.style.display = 'flex';
+                    }
+                };
+            }
         }
 
         let opponentImageLoaded = false; // Flag to load opponent image only once
