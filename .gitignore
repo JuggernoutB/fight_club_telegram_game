@@ -29,3 +29,6 @@ playerProfiles.json
 *.bak
 *.swp
 *.swo
+
+**/__pycache__/
+
