@@ -17,10 +17,14 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from combat_engine import (
     Player, Equipment, create_player, get_enabled_slots, calculate_knowledge_for_level,
     RACE_DEFAULTS, BODY_PARTS, RACE_EQUIPMENT_SLOTS,
-    calculate_damage, calculate_xp_for_fight, get_xp_required_for_level,
-    get_xp_for_single_level, get_current_level_from_xp,
-    check_fear_spell_usage, check_scream_spell_usage,
+    calculate_damage, check_fear_spell_usage, check_scream_spell_usage,
     create_equipment_item
+)
+
+from combat_engine.xp_calculator import (
+    calculate_xp_for_fight, get_xp_required_for_level,
+    get_xp_for_single_level, get_current_level_from_xp,
+    check_level_up, calculate_time_to_target_level
 )
 
 app = Flask(__name__)
@@ -460,32 +464,6 @@ def run_simulation(player1_config: Dict, player2_config: Dict, num_simulations: 
 
     return results
 
-def calculate_time_to_target_level(current_xp: int, daily_xp: int, target_level: int = 10) -> dict:
-    """Calculate time needed to reach target level"""
-
-    total_xp_needed = get_xp_required_for_level(target_level)
-    remaining_xp = total_xp_needed - current_xp
-
-    if remaining_xp <= 0:
-        return {
-            'already_target_level': True,
-            'days': 0,
-            'weeks': 0,
-            'months': 0
-        }
-
-    days_needed = remaining_xp / daily_xp if daily_xp > 0 else float('inf')
-    weeks_needed = days_needed / 7
-    months_needed = days_needed / 30
-
-    return {
-        'already_target_level': False,
-        'total_xp_needed': total_xp_needed,
-        'remaining_xp': remaining_xp,
-        'days': round(days_needed, 1),
-        'weeks': round(weeks_needed, 1),
-        'months': round(months_needed, 1)
-    }
 
 @app.route('/debug_equipment')
 def debug_equipment():
