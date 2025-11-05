@@ -3,6 +3,7 @@ const path = require("path");
 const express = require("express");
 const cors = require("cors");
 const bodyParser = require("body-parser");
+const combatEngine = require("./combat_engine.js");
 
 const DATA_FILE = path.join(__dirname, "playerProfiles.json");
 
@@ -34,14 +35,8 @@ const ITEMS = {
   scream_spell: { name: "Scream Spell", level: 2, slot: "basic", mana_cost: 4, knowledge_req: 2, type: "spell" }
 };
 
-// Race equipment slot configuration
-const RACE_EQUIPMENT_SLOTS = {
-  human: { basic_slots: 2, hand_slots: 2 },
-  elf: { basic_slots: 2, hand_slots: 2 },
-  orc: { basic_slots: 1, hand_slots: 2 },
-  dwarf: { basic_slots: 1, hand_slots: 2 },
-  skeleton: { basic_slots: 1, hand_slots: 2 }
-};
+// Use race equipment slot configuration from combat engine
+const RACE_EQUIPMENT_SLOTS = combatEngine.COMBAT_CONSTANTS.RACE_EQUIPMENT_SLOTS;
 
 try {
   if (fs.existsSync(DATA_FILE)) {
