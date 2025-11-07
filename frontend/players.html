@@ -880,6 +880,21 @@
                     box-shadow: 0 0 10px rgba(80, 200, 120, 0.3);
                 }
 
+                /* Enhanced canvas styling for better mobile display */
+                canvas.fighter-image {
+                    max-width: 100%;
+                    height: auto;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+                }
+
+                @media (max-width: 480px) {
+                    canvas.fighter-image {
+                        width: 180px !important;
+                        height: 225px !important;
+                    }
+                }
+
             `;
             document.head.appendChild(style);
 
@@ -1055,72 +1070,144 @@
 
             console.log('Loading PvP player fighter image for race:', race);
 
-            // Use sprite animation for orc player
-            if (race === 'orc') {
-                console.log('Creating animated orc sprite for player');
+            // Use sprite animation for orc and human players
+            if (race === 'orc' || race === 'human') {
+                console.log(`Creating animated ${race} sprite for player`);
                 const canvas = document.createElement('canvas');
-                canvas.width = 200;
-                canvas.height = 250;
+                canvas.width = 240;
+                canvas.height = 300;
                 canvas.className = 'fighter-image';
 
                 const ctx = canvas.getContext('2d');
 
                 let currentFrame = 0;
-                const totalFrames = 16; // 000 to 015
                 const animationSpeed = 8; // frames per second
                 let frameCounter = 0;
-                const frameImages = [];
-                let imagesLoaded = 0;
 
-                // Load all frame images
-                for (let i = 0; i < totalFrames; i++) {
-                    const frameImg = new Image();
-                    const frameNumber = i.toString().padStart(3, '0');
-                    frameImg.src = `./images/fighters/sprites/orc/idle/Front - Idle_${frameNumber}.png`;
-                    frameImages[i] = frameImg;
+                if (race === 'human') {
+                    // Use sprite sheet for human
+                    const spriteSheet = new Image();
+                    spriteSheet.src = './images/fighters/sprites/human/idle/human.png';
 
-                    frameImg.onload = function() {
-                        imagesLoaded++;
-                        if (imagesLoaded === 1) { // Show canvas after first frame loads
-                            console.log('PvP player orc sprite frames loading...');
-                            fallback.style.display = 'none';
-                            container.appendChild(canvas);
-                            animate();
-                        }
+                    const totalFrames = 21;
+                    const framesPerRow = 4; // 5 rows of 4 frames + 1 row with 1 frame
+
+                    // Your sprite sheet specifications
+                    const firstFrameCenterX = 384;
+                    const firstFrameCenterY = 225;
+                    const stepX = 768;
+                    const stepY = 448;
+                    const frameWidth = 650;  // Updated frame width
+                    const frameHeight = 450; // Assuming frame height from step
+
+                    spriteSheet.onload = function() {
+                        console.log('PvP player human sprite sheet loaded successfully');
+                        console.log('Sprite sheet size:', spriteSheet.width, 'x', spriteSheet.height);
+                        fallback.style.display = 'none';
+                        container.appendChild(canvas);
+                        animate();
                     };
 
-                    frameImg.onerror = function() {
-                        console.log(`PvP player orc sprite frame ${frameNumber} failed to load`);
-                        if (i === 0) { // If first frame fails, show fallback
-                            fallback.innerHTML = "👹";
-                            fallback.style.display = 'flex';
-                        }
+                    spriteSheet.onerror = function() {
+                        console.log('PvP player human sprite sheet failed to load, using fallback');
+                        fallback.innerHTML = "🧑";
+                        fallback.style.display = 'flex';
                     };
-                }
 
-                function animate() {
-                    // Clear canvas
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    function animate() {
+                        // Clear canvas
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-                    // Calculate frame timing
-                    frameCounter++;
-                    if (frameCounter >= 60 / animationSpeed) {
-                        currentFrame = (currentFrame + 1) % totalFrames;
-                        frameCounter = 0;
+                        // Calculate frame timing
+                        frameCounter++;
+                        if (frameCounter >= 60 / animationSpeed) {
+                            currentFrame = (currentFrame + 1) % totalFrames;
+                            frameCounter = 0;
+                        }
+
+                        // Calculate sprite sheet position using your specifications
+                        const col = currentFrame % framesPerRow;
+                        const row = Math.floor(currentFrame / framesPerRow);
+
+                        // Calculate source position from center point
+                        const centerX = firstFrameCenterX + (col * stepX);
+                        const centerY = firstFrameCenterY + (row * stepY);
+                        const sourceX = centerX - (frameWidth / 2);
+                        const sourceY = centerY - (frameHeight / 2);
+
+                        // Draw current frame scaled to fit canvas
+                        const scaleX = canvas.width / frameWidth;
+                        const scaleY = canvas.height / frameHeight;
+                        const scale = Math.min(scaleX, scaleY) * 1.8; // 200% zoom (2.0 * 0.9 = 1.8)
+                        const scaledWidth = frameWidth * scale;
+                        const scaledHeight = frameHeight * scale;
+                        const x = (canvas.width - scaledWidth) / 2;
+                        const y = (canvas.height - scaledHeight) / 2;
+
+                        ctx.drawImage(
+                            spriteSheet,
+                            sourceX, sourceY, frameWidth, frameHeight,
+                            x, y, scaledWidth, scaledHeight
+                        );
+
+                        requestAnimationFrame(animate);
+                    }
+                } else if (race === 'orc') {
+                    // Use individual frames for orc
+                    const totalFrames = 16;
+                    const frameImages = [];
+                    let imagesLoaded = 0;
+
+                    // Load all frame images
+                    for (let i = 0; i < totalFrames; i++) {
+                        const frameImg = new Image();
+                        const frameNumber = i.toString().padStart(3, '0');
+                        frameImg.src = `./images/fighters/sprites/orc/idle/Front - Idle_${frameNumber}.png`;
+                        frameImages[i] = frameImg;
+
+                        frameImg.onload = function() {
+                            imagesLoaded++;
+                            if (imagesLoaded === 1) { // Show canvas after first frame loads
+                                console.log('PvP player orc sprite frames loading...');
+                                fallback.style.display = 'none';
+                                container.appendChild(canvas);
+                                animate();
+                            }
+                        };
+
+                        frameImg.onerror = function() {
+                            console.log(`PvP player orc sprite frame ${frameNumber} failed to load`);
+                            if (i === 0) { // If first frame fails, show fallback
+                                fallback.innerHTML = "👹";
+                                fallback.style.display = 'flex';
+                            }
+                        };
                     }
 
-                    // Draw current frame if loaded
-                    if (frameImages[currentFrame] && frameImages[currentFrame].complete) {
-                        const img = frameImages[currentFrame];
-                        // Center and scale the image
-                        const scale = Math.min(canvas.width / img.width, canvas.height / img.height) * 0.8;
-                        const x = (canvas.width - img.width * scale) / 2;
-                        const y = (canvas.height - img.height * scale) / 2;
+                    function animate() {
+                        // Clear canvas
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-                        ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+                        // Calculate frame timing
+                        frameCounter++;
+                        if (frameCounter >= 60 / animationSpeed) {
+                            currentFrame = (currentFrame + 1) % totalFrames;
+                            frameCounter = 0;
+                        }
+
+                        // Draw current frame if loaded
+                        if (frameImages[currentFrame] && frameImages[currentFrame].complete) {
+                            const img = frameImages[currentFrame];
+                            // Center and scale the image
+                            const scale = Math.min(canvas.width / img.width, canvas.height / img.height) * 0.8;
+                            const x = (canvas.width - img.width * scale) / 2;
+                            const y = (canvas.height - img.height * scale) / 2;
+
+                            ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+                        }
+
+                        requestAnimationFrame(animate);
                     }
-
-                    requestAnimationFrame(animate);
                 }
             } else {
                 // Use static image for non-orc races
@@ -1161,77 +1248,153 @@
 
             console.log('Loading PvP opponent image for race:', race, 'nickname:', nickname);
 
-            // Use sprite animation for orc opponent
-            if (race === 'orc') {
-                console.log('Creating animated orc sprite for opponent');
+            // Use sprite animation for orc and human opponents
+            if (race === 'orc' || race === 'human') {
+                console.log(`Creating animated ${race} sprite for opponent`);
                 const canvas = document.createElement('canvas');
-                canvas.width = 200;
-                canvas.height = 250;
+                canvas.width = 240;
+                canvas.height = 300;
                 canvas.className = 'fighter-image';
                 canvas.style.filter = 'sepia(50%) hue-rotate(10deg) saturate(1.5) brightness(0.9)';
 
                 const ctx = canvas.getContext('2d');
 
                 let currentFrame = 0;
-                const totalFrames = 16; // 000 to 015
                 const animationSpeed = 8; // frames per second
                 let frameCounter = 0;
-                const frameImages = [];
-                let imagesLoaded = 0;
 
-                // Load all frame images
-                for (let i = 0; i < totalFrames; i++) {
-                    const frameImg = new Image();
-                    const frameNumber = i.toString().padStart(3, '0');
-                    frameImg.src = `./images/fighters/sprites/orc/idle/Front - Idle_${frameNumber}.png`;
-                    frameImages[i] = frameImg;
+                if (race === 'human') {
+                    // Use sprite sheet for human opponent
+                    const spriteSheet = new Image();
+                    spriteSheet.src = './images/fighters/sprites/human/idle/human.png';
 
-                    frameImg.onload = function() {
-                        imagesLoaded++;
-                        if (imagesLoaded === 1) { // Show canvas after first frame loads
-                            console.log('PvP opponent orc sprite frames loading...');
-                            const fallback = container.querySelector('.fighter-fallback');
-                            if (fallback) fallback.style.display = 'none';
-                            container.appendChild(canvas);
-                            animate();
+                    const totalFrames = 21;
+                    const framesPerRow = 4; // 5 rows of 4 frames + 1 row with 1 frame
+
+                    // Your sprite sheet specifications
+                    const firstFrameCenterX = 384;
+                    const firstFrameCenterY = 220;
+                    const stepX = 768;
+                    const stepY = 448;
+                    const frameWidth = 650;  // Updated frame width
+                    const frameHeight = 450; // Assuming frame height from step
+
+                    spriteSheet.onload = function() {
+                        console.log('PvP opponent human sprite sheet loaded successfully');
+                        console.log('Sprite sheet size:', spriteSheet.width, 'x', spriteSheet.height);
+                        const fallback = container.querySelector('.fighter-fallback');
+                        if (fallback) fallback.style.display = 'none';
+                        container.appendChild(canvas);
+                        animate();
+                    };
+
+                    spriteSheet.onerror = function() {
+                        console.log('PvP opponent human sprite sheet failed to load, using fallback');
+                        const fallback = container.querySelector('.fighter-fallback');
+                        if (fallback) {
+                            fallback.innerHTML = "🧑";
+                            fallback.style.display = 'flex';
                         }
                     };
 
-                    frameImg.onerror = function() {
-                        console.log(`PvP opponent orc sprite frame ${frameNumber} failed to load`);
-                        if (i === 0) { // If first frame fails, show fallback
-                            const fallback = container.querySelector('.fighter-fallback');
-                            if (fallback) {
-                                fallback.innerHTML = "👹";
-                                fallback.style.display = 'flex';
+                    function animate() {
+                        // Clear canvas
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                        // Calculate frame timing
+                        frameCounter++;
+                        if (frameCounter >= 60 / animationSpeed) {
+                            currentFrame = (currentFrame + 1) % totalFrames;
+                            frameCounter = 0;
+                        }
+
+                        // Calculate sprite sheet position using your specifications
+                        const col = currentFrame % framesPerRow;
+                        const row = Math.floor(currentFrame / framesPerRow);
+
+                        // Calculate source position from center point
+                        const centerX = firstFrameCenterX + (col * stepX);
+                        const centerY = firstFrameCenterY + (row * stepY);
+                        const sourceX = centerX - (frameWidth / 2);
+                        const sourceY = centerY - (frameHeight / 2);
+
+                        // Draw current frame scaled to fit canvas
+                        const scaleX = canvas.width / frameWidth;
+                        const scaleY = canvas.height / frameHeight;
+                        const scale = Math.min(scaleX, scaleY) * 1.8; // 200% zoom (2.0 * 0.9 = 1.8)
+                        const scaledWidth = frameWidth * scale;
+                        const scaledHeight = frameHeight * scale;
+                        const x = (canvas.width - scaledWidth) / 2;
+                        const y = (canvas.height - scaledHeight) / 2;
+
+                        ctx.drawImage(
+                            spriteSheet,
+                            sourceX, sourceY, frameWidth, frameHeight,
+                            x, y, scaledWidth, scaledHeight
+                        );
+
+                        requestAnimationFrame(animate);
+                    }
+                } else if (race === 'orc') {
+                    // Use individual frames for orc opponent
+                    const totalFrames = 16;
+                    const frameImages = [];
+                    let imagesLoaded = 0;
+
+                    // Load all frame images
+                    for (let i = 0; i < totalFrames; i++) {
+                        const frameImg = new Image();
+                        const frameNumber = i.toString().padStart(3, '0');
+                        frameImg.src = `./images/fighters/sprites/orc/idle/Front - Idle_${frameNumber}.png`;
+                        frameImages[i] = frameImg;
+
+                        frameImg.onload = function() {
+                            imagesLoaded++;
+                            if (imagesLoaded === 1) { // Show canvas after first frame loads
+                                console.log('PvP opponent orc sprite frames loading...');
+                                const fallback = container.querySelector('.fighter-fallback');
+                                if (fallback) fallback.style.display = 'none';
+                                container.appendChild(canvas);
+                                animate();
                             }
+                        };
+
+                        frameImg.onerror = function() {
+                            console.log(`PvP opponent orc sprite frame ${frameNumber} failed to load`);
+                            if (i === 0) { // If first frame fails, show fallback
+                                const fallback = container.querySelector('.fighter-fallback');
+                                if (fallback) {
+                                    fallback.innerHTML = "👹";
+                                    fallback.style.display = 'flex';
+                                }
+                            }
+                        };
+                    }
+
+                    function animate() {
+                        // Clear canvas
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                        // Calculate frame timing
+                        frameCounter++;
+                        if (frameCounter >= 60 / animationSpeed) {
+                            currentFrame = (currentFrame + 1) % totalFrames;
+                            frameCounter = 0;
                         }
-                    };
-                }
 
-                function animate() {
-                    // Clear canvas
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        // Draw current frame if loaded
+                        if (frameImages[currentFrame] && frameImages[currentFrame].complete) {
+                            const img = frameImages[currentFrame];
+                            // Center and scale the image
+                            const scale = Math.min(canvas.width / img.width, canvas.height / img.height) * 0.8;
+                            const x = (canvas.width - img.width * scale) / 2;
+                            const y = (canvas.height - img.height * scale) / 2;
 
-                    // Calculate frame timing
-                    frameCounter++;
-                    if (frameCounter >= 60 / animationSpeed) {
-                        currentFrame = (currentFrame + 1) % totalFrames;
-                        frameCounter = 0;
+                            ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+                        }
+
+                        requestAnimationFrame(animate);
                     }
-
-                    // Draw current frame if loaded
-                    if (frameImages[currentFrame] && frameImages[currentFrame].complete) {
-                        const img = frameImages[currentFrame];
-                        // Center and scale the image
-                        const scale = Math.min(canvas.width / img.width, canvas.height / img.height) * 0.8;
-                        const x = (canvas.width - img.width * scale) / 2;
-                        const y = (canvas.height - img.height * scale) / 2;
-
-                        ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
-                    }
-
-                    requestAnimationFrame(animate);
                 }
             } else {
                 // Use static image for non-orc races

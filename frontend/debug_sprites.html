@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔧 Sprite Debug Page</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .debug-container { max-width: 1000px; margin: 0 auto; }
+        .sprite-test {
+            border: 2px solid #ddd;
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .fighter-container {
+            width: 150px;
+            height: 150px;
+            border: 1px solid #ccc;
+            margin: 10px;
+            display: inline-block;
+            vertical-align: top;
+            background: #f9f9f9;
+            position: relative;
+        }
+        .fighter-sprite { max-width: 100%; max-height: 100%; }
+        .fighter-image { max-width: 100%; max-height: 100%; }
+        .fighter-fallback { font-size: 48px; display: flex; align-items: center; justify-content: center; height: 100%; }
+        .log {
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+        .status { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <div class="debug-container">
+        <h1>🔧 Sprite Animation Debug Tool</h1>
+        <p>This page helps debug sprite animation loading issues.</p>
+
+        <div class="sprite-test">
+            <h2>Test 1: Individual Frame Animation System</h2>
+            <div class="status" id="spriteSystemStatus">Checking sprite system...</div>
+
+            <h3>Orc Animation Test (Individual Frames)</h3>
+            <div class="fighter-container" id="orcTest">
+                <div class="fighter-fallback">👹</div>
+            </div>
+
+            <h3>Human Fallback Test (Individual Frames)</h3>
+            <div class="fighter-container" id="humanTest">
+                <div class="fighter-fallback">🧑</div>
+            </div>
+        </div>
+
+        <div class="sprite-test">
+            <h2>Test 2: Sprite Sheet Animation System</h2>
+            <div class="status" id="spriteSheetStatus">Checking sprite sheet system...</div>
+
+            <h3>Human Sprite Sheet Test</h3>
+            <div class="fighter-container" id="humanSpriteSheetTest">
+                <div class="fighter-fallback">🧑</div>
+            </div>
+
+            <h3>Custom Sprite Sheet Config Test</h3>
+            <div class="fighter-container" id="customConfigTest">
+                <div class="fighter-fallback">⚙️</div>
+            </div>
+        </div>
+
+        <div class="sprite-test">
+            <h2>Test 3: Direct Image Loading</h2>
+            <div class="status" id="imageTestStatus">Testing direct image access...</div>
+
+            <h3>First Sprite Frame</h3>
+            <div class="fighter-container">
+                <img id="directSprite" src="images/fighters/sprites/orc/idle/Front - Idle_000.png"
+                     style="max-width: 100%; max-height: 100%;"
+                     onerror="document.getElementById('directImageError').style.display='block'">
+                <div id="directImageError" style="display:none; color: red;">❌ Direct image failed</div>
+            </div>
+
+            <h3>Old Static Image</h3>
+            <div class="fighter-container">
+                <img id="staticOrc" src="images/fighters/orc.png"
+                     style="max-width: 100%; max-height: 100%;"
+                     onerror="document.getElementById('staticImageError').style.display='block'">
+                <div id="staticImageError" style="display:none; color: red;">❌ Static image failed</div>
+            </div>
+        </div>
+
+        <div class="sprite-test">
+            <h2>Interactive Config Testing</h2>
+            <p>Adjust these values and click "Test Config" to see changes:</p>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div>
+                    <h4>Layout Settings:</h4>
+                    <label>Total Frames: <input type="number" id="totalFrames" value="21" min="1" max="50"></label><br>
+                    <label>Frames Per Row: <input type="number" id="framesPerRow" value="4" min="1" max="20"></label><br>
+
+                    <h4>Frame Dimensions:</h4>
+                    <label>Frame Width: <input type="number" id="frameWidth" value="650" min="50" max="2000"></label><br>
+                    <label>Frame Height: <input type="number" id="frameHeight" value="450" min="50" max="2000"></label><br>
+                </div>
+
+                <div>
+                    <h4>Positioning:</h4>
+                    <label>First Center X: <input type="number" id="firstCenterX" value="384" min="0" max="2000"></label><br>
+                    <label>First Center Y: <input type="number" id="firstCenterY" value="220" min="0" max="2000"></label><br>
+
+                    <h4>Steps:</h4>
+                    <label>Step X: <input type="number" id="stepX" value="768" min="50" max="2000"></label><br>
+                    <label>Step Y: <input type="number" id="stepY" value="448" min="50" max="2000"></label><br>
+
+                    <h4>Scale/Zoom:</h4>
+                    <label>Scale: <input type="range" id="scale" value="2.0" min="0.1" max="3.0" step="0.1" oninput="updateScaleValue()"></label><br>
+                    <span id="scaleValue" style="font-weight: bold; color: #007bff;">2.0x</span>
+                </div>
+            </div>
+
+            <div style="margin: 20px 0;">
+                <button onclick="testCustomConfig()" style="padding: 10px 20px; font-size: 16px;">🔄 Test Config</button>
+                <button onclick="resetToDefaults()" style="padding: 10px 20px; font-size: 16px;">↻ Reset to Defaults</button>
+            </div>
+
+            <div style="margin: 10px 0;">
+                <strong>Quick Zoom:</strong>
+                <button onclick="quickZoom(0.5)" style="padding: 5px 10px; margin: 2px;">🔍- 50%</button>
+                <button onclick="quickZoom(0.8)" style="padding: 5px 10px; margin: 2px;">🔍- 80%</button>
+                <button onclick="quickZoom(1.0)" style="padding: 5px 10px; margin: 2px;">🔍 100%</button>
+                <button onclick="quickZoom(1.5)" style="padding: 5px 10px; margin: 2px;">🔍+ 150%</button>
+                <button onclick="quickZoom(2.0)" style="padding: 5px 10px; margin: 2px;">🔍+ 200%</button>
+            </div>
+
+            <div class="fighter-container" id="interactiveTest" style="width: 300px; height: 300px;">
+                <div class="fighter-fallback">🧑</div>
+            </div>
+
+            <div style="margin: 20px 0; border-top: 2px solid #ddd; padding-top: 20px;">
+                <h4>Manual Frame Navigation</h4>
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                    <button onclick="toggleAnimation()" id="playPauseBtn" style="padding: 8px 16px;">⏸️ Pause</button>
+                    <button onclick="previousFrame()" style="padding: 8px 16px;">⏮️ Previous</button>
+                    <button onclick="nextFrame()" style="padding: 8px 16px;">⏭️ Next</button>
+                    <span style="margin: 0 10px;">Frame: <strong id="currentFrameDisplay">0</strong></span>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label>Go to frame: <input type="range" id="frameSlider" min="0" max="20" value="0" oninput="goToFrame(this.value)" style="width: 200px;"></label>
+                </div>
+
+                <div id="frameInfo" style="background: #f8f9fa; padding: 15px; border-radius: 5px; font-family: monospace; font-size: 12px;">
+                    <strong>Frame Information:</strong><br>
+                    Frame Index: <span id="frameIndex">-</span><br>
+                    Grid Position: Col <span id="frameCol">-</span>, Row <span id="frameRow">-</span><br>
+                    Center Position: X=<span id="centerX">-</span>, Y=<span id="centerY">-</span><br>
+                    Source Position: X=<span id="sourceX">-</span>, Y=<span id="sourceY">-</span><br>
+                    Frame Size: <span id="frameSize">-</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="sprite-test">
+            <h2>Debug Log</h2>
+            <div class="log" id="debugLog">Starting debug tests...\n</div>
+        </div>
+    </div>
+
+    <script src="js/sprite-animator.js"></script>
+    <script>
+        const log = document.getElementById('debugLog');
+        const spriteSystemStatus = document.getElementById('spriteSystemStatus');
+        const imageTestStatus = document.getElementById('imageTestStatus');
+
+        function addLog(message) {
+            log.textContent += new Date().toLocaleTimeString() + ': ' + message + '\n';
+            log.scrollTop = log.scrollHeight;
+        }
+
+        function setStatus(element, message, type = 'info') {
+            element.textContent = message;
+            element.className = 'status ' + type;
+        }
+
+        // Test 1: Check individual frame animator system
+        addLog('=== INDIVIDUAL FRAME ANIMATOR SYSTEM TEST ===');
+
+        if (typeof createAnimatedFighter === 'function') {
+            addLog('✅ createAnimatedFighter function found');
+            setStatus(spriteSystemStatus, '✅ Sprite animator system loaded', 'success');
+
+            // Test orc animation
+            addLog('Testing orc sprite animation...');
+            const orcContainer = document.getElementById('orcTest');
+            try {
+                const orcAnimator = createAnimatedFighter(orcContainer, 'orc', 'idle');
+                addLog('✅ Orc animator created successfully');
+            } catch (error) {
+                addLog('❌ Orc animator failed: ' + error.message);
+            }
+
+            // Test human fallback
+            addLog('Testing human fallback...');
+            const humanContainer = document.getElementById('humanTest');
+            try {
+                const humanAnimator = createAnimatedFighter(humanContainer, 'human', 'idle');
+                addLog('✅ Human animator created successfully');
+            } catch (error) {
+                addLog('❌ Human animator failed: ' + error.message);
+            }
+
+        } else {
+            addLog('❌ createAnimatedFighter function not found');
+            setStatus(spriteSystemStatus, '❌ Sprite animator system NOT loaded', 'error');
+        }
+
+        // Test 2: Check sprite sheet animator system
+        addLog('\n=== SPRITE SHEET ANIMATOR SYSTEM TEST ===');
+        const spriteSheetStatus = document.getElementById('spriteSheetStatus');
+
+        if (typeof createSpriteSheetFighter === 'function') {
+            addLog('✅ createSpriteSheetFighter function found');
+            setStatus(spriteSheetStatus, '✅ Sprite sheet system loaded', 'success');
+
+            // Test human sprite sheet
+            addLog('Testing human sprite sheet animation...');
+            const humanSpriteSheetContainer = document.getElementById('humanSpriteSheetTest');
+            try {
+                const humanSpriteSheetAnimator = createSpriteSheetFighter(humanSpriteSheetContainer, 'human', 'idle');
+                addLog('✅ Human sprite sheet animator created successfully');
+            } catch (error) {
+                addLog('❌ Human sprite sheet animator failed: ' + error.message);
+            }
+
+            // Test custom config - ADJUST THESE VALUES TO FIX POSITIONING
+            addLog('Testing custom sprite sheet config...');
+            const customContainer = document.getElementById('customConfigTest');
+            try {
+                const customConfig = createSpriteSheetConfig(
+                    'human.png', // fileName
+                    21,          // totalFrames
+                    4,           // framesPerRow - try 3, 5, or 7 if layout is different
+                    384,         // firstFrameCenterX - adjust this if character appears cut off horizontally
+                    96,          // firstFrameCenterY - adjust this if character appears cut off vertically
+                    768,         // stepX - distance between frame centers horizontally
+                    442,         // stepY - distance between frame centers vertically
+                    768,         // frameWidth - width of each frame
+                    442          // frameHeight - height of each frame
+                );
+                const customAnimator = createSpriteSheetFighter(customContainer, 'human', 'idle', customConfig);
+                addLog('✅ Custom config animator created successfully');
+                addLog('Config: ' + JSON.stringify(customConfig, null, 2));
+            } catch (error) {
+                addLog('❌ Custom config animator failed: ' + error.message);
+            }
+
+        } else {
+            addLog('❌ createSpriteSheetFighter function not found');
+            setStatus(spriteSheetStatus, '❌ Sprite sheet system NOT loaded', 'error');
+        }
+
+        // Test 3: Check direct image access
+        addLog('\n=== DIRECT IMAGE ACCESS TEST ===');
+
+        const directSprite = document.getElementById('directSprite');
+        const staticOrc = document.getElementById('staticOrc');
+
+        directSprite.onload = function() {
+            addLog('✅ Direct sprite image loaded successfully');
+            setStatus(imageTestStatus, '✅ Sprite images accessible', 'success');
+        };
+
+        directSprite.onerror = function() {
+            addLog('❌ Direct sprite image failed to load');
+            setStatus(imageTestStatus, '❌ Sprite images NOT accessible', 'error');
+        };
+
+        staticOrc.onload = function() {
+            addLog('✅ Static orc image loaded successfully');
+        };
+
+        staticOrc.onerror = function() {
+            addLog('❌ Static orc image failed to load');
+        };
+
+        // Test 3: Check global variables
+        addLog('\n=== GLOBAL VARIABLES TEST ===');
+
+        setTimeout(() => {
+            if (window.fighterSprites) {
+                addLog('✅ window.fighterSprites exists');
+            } else {
+                addLog('❌ window.fighterSprites not found');
+            }
+
+            if (window.pvpSprites) {
+                addLog('✅ window.pvpSprites exists');
+            } else {
+                addLog('❌ window.pvpSprites not found');
+            }
+
+            addLog('\n=== DEBUG COMPLETE ===');
+        }, 2000);
+
+        // Interactive testing functions
+        let currentInteractiveAnimator = null;
+        let isAnimationPaused = false;
+
+        function testCustomConfig() {
+            addLog('\n=== TESTING CUSTOM CONFIG ===');
+
+            // Get values from inputs
+            const totalFrames = parseInt(document.getElementById('totalFrames').value);
+            const framesPerRow = parseInt(document.getElementById('framesPerRow').value);
+            const frameWidth = parseInt(document.getElementById('frameWidth').value);
+            const frameHeight = parseInt(document.getElementById('frameHeight').value);
+            const firstCenterX = parseInt(document.getElementById('firstCenterX').value);
+            const firstCenterY = parseInt(document.getElementById('firstCenterY').value);
+            const stepX = parseInt(document.getElementById('stepX').value);
+            const stepY = parseInt(document.getElementById('stepY').value);
+            const scale = parseFloat(document.getElementById('scale').value);
+
+            // Create config
+            const testConfig = createSpriteSheetConfig(
+                'human.png',
+                totalFrames,
+                framesPerRow,
+                firstCenterX,
+                firstCenterY,
+                stepX,
+                stepY,
+                frameWidth,
+                frameHeight
+            );
+
+            addLog('Testing config: ' + JSON.stringify(testConfig, null, 2));
+            addLog('Scale: ' + scale + 'x');
+
+            // Destroy previous animator
+            if (currentInteractiveAnimator) {
+                currentInteractiveAnimator.destroy();
+            }
+
+            // Create new animator with scale
+            const container = document.getElementById('interactiveTest');
+            try {
+                currentInteractiveAnimator = createSpriteSheetFighter(container, 'human', 'idle', testConfig, scale);
+                addLog('✅ Interactive test successful!');
+
+                // Update frame navigation controls
+                updateFrameSlider();
+                updateFrameInfo();
+                updatePlayPauseButton();
+            } catch (error) {
+                addLog('❌ Interactive test failed: ' + error.message);
+            }
+        }
+
+        function resetToDefaults() {
+            document.getElementById('totalFrames').value = '21';
+            document.getElementById('framesPerRow').value = '4';
+            document.getElementById('frameWidth').value = '650';
+            document.getElementById('frameHeight').value = '450';
+            document.getElementById('firstCenterX').value = '384';
+            document.getElementById('firstCenterY').value = '220';
+            document.getElementById('stepX').value = '768';
+            document.getElementById('stepY').value = '448';
+            document.getElementById('scale').value = '2.0';
+            updateScaleValue();
+
+            addLog('\n=== RESET TO DEFAULTS ===');
+            testCustomConfig();
+        }
+
+        function updateScaleValue() {
+            const scale = document.getElementById('scale').value;
+            document.getElementById('scaleValue').textContent = scale + 'x';
+        }
+
+        function quickZoom(scaleValue) {
+            document.getElementById('scale').value = scaleValue;
+            updateScaleValue();
+
+            // Apply scale to current animator if it exists
+            if (currentInteractiveAnimator && currentInteractiveAnimator.setScale) {
+                currentInteractiveAnimator.setScale(scaleValue);
+                addLog('Quick zoom applied: ' + scaleValue + 'x');
+            } else {
+                // Recreate animator with new scale
+                testCustomConfig();
+            }
+        }
+
+        // Manual frame navigation functions
+        function toggleAnimation() {
+            if (!currentInteractiveAnimator) return;
+
+            if (isAnimationPaused) {
+                currentInteractiveAnimator.play();
+                isAnimationPaused = false;
+            } else {
+                currentInteractiveAnimator.stop();
+                isAnimationPaused = true;
+            }
+            updatePlayPauseButton();
+            addLog('Animation ' + (isAnimationPaused ? 'paused' : 'resumed'));
+        }
+
+        function nextFrame() {
+            if (!currentInteractiveAnimator) return;
+
+            if (!isAnimationPaused) {
+                currentInteractiveAnimator.stop();
+                isAnimationPaused = true;
+                updatePlayPauseButton();
+            }
+
+            currentInteractiveAnimator.nextFrame();
+            updateFrameInfo();
+            updateFrameSlider();
+        }
+
+        function previousFrame() {
+            if (!currentInteractiveAnimator) return;
+
+            if (!isAnimationPaused) {
+                currentInteractiveAnimator.stop();
+                isAnimationPaused = true;
+                updatePlayPauseButton();
+            }
+
+            currentInteractiveAnimator.previousFrame();
+            updateFrameInfo();
+            updateFrameSlider();
+        }
+
+        function goToFrame(frameIndex) {
+            if (!currentInteractiveAnimator) return;
+
+            if (!isAnimationPaused) {
+                currentInteractiveAnimator.stop();
+                isAnimationPaused = true;
+                updatePlayPauseButton();
+            }
+
+            currentInteractiveAnimator.goToFrame(parseInt(frameIndex));
+            updateFrameInfo();
+        }
+
+        function updateFrameSlider() {
+            if (!currentInteractiveAnimator) return;
+
+            const totalFrames = currentInteractiveAnimator.getTotalFrames();
+            const frameSlider = document.getElementById('frameSlider');
+            frameSlider.max = totalFrames - 1;
+            frameSlider.value = currentInteractiveAnimator.currentFrame;
+        }
+
+        function updateFrameInfo() {
+            if (!currentInteractiveAnimator) return;
+
+            const frameInfo = currentInteractiveAnimator.getCurrentFrameInfo();
+            if (!frameInfo) return;
+
+            document.getElementById('currentFrameDisplay').textContent = frameInfo.frameIndex;
+            document.getElementById('frameIndex').textContent = frameInfo.frameIndex;
+
+            if (frameInfo.col !== undefined) {
+                // Sprite sheet mode
+                document.getElementById('frameCol').textContent = frameInfo.col;
+                document.getElementById('frameRow').textContent = frameInfo.row;
+                document.getElementById('centerX').textContent = frameInfo.centerX;
+                document.getElementById('centerY').textContent = frameInfo.centerY;
+                document.getElementById('sourceX').textContent = frameInfo.sourceX;
+                document.getElementById('sourceY').textContent = frameInfo.sourceY;
+                document.getElementById('frameSize').textContent = `${frameInfo.frameWidth}x${frameInfo.frameHeight}`;
+            } else {
+                // Individual frames mode
+                document.getElementById('frameCol').textContent = 'N/A';
+                document.getElementById('frameRow').textContent = 'N/A';
+                document.getElementById('centerX').textContent = 'N/A';
+                document.getElementById('centerY').textContent = 'N/A';
+                document.getElementById('sourceX').textContent = 'N/A';
+                document.getElementById('sourceY').textContent = 'N/A';
+                document.getElementById('frameSize').textContent = `File: ${frameInfo.framePath || 'N/A'}`;
+            }
+        }
+
+        function updatePlayPauseButton() {
+            const btn = document.getElementById('playPauseBtn');
+            if (isAnimationPaused) {
+                btn.textContent = '▶️ Play';
+            } else {
+                btn.textContent = '⏸️ Pause';
+            }
+        }
+
+        // CSS styles for better input layout
+        const inputStyles = document.createElement('style');
+        inputStyles.textContent = `
+            label {
+                display: block;
+                margin: 5px 0;
+                font-weight: bold;
+            }
+            input[type="number"] {
+                width: 100px;
+                padding: 5px;
+                margin-left: 10px;
+                border: 1px solid #ccc;
+                border-radius: 3px;
+            }
+            h4 {
+                color: #333;
+                margin-top: 15px;
+                margin-bottom: 10px;
+            }
+        `;
+        document.head.appendChild(inputStyles);
+    </script>
+</body>
+</html>
